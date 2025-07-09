@@ -1,0 +1,1 @@
+# Endpoints de administración (opcional)
