@@ -17,3 +17,13 @@ def get_game(game_id: str) -> Optional[Game]:
 
 def get_all_games() -> List[Game]:
     return load_all_games()
+
+def delete_game(game_id: str) -> bool:
+    """Elimina una partida de la base de datos por su id. Devuelve True si existía y fue eliminada."""
+    from app.database import load_json, save_json
+    games = load_json('games') or {}
+    if game_id in games:
+        del games[game_id]
+        save_json('games', games)
+        return True
+    return False

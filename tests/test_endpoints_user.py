@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 import uuid
+from app.database import delete_user, load_all_users
 
 client = TestClient(app)
 
@@ -23,6 +24,8 @@ def test_register_user():
     assert "id" in user
     assert "created_at" in user
     assert "updated_at" in user
+    # Eliminar usuario creado
+    assert delete_user(user["id"]) is True
 
 def test_login_and_get_user_by_id():
     data = {
@@ -39,6 +42,8 @@ def test_login_and_get_user_by_id():
     user2 = response.json()
     assert user2["id"] == user_id
     assert user2["username"] == data["username"]
+    # Eliminar usuario creado
+    assert delete_user(user_id) is True
 
 def test_list_users_auth():
     data = {
@@ -47,10 +52,13 @@ def test_list_users_auth():
         "password": "passlist"
     }
     reg = client.post("/register", data=data)
+    user = reg.json()
     token = get_token(data["username"], data["password"])
     response = client.get("/users", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+    # Eliminar usuario creado
+    assert delete_user(user["id"]) is True
 
 def test_create_and_get_game_auth():
     user_data = {
@@ -85,8 +93,13 @@ def test_list_games_auth():
         "email": f"gamelist_{uuid.uuid4()}@example.com",
         "password": "passgamelist"
     }
-    reg = client.post("/register", data=data)
+    client.post("/register", data=data)
     token = get_token(data["username"], data["password"])
     response = client.get("/games", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+    # Eliminar usuario creado
+    users = load_all_users()
+    user = next((u for u in users if u.username == data["username"]), None)
+    if user:
+        assert delete_user(user.id) is True
