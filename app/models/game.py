@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Dict
 from .user import User
 from .roles import RoleInfo
@@ -25,9 +25,8 @@ class Game(GameBase):
     players: List[User] = []
     roles: Dict[str, RoleInfo] = {}  # player_id -> RoleInfo
     status: GameStatus = GameStatus.WAITING
-    created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    created_at: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.UTC))
     current_round: int = 0
     # Otros campos: historial, votos, etc.
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

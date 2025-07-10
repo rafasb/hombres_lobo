@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, UTC
 
 # Modelo de usuario (Pydantic)
 
@@ -25,12 +25,11 @@ class User(UserBase):
     role: UserRole = UserRole.PLAYER
     status: UserStatus = UserStatus.ACTIVE
     hashed_password: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     # Otros campos opcionales: fecha de registro, avatar, etc.
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserUpdate(BaseModel):
     email: EmailStr | None = None

@@ -4,7 +4,7 @@ import uuid
 from typing import Any, List, Optional
 from app.models.user import User
 from app.models.game import Game
-from datetime import datetime
+from datetime import datetime, UTC
 from app.core.security import hash_password
 from app.models.user import UserRole
 from dotenv import load_dotenv
@@ -47,10 +47,10 @@ if admin_username and admin_email and admin_password:
             email=admin_email,
             hashed_password=hash_password(admin_password),
             role=UserRole.ADMIN,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC)
         )
-        users[admin.id] = admin.dict()
+        users[admin.id] = admin.model_dump()
         # Serializar datetime
         for field in ["created_at", "updated_at"]:
             if isinstance(users[admin.id][field], datetime):
@@ -80,7 +80,7 @@ def load_json(filename: str) -> Any:
 def save_user(user: User) -> None:
     """Guarda un usuario en la base de datos (por id), serializando datetime."""
     users = load_json('users') or {}
-    user_dict = user.dict()
+    user_dict = user.model_dump()
     # Serializar datetime a string ISO
     for field in ["created_at", "updated_at"]:
         if isinstance(user_dict.get(field), datetime):
@@ -126,7 +126,7 @@ def delete_user(user_id: str) -> bool:
 def save_game(game: Game) -> None:
     """Guarda una partida en la base de datos (por id), serializando datetime."""
     games = load_json('games') or {}
-    game_dict = game.dict()
+    game_dict = game.model_dump()
     # Serializar datetime a string ISO
     if isinstance(game_dict.get('created_at'), datetime):
         game_dict['created_at'] = game_dict['created_at'].isoformat()
