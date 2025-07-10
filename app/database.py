@@ -155,3 +155,12 @@ def load_all_games() -> List[Game]:
             g['created_at'] = datetime.fromisoformat(g['created_at'])
         result.append(Game(**g))
     return result
+
+def delete_game(game_id: str) -> bool:
+    """Elimina una partida de la base de datos por su id. Devuelve True si existía y fue eliminada."""
+    games = load_json('games') or {}
+    if game_id in games:
+        del games[game_id]
+        save_json('games', games)
+        return True
+    return False

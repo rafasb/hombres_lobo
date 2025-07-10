@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 import os
+from app.database import delete_user
 
 client = TestClient(app)
 
@@ -30,6 +31,8 @@ def test_admin_get_user():
     response = client.get(f"/admin/users/{user['id']}", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["id"] == user["id"]
+    # Eliminar usuario creado
+    assert delete_user(user["id"]) is True
 
 def test_admin_update_user():
     token = get_admin_token()
@@ -40,6 +43,8 @@ def test_admin_update_user():
     response = client.put(f"/admin/users/{user['id']}", json=update, headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["email"] == update["email"]
+    # Eliminar usuario creado
+    assert delete_user(user["id"]) is True
 
 def test_admin_delete_user():
     token = get_admin_token()
@@ -51,6 +56,8 @@ def test_admin_delete_user():
     get_resp = client.get(f"/admin/users/{user['id']}" , headers={"Authorization": f"Bearer {token}"})
     assert get_resp.status_code == 200
     assert get_resp.json()["status"] == "banned"
+    # Eliminar usuario creado (borrado lógico, pero limpiamos registro)
+    assert delete_user(user["id"]) is True
 
 def test_admin_update_user_role():
     token = get_admin_token()
@@ -60,6 +67,8 @@ def test_admin_update_user_role():
     response = client.put(f"/admin/users/{user['id']}/role?role=admin", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
+    # Eliminar usuario creado
+    assert delete_user(user["id"]) is True
 
 def test_admin_env_credentials_login():
     """Verifica que las credenciales de admin del .env permiten login y acceso a /admin/users."""

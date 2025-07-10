@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 import uuid
 from app.database import delete_user, load_all_users
+from app.services.game_service import delete_game
 
 client = TestClient(app)
 
@@ -86,6 +87,10 @@ def test_create_and_get_game_auth():
     game2 = get_resp.json()
     assert game2["id"] == gid
     assert game2["name"] == game_data["name"]
+    # Eliminar partida creada
+    assert delete_game(gid) is True
+    # Eliminar usuario creador
+    assert delete_user(creator["id"]) is True
 
 def test_list_games_auth():
     data = {

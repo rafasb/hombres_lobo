@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 import uuid
 from app.services.game_service import delete_game
+from app.database import delete_user
 
 client = TestClient(app)
 
@@ -42,6 +43,8 @@ def test_create_and_get_game_auth():
     assert game2["name"] == game_data["name"]
     # Eliminar partida creada
     assert delete_game(gid) is True
+    # Eliminar usuario creador
+    assert delete_user(creator["id"]) is True
 
 def test_list_games_auth():
     # Crear y loguear usuario
@@ -50,8 +53,11 @@ def test_list_games_auth():
         "email": f"gamelist_{uuid.uuid4()}@example.com",
         "password": "passgamelist"
     }
-    client.post("/register", data=data)
+    reg = client.post("/register", data=data)
+    creator = reg.json()
     token = get_token(data["username"], data["password"])
     response = client.get("/games", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+    # Eliminar usuario creado
+    assert delete_user(creator["id"]) is True

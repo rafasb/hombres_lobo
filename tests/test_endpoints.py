@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 import uuid
+from app.database import delete_user
 
 client = TestClient(app)
 
@@ -23,6 +24,8 @@ def test_register_user():
     assert "id" in user
     assert "created_at" in user
     assert "updated_at" in user
+    # Eliminar usuario creado
+    assert delete_user(user["id"]) is True
 
 def test_login_and_get_user_by_id():
     # Crear usuario primero
@@ -42,6 +45,8 @@ def test_login_and_get_user_by_id():
     user2 = response.json()
     assert user2["id"] == user_id
     assert user2["username"] == data["username"]
+    # Eliminar usuario creado
+    assert delete_user(user_id) is True
 
 def test_list_users_auth():
     # Crear y loguear usuario
@@ -51,7 +56,10 @@ def test_list_users_auth():
         "password": "passlist"
     }
     reg = client.post("/register", data=data)
+    user = reg.json()
     token = get_token(data["username"], data["password"])
     response = client.get("/users", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+    # Eliminar usuario creado
+    assert delete_user(user["id"]) is True

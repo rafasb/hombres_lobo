@@ -1,4 +1,4 @@
-from app.database import save_user, load_user, load_all_users, save_game, load_game, load_all_games, delete_user
+from app.database import save_user, load_user, load_all_users, save_game, load_game, load_all_games, delete_user, delete_game
 from app.models.user import User, UserRole, UserStatus
 from app.models.game import Game, GameStatus
 import uuid
@@ -70,6 +70,8 @@ def test_save_and_load_game():
     assert loaded.creator_id == game.creator_id
     assert loaded.status == game.status
     assert loaded.max_players == game.max_players
+    # Eliminar partida creada
+    assert delete_game(game.id) is True
 
 
 def test_load_all_games():
@@ -97,3 +99,6 @@ def test_load_all_games():
     ids = [g.id for g in games]
     assert game1.id in ids
     assert game2.id in ids
+    # Eliminar juegos creados
+    assert delete_game(game1.id) is True
+    assert delete_game(game2.id) is True
