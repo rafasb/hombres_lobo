@@ -26,3 +26,16 @@ jobs:
       - name: Run tests
         run: |
           pytest --maxfail=1 --disable-warnings -q
+
+      - name: Start FastAPI server (Uvicorn) in background
+        run: |
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          sleep 5
+
+      - name: Check FastAPI server is running
+        run: |
+          curl -f http://127.0.0.1:8000/docs || (echo 'Server did not respond' && exit 1)
+
+      - name: Stop Uvicorn server
+        run: |
+          pkill -f uvicorn || true
