@@ -1,17 +1,62 @@
 import os
 import json
+import uuid
 from typing import Any, List, Optional
 from app.models.user import User
 from app.models.game import Game
 from datetime import datetime
+from app.core.security import hash_password
+from app.models.user import UserRole
+from dotenv import load_dotenv
 
-# Configuración y conexión a la base de datos
+# Cargar variables de entorno
+load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
 
 # Directorio donde se almacenarán los ficheros JSON
 DB_DIR = os.path.join(os.path.dirname(__file__), 'db_json')
-
-# Crear el directorio si no existe
 os.makedirs(DB_DIR, exist_ok=True)
+
+# Inicializar ficheros si no existen
+def ensure_json_file(filename: str, empty_obj: Any = {}):
+    path = os.path.join(DB_DIR, filename)
+    if not os.path.exists(path):
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(empty_obj, f)
+
+ensure_json_file('users.json', {})
+ensure_json_file('games.json', {})
+
+# Crear usuario admin por defecto si no existe
+admin_username = os.getenv('ADMIN_USERNAME')
+admin_email = os.getenv('ADMIN_EMAIL')
+admin_password = os.getenv('ADMIN_PASSWORD')
+
+# Crear admin directamente usando funciones locales
+users = None
+try:
+    with open(os.path.join(DB_DIR, 'users.json'), 'r', encoding='utf-8') as f:
+        users = json.load(f)
+except Exception:
+    users = {}
+
+if admin_username and admin_email and admin_password:
+    if not any(u.get('username') == admin_username for u in users.values()):
+        admin = User(
+            id=str(uuid.uuid4()),
+            username=admin_username,
+            email=admin_email,
+            hashed_password=hash_password(admin_password),
+            role=UserRole.ADMIN,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        users[admin.id] = admin.dict()
+        # Serializar datetime
+        for field in ["created_at", "updated_at"]:
+            if isinstance(users[admin.id][field], datetime):
+                users[admin.id][field] = users[admin.id][field].isoformat()
+        with open(os.path.join(DB_DIR, 'users.json'), 'w', encoding='utf-8') as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
 
 def get_json_path(filename: str) -> str:
     """Devuelve la ruta absoluta de un fichero JSON en la base de datos."""
@@ -33,24 +78,48 @@ def load_json(filename: str) -> Any:
 # --- Funciones específicas para usuarios ---
 
 def save_user(user: User) -> None:
-    """Guarda un usuario en la base de datos (por id)."""
+    """Guarda un usuario en la base de datos (por id), serializando datetime."""
     users = load_json('users') or {}
-    users[user.id] = user.dict()
+    user_dict = user.dict()
+    # Serializar datetime a string ISO
+    for field in ["created_at", "updated_at"]:
+        if isinstance(user_dict.get(field), datetime):
+            user_dict[field] = user_dict[field].isoformat()
+    users[user.id] = user_dict
     save_json('users', users)
 
 def load_user(user_id: str) -> Optional[User]:
-    """Carga un usuario por id."""
+    """Carga un usuario por id, deserializando datetime."""
     users = load_json('users')
     if users and user_id in users:
-        return User(**users[user_id])
+        data = users[user_id]
+        for field in ["created_at", "updated_at"]:
+            if field in data and isinstance(data[field], str):
+                data[field] = datetime.fromisoformat(data[field])
+        return User(**data)
     return None
 
 def load_all_users() -> List[User]:
-    """Carga todos los usuarios."""
+    """Carga todos los usuarios, deserializando datetime."""
     users = load_json('users')
     if not users:
         return []
-    return [User(**u) for u in users.values()]
+    result = []
+    for u in users.values():
+        for field in ["created_at", "updated_at"]:
+            if field in u and isinstance(u[field], str):
+                u[field] = datetime.fromisoformat(u[field])
+        result.append(User(**u))
+    return result
+
+def delete_user(user_id: str) -> bool:
+    """Elimina un usuario de la base de datos por su id. Devuelve True si existía y fue eliminado."""
+    users = load_json('users') or {}
+    if user_id in users:
+        del users[user_id]
+        save_json('users', users)
+        return True
+    return False
 
 # --- Funciones específicas para partidas ---
 

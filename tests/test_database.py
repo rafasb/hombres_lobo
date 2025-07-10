@@ -1,17 +1,6 @@
-import os
-import shutil
 from app import database
 
-def setup_module(module):
-    # Crear un entorno limpio para los tests
-    if os.path.exists(database.DB_DIR):
-        shutil.rmtree(database.DB_DIR)
-    os.makedirs(database.DB_DIR, exist_ok=True)
-
-def teardown_module(module):
-    # Limpiar después de los tests
-    if os.path.exists(database.DB_DIR):
-        shutil.rmtree(database.DB_DIR)
+# Eliminados imports y funciones que borraban el directorio db_json
 
 def test_save_and_load_json():
     data = {"foo": "bar", "num": 42}

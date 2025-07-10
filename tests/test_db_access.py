@@ -1,23 +1,7 @@
-import os
-from app.database import save_user, load_user, load_all_users, save_game, load_game, load_all_games
+from app.database import save_user, load_user, load_all_users, save_game, load_game, load_all_games, delete_user
 from app.models.user import User, UserRole, UserStatus
 from app.models.game import Game, GameStatus
 import uuid
-import shutil
-
-TEST_DB_DIR = os.path.join(os.path.dirname(__file__), '../app/db_json')
-
-def setup_module(module):
-    # Limpiar la base de datos de test antes de cada módulo
-    if os.path.exists(TEST_DB_DIR):
-        shutil.rmtree(TEST_DB_DIR)
-    os.makedirs(TEST_DB_DIR, exist_ok=True)
-
-def teardown_module(module):
-    # Limpiar la base de datos de test después de cada módulo
-    if os.path.exists(TEST_DB_DIR):
-        shutil.rmtree(TEST_DB_DIR)
-
 
 def test_save_and_load_user():
     user = User(
@@ -36,6 +20,9 @@ def test_save_and_load_user():
     assert loaded.role == user.role
     assert loaded.status == user.status
     assert loaded.hashed_password == user.hashed_password
+    # Eliminar usuario creado
+    assert delete_user(user.id) is True
+    assert load_user(user.id) is None
 
 
 def test_load_all_users():
@@ -61,6 +48,9 @@ def test_load_all_users():
     ids = [u.id for u in users]
     assert user1.id in ids
     assert user2.id in ids
+    # Eliminar usuarios creados
+    assert delete_user(user1.id) is True
+    assert delete_user(user2.id) is True
 
 
 def test_save_and_load_game():

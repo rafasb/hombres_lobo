@@ -7,3 +7,4 @@ httpx
 python-multipart
 passlib[bcrypt]
 python-jose
+python-dotenv

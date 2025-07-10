@@ -25,7 +25,6 @@ def test_register_user():
     assert "updated_at" in user
 
 def test_login_and_get_user_by_id():
-    # Crear usuario primero
     data = {
         "username": "user2",
         "email": f"user2_{uuid.uuid4()}@example.com",
@@ -34,9 +33,7 @@ def test_login_and_get_user_by_id():
     reg = client.post("/register", data=data)
     user = reg.json()
     user_id = user["id"]
-    # Login para obtener token
     token = get_token(data["username"], data["password"])
-    # Obtener usuario autenticado
     response = client.get(f"/users/{user_id}", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     user2 = response.json()
@@ -44,7 +41,6 @@ def test_login_and_get_user_by_id():
     assert user2["username"] == data["username"]
 
 def test_list_users_auth():
-    # Crear y loguear usuario
     data = {
         "username": "userlist",
         "email": f"userlist_{uuid.uuid4()}@example.com",
@@ -57,7 +53,6 @@ def test_list_users_auth():
     assert isinstance(response.json(), list)
 
 def test_create_and_get_game_auth():
-    # Crear usuario y loguear
     user_data = {
         "username": "creator",
         "email": f"creator_{uuid.uuid4()}@example.com",
@@ -77,7 +72,6 @@ def test_create_and_get_game_auth():
     assert game["name"] == game_data["name"]
     assert game["creator_id"] == creator["id"]
     assert game["max_players"] == 8
-    # Obtener partida autenticado
     gid = game["id"]
     get_resp = client.get(f"/games/{gid}", headers={"Authorization": f"Bearer {token}"})
     assert get_resp.status_code == 200
@@ -86,7 +80,6 @@ def test_create_and_get_game_auth():
     assert game2["name"] == game_data["name"]
 
 def test_list_games_auth():
-    # Crear y loguear usuario
     data = {
         "username": "gamelist",
         "email": f"gamelist_{uuid.uuid4()}@example.com",
