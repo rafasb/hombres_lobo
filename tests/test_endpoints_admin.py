@@ -60,3 +60,12 @@ def test_admin_update_user_role():
     response = client.put(f"/admin/users/{user['id']}/role?role=admin", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
+
+def test_admin_env_credentials_login():
+    """Verifica que las credenciales de admin del .env permiten login y acceso a /admin/users."""
+    token = get_admin_token()
+    assert token is not None
+    # El token debe permitir acceso a endpoint admin
+    response = client.get("/admin/users", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
