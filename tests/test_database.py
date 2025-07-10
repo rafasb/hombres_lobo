@@ -1,6 +1,5 @@
 import os
 import shutil
-import pytest
 from app import database
 
 def setup_module(module):

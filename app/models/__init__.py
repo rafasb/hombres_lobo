@@ -1,0 +1,3 @@
+from .roles import GameRole, RoleInfo
+
+# ...existing code...
