@@ -1,6 +1,12 @@
 # To Do
 
-- [ ] genera los modelos base para usuarios
-- [ ] genera los modelos base para las partidas
-- [ ] genera los modelos base para los roles
-- [ ] Prepara funciones específicas de acceso a datos en la base JSON
+- [ ] Instalar dependencias de seguridad:
+passlib[bcrypt] para hashing de contraseñas.
+python-jose para JWT.
+Implementar en security.py:
+Funciones de hash/verificación de contraseña.
+Funciones para crear/verificar JWT.
+Crear endpoint /login en routes_auth.py.
+Añadir dependencias de usuario autenticado en dependencies.py y proteger rutas.
+- [ ]  añadir autenticación y autorización (por ejemplo, usando dependencias en FastAPI y utilidades en security.py). Si quieres, puedo implementar autenticación básica o JWT
+- [ ] añadir los endpoints de login y logout
