@@ -1,5 +1,7 @@
 # To Do
 
+ASEGURARSE QUE LAS PARTIDAS NO INICIAN SI NO HAY MÁS DE 10 JUAGORES Y MENOS DE 18
+
 Servicios/endpoints que faltan para cubrir completamente los permisos del creador:
 
 Endpoint/servicio para modificar la parametrización de la partida (PUT/PATCH /games/{game_id}).

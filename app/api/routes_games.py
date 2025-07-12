@@ -15,6 +15,7 @@ from app.services.game_service import (
     change_game_status,
     creator_delete_game,
     join_game,
+    assign_roles,
 )
 from app.core.dependencies import get_current_user
 import uuid
@@ -28,7 +29,7 @@ def create_new_game(game: GameCreate, user=Depends(get_current_user)):
         id=str(uuid.uuid4()),
         name=game.name,
         creator_id=game.creator_id,
-        players=[],
+        players=[user],  # El creador se une automáticamente
         roles={},
         status=GameStatus.WAITING,
         max_players=game.max_players,
@@ -58,6 +59,19 @@ def join_game_endpoint(game_id: str, user=Depends(get_current_user)):
     raise HTTPException(
         status_code=400,
         detail="No puedes unirte a la partida (partida llena, ya comenzó, no existe, o ya eres jugador)",
+    )
+
+
+@router.post("/games/{game_id}/assign-roles", response_model=Game)
+def assign_roles_endpoint(game_id: str, user=Depends(get_current_user)):
+    """Permite al creador o admin iniciar el reparto de roles y comenzar la partida."""
+    is_admin = user.role == UserRole.ADMIN
+    game = assign_roles(game_id, user.id, is_admin)
+    if game:
+        return game
+    raise HTTPException(
+        status_code=400,
+        detail="No puedes iniciar el reparto de roles (no tienes permisos, partida ya iniciada, o faltan jugadores)",
     )
 
 
