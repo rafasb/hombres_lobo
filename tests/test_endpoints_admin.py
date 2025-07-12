@@ -78,3 +78,30 @@ def test_admin_env_credentials_login():
     response = client.get("/admin/users", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+def test_admin_delete_game():
+    token = get_admin_token()
+    # Crear usuario y partida
+    user_data = {"username": "admin_game", "email": "admin_game@example.com", "password": "adminpassgame"}
+    reg = client.post("/register", data=user_data)
+    creator = reg.json()
+    user_token = get_token(user_data["username"], user_data["password"])
+    game_data = {
+        "name": "Partida Admin Test",
+        "creator_id": creator["id"],
+        "max_players": 8
+    }
+    resp = client.post("/games", json=game_data, headers={"Authorization": f"Bearer {user_token}"})
+    assert resp.status_code == 200
+    game = resp.json()
+    gid = game["id"]
+    # Eliminar partida como admin
+    del_resp = client.delete(f"/admin/games/{gid}", headers={"Authorization": f"Bearer {token}"})
+    assert del_resp.status_code == 200
+    assert del_resp.json()["detail"] == "Partida eliminada"
+    # Comprobar que ya no existe
+    get_resp = client.get(f"/games/{gid}", headers={"Authorization": f"Bearer {user_token}"})
+    assert get_resp.status_code == 404
+    # Limpiar usuario creado
+    from app.database import delete_user
+    assert delete_user(creator["id"]) is True
