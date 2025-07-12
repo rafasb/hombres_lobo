@@ -36,3 +36,11 @@ def get_game_by_id(game_id: str, user=Depends(get_current_user)):
 @router.get("/games", response_model=list[Game])
 def list_games(user=Depends(get_current_user)):
     return get_all_games()
+
+@router.post("/games/{game_id}/leave")
+def leave_game_endpoint(game_id: str, user=Depends(get_current_user)):
+    """Permite que un usuario autenticado abandone una partida si aún no ha comenzado."""
+    from app.services.game_service import leave_game
+    if leave_game(game_id, user.id):
+        return {"detail": "Has abandonado la partida"}
+    raise HTTPException(status_code=400, detail="No puedes abandonar la partida (no eres jugador o la partida ya ha comenzado)")

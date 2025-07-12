@@ -8,7 +8,7 @@
 - Puede unirse a partidas existentes (si no han comenzado y no están llenas).
 - Puede abandonar una partida antes de que comience.
 - Puede consultar el listado de partidas públicas y su propio historial de partidas.
-- Puede ver y modificar su propio perfil (email, contraseña, etc.).
+- Puede ver y modificar su propio perfil (email y contraseña).
 - **Restricciones:**
   - No puede modificar, eliminar ni avanzar fases en partidas que no haya creado.
   - No puede eliminar a otros usuarios ni partidas ajenas.

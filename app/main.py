@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from app.api import routes_auth, routes_games, routes_admin
+from app.api import routes_games, routes_admin, routes_users
 
 app = FastAPI()
 
@@ -12,6 +12,6 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 # Incluir rutas
-app.include_router(routes_auth.router)
+app.include_router(routes_users.router)
 app.include_router(routes_games.router)
 app.include_router(routes_admin.router)

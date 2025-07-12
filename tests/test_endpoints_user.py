@@ -108,3 +108,57 @@ def test_list_games_auth():
     user = next((u for u in users if u.username == data["username"]), None)
     if user:
         assert delete_user(user.id) is True
+
+def test_leave_game_endpoint():
+    # Crear usuario y loguear
+    user_data = {
+        "username": "jugador_leave",
+        "email": "leave_{0}@example.com".format(uuid.uuid4()),
+        "password": "leavepass"
+    }
+    reg = client.post("/register", data=user_data)
+    user = reg.json()
+    token = get_token(user_data["username"], user_data["password"])
+    # Crear partida y añadir usuario como jugador
+    game_data = {
+        "name": "Partida Leave Test",
+        "creator_id": user["id"],
+        "max_players": 8
+    }
+    resp = client.post("/games", json=game_data, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    game = resp.json()
+    gid = game["id"]
+    # Simular que el usuario se une a la partida (añadirlo a players)
+    from app.database import load_game, save_game
+    g = load_game(gid)
+    assert g is not None
+    # Añadir usuario como dict serializable directamente a la estructura interna
+    if hasattr(g, '__dict__'):
+        if not hasattr(g, 'players') or g.players is None:
+            g.players = []
+        g.players.append(user)
+        # Forzar serialización manual
+        from app.database import save_json, load_json
+        games = load_json('games') or {}
+        game_dict = g.model_dump()
+        import datetime
+        if isinstance(game_dict.get('created_at'), datetime.datetime):
+            game_dict['created_at'] = game_dict['created_at'].isoformat()
+        games[gid] = game_dict
+        save_json('games', games)
+    else:
+        raise AssertionError('No se pudo manipular la partida para el test')
+    # Abandonar la partida
+    leave_resp = client.post(f"/games/{gid}/leave", headers={"Authorization": f"Bearer {token}"})
+    assert leave_resp.status_code == 200
+    assert leave_resp.json()["detail"] == "Has abandonado la partida"
+    # Comprobar que ya no está en la lista de jugadores
+    g2 = load_game(gid)
+    assert g2 is not None
+    assert all((p["id"] if isinstance(p, dict) else p.id) != user["id"] for p in g2.players)
+    # Limpiar datos
+    from app.services.game_service import delete_game
+    assert delete_game(gid) is True
+    from app.database import delete_user
+    assert delete_user(user["id"]) is True
