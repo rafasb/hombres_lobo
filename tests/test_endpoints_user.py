@@ -162,3 +162,46 @@ def test_leave_game_endpoint():
     assert delete_game(gid) is True
     from app.database import delete_user
     assert delete_user(user["id"]) is True
+
+def test_update_game_params_and_status_and_delete():
+    # Crear usuario y loguear
+    user_data = {
+        "username": "creador_param",
+        "email": f"param_{uuid.uuid4()}@example.com",
+        "password": "parampass"
+    }
+    reg = client.post("/register", data=user_data)
+    user = reg.json()
+    token = get_token(user_data["username"], user_data["password"])
+    # Crear partida
+    game_data = {
+        "name": "Partida Param Test",
+        "creator_id": user["id"],
+        "max_players": 8
+    }
+    resp = client.post("/games", json=game_data, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    game = resp.json()
+    gid = game["id"]
+    # Modificar parámetros (nombre y max_players)
+    update_data = {"name": "Nueva Partida", "max_players": 10}
+    upd_resp = client.put(f"/games/{gid}", json=update_data, headers={"Authorization": f"Bearer {token}"})
+    assert upd_resp.status_code == 200
+    updated = upd_resp.json()
+    assert updated["name"] == "Nueva Partida"
+    assert updated["max_players"] == 10
+    # Cambiar estado a STARTED
+    status_resp = client.put(f"/games/{gid}/status", json="started", headers={"Authorization": f"Bearer {token}"})
+    assert status_resp.status_code == 200
+    assert status_resp.json()["status"] == "started"
+    # Pausar la partida
+    pause_resp = client.put(f"/games/{gid}/status", json="paused", headers={"Authorization": f"Bearer {token}"})
+    assert pause_resp.status_code == 200
+    assert pause_resp.json()["status"] == "paused"
+    # Eliminar la partida (debe poder porque está pausada)
+    del_resp = client.delete(f"/games/{gid}", headers={"Authorization": f"Bearer {token}"})
+    assert del_resp.status_code == 200
+    assert del_resp.json()["detail"] == "Partida eliminada"
+    # Limpiar usuario
+    from app.database import delete_user
+    assert delete_user(user["id"]) is True

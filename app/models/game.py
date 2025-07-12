@@ -10,6 +10,7 @@ class GameStatus(str, Enum):
     STARTED = "started"      # En curso
     NIGHT = "night"          # Fase de noche
     DAY = "day"              # Fase de día
+    PAUSED = "paused"        # Pausada
     FINISHED = "finished"    # Finalizada
 
 class GameBase(BaseModel):

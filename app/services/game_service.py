@@ -4,7 +4,7 @@ Incluye funciones para crear, obtener y listar partidas usando la base de datos 
 """
 
 from app.database import save_game, load_game, load_all_games
-from app.models.game import Game
+from app.models.game import Game, GameStatus
 from typing import Optional, List
 
 # Lógica relacionada con partidas
@@ -46,3 +46,49 @@ def leave_game(game_id: str, user_id: str) -> bool:
         save_game(game)
         return True
     return False
+
+def update_game_params(game_id: str, user_id: str, name: str | None = None, max_players: int | None = None, roles: dict | None = None) -> Optional[Game]:
+    """Permite al creador modificar nombre, max_players y roles antes de que comience la partida."""
+    game = load_game(game_id)
+    if not game or game.creator_id != user_id or game.status != GameStatus.WAITING:
+        return None
+    if name is not None:
+        game.name = name
+    if max_players is not None:
+        game.max_players = max_players
+    if roles is not None:
+        game.roles = roles
+    save_game(game)
+    return game
+
+def change_game_status(game_id: str, user_id: str, new_status: GameStatus) -> Optional[Game]:
+    """Permite al creador iniciar, pausar, avanzar fase o detener la partida."""
+    game = load_game(game_id)
+    if not game or game.creator_id != user_id:
+        return None
+    # Lógica de transición de estados
+    allowed = False
+    if new_status == GameStatus.STARTED and game.status == GameStatus.WAITING:
+        allowed = True
+    elif new_status == GameStatus.NIGHT and game.status in [GameStatus.STARTED, GameStatus.DAY]:
+        allowed = True
+    elif new_status == GameStatus.DAY and game.status == GameStatus.NIGHT:
+        allowed = True
+    elif new_status == GameStatus.FINISHED and game.status in [GameStatus.STARTED, GameStatus.NIGHT, GameStatus.DAY]:
+        allowed = True
+    elif new_status == GameStatus.WAITING and game.status == GameStatus.PAUSED:
+        allowed = True
+    elif new_status == GameStatus.PAUSED and game.status in [GameStatus.STARTED, GameStatus.NIGHT, GameStatus.DAY]:
+        allowed = True
+    if not allowed:
+        return None
+    game.status = new_status
+    save_game(game)
+    return game
+
+def creator_delete_game(game_id: str, user_id: str) -> bool:
+    """Permite al creador eliminar la partida si está en estado WAITING o PAUSED."""
+    game = load_game(game_id)
+    if not game or game.creator_id != user_id or game.status not in [GameStatus.WAITING, GameStatus.PAUSED]:
+        return False
+    return delete_game(game_id)
