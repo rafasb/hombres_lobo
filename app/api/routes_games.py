@@ -14,6 +14,7 @@ from app.services.game_service import (
     update_game_params,
     change_game_status,
     creator_delete_game,
+    join_game,
 )
 from app.core.dependencies import get_current_user
 import uuid
@@ -47,6 +48,17 @@ def get_game_by_id(game_id: str, user=Depends(get_current_user)):
 @router.get("/games", response_model=list[Game])
 def list_games(user=Depends(get_current_user)):
     return get_all_games()
+
+
+@router.post("/games/{game_id}/join")
+def join_game_endpoint(game_id: str, user=Depends(get_current_user)):
+    """Permite que un usuario autenticado se una a una partida que esté esperando jugadores."""
+    if join_game(game_id, user):
+        return {"detail": "Te has unido a la partida exitosamente"}
+    raise HTTPException(
+        status_code=400,
+        detail="No puedes unirte a la partida (partida llena, ya comenzó, no existe, o ya eres jugador)",
+    )
 
 
 @router.post("/games/{game_id}/leave")

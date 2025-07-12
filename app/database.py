@@ -134,6 +134,15 @@ def save_game(game: Game) -> None:
     # Serializar datetime a string ISO
     if isinstance(game_dict.get('created_at'), datetime):
         game_dict['created_at'] = game_dict['created_at'].isoformat()
+    
+    # Serializar datetime en los objetos User de la lista de jugadores
+    if 'players' in game_dict and game_dict['players']:
+        for player in game_dict['players']:
+            if isinstance(player.get('created_at'), datetime):
+                player['created_at'] = player['created_at'].isoformat()
+            if isinstance(player.get('updated_at'), datetime):
+                player['updated_at'] = player['updated_at'].isoformat()
+    
     games[game.id] = game_dict
     save_json('games', games)
 
@@ -145,6 +154,15 @@ def load_game(game_id: str) -> Optional[Game]:
         # Deserializar string ISO a datetime
         if 'created_at' in data and isinstance(data['created_at'], str):
             data['created_at'] = datetime.fromisoformat(data['created_at'])
+        
+        # Deserializar datetime en los objetos User de la lista de jugadores
+        if 'players' in data and data['players']:
+            for player in data['players']:
+                if 'created_at' in player and isinstance(player['created_at'], str):
+                    player['created_at'] = datetime.fromisoformat(player['created_at'])
+                if 'updated_at' in player and isinstance(player['updated_at'], str):
+                    player['updated_at'] = datetime.fromisoformat(player['updated_at'])
+        
         return Game(**data)
     return None
 

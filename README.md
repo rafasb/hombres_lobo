@@ -32,7 +32,7 @@ El Narrador Digital (la app) se encargará de todo el proceso:
 
 1. **Creación de Partida:** Un jugador crea la partida en la app y comparte un código con los demás.
 2. **Unión de Jugadores:** Los demás jugadores se unen a la partida usando el código.
-3. **Asignación de Roles:** Una vez que todos están en la partida, la app asigna roles de forma aleatoria y secreta. Cada jugador recibirá un aviso de forma privada en la app con su rol, su objetivo y cualquier habilidad especial. Los Hombres Lobo serán notificados de la identidad de sus compañeros en la primera fase de "noche" a través de un aviso privado en la app.
+3. **Asignación de Roles:** Una vez que todos están en la partida, la app asigna roles de forma aleatoria y secreta. Cada jugador recibirá un aviso de forma privada en la app con su rol, su objetivo y cualquier habilidad especial. Los Hombres Lobo serán notificados de la identidad de sus compañeros en la primera fase de "noche" a través de un aviso privado en la app. Se asigna un hombre lobo cada 3 ciudadanos. 
 
 ---
 

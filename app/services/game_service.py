@@ -104,3 +104,27 @@ def creator_delete_game(game_id: str, user_id: str, is_admin: bool = False) -> b
     if not is_admin and (game.creator_id != user_id or game.status not in [GameStatus.WAITING, GameStatus.PAUSED]):
         return False
     return delete_game(game_id)
+
+def join_game(game_id: str, user) -> bool:
+    """Permite que un usuario se una a una partida si está en estado WAITING y hay espacios disponibles."""
+    from app.database import load_game, save_game
+    game = load_game(game_id)
+    if not game:
+        return False
+    
+    # Solo se puede unir si la partida está en estado WAITING
+    if game.status != GameStatus.WAITING:
+        return False
+    
+    # Verificar que no haya alcanzado el máximo de jugadores
+    if len(game.players) >= game.max_players:
+        return False
+    
+    # Verificar que el usuario no esté ya en la partida
+    if any(p.id == user.id for p in game.players):
+        return False
+    
+    # Agregar al usuario a la lista de jugadores
+    game.players.append(user)
+    save_game(game)
+    return True
