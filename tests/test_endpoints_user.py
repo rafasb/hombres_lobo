@@ -56,9 +56,16 @@ def test_list_users_auth():
     reg = client.post("/register", data=data)
     user = reg.json()
     token = get_token(data["username"], data["password"])
+    
+    # Usuario regular NO debe poder acceder a lista completa de usuarios
     response = client.get("/users", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 403  # Forbidden - solo admin puede ver lista completa
+    
+    # Pero SÍ debe poder acceder a su propio perfil
+    response = client.get(f"/users/{user['id']}", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert response.json()["id"] == user["id"]
+    
     # Eliminar usuario creado
     assert delete_user(user["id"]) is True
 
