@@ -10,7 +10,11 @@ from app.models.user import UserRole
 from dotenv import load_dotenv
 
 # Cargar variables de entorno
-load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
+# se cargarán de .env y si no existe de .env.example
+if not os.path.exists(os.path.join(os.path.dirname(__file__), '../.env')):
+    os.rename(os.path.join(os.path.dirname(__file__), '../.env.example'), os.path.join(os.path.dirname(__file__), '../.env'))
+else:
+    load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
 
 # Directorio donde se almacenarán los ficheros JSON
 DB_DIR = os.path.join(os.path.dirname(__file__), 'db_json')

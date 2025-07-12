@@ -46,6 +46,7 @@ app/db_json/
 *.sqlite3
 *.db
 *.json
+!.env.example
 
 # Unit test / coverage reports
 htmlcov/
