@@ -23,3 +23,31 @@ def admin_required(user=Depends(get_current_user)):
     if user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso solo para administradores")
     return user
+
+def creator_or_admin_required(game_id: str, user=Depends(get_current_user)):
+    """Verifica que el usuario sea el creador de la partida o admin."""
+    from app.services.game_service import get_game
+    
+    # Si es admin, tiene acceso total
+    if user.role == UserRole.ADMIN:
+        return user
+    
+    # Si no es admin, debe ser el creador de la partida
+    game = get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partida no encontrada")
+    
+    if game.creator_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo el creador o admin pueden realizar esta acción")
+    
+    return user
+
+def self_or_admin_required(user_id: str, user=Depends(get_current_user)):
+    """Verifica que el usuario solo pueda acceder a su propio perfil o sea admin."""
+    if user.role == UserRole.ADMIN:
+        return user
+    
+    if user.id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo puedes acceder a tu propio perfil")
+    
+    return user

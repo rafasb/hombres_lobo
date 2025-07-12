@@ -5,8 +5,9 @@ Incluye endpoints para gestión de usuarios (solo accesibles por admin).
 
 from fastapi import APIRouter, HTTPException, Body, Depends
 from app.models.user import User, UserRole, UserStatus, UserUpdate
+from app.models.game import Game
 from app.services.user_service import get_user, get_all_users, update_user
-from app.services.game_service import delete_game
+from app.services.game_service import delete_game, get_all_games
 from app.core.dependencies import admin_required
 
 router = APIRouter()
@@ -57,3 +58,8 @@ def admin_delete_game(game_id: str, admin=Depends(admin_required)):
     if delete_game(game_id):
         return {"detail": "Partida eliminada"}
     raise HTTPException(status_code=404, detail="Partida no encontrada")
+
+@router.get("/admin/games", response_model=list[Game])
+def admin_list_games(admin=Depends(admin_required)):
+    """Consultar el estado de todas las partidas activas o históricas (solo admin)."""
+    return get_all_games()

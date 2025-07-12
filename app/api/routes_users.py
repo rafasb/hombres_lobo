@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Form, status, Depends, Body
 from app.models.user import User, UserRole, UserStatus, UserUpdate
 from app.services.user_service import create_user, get_user, get_all_users, update_user
 from app.core.security import hash_password, verify_password, create_access_token
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, admin_required
 import uuid
 
 router = APIRouter()
@@ -40,14 +40,19 @@ def login_user(username: str = Form(...), password: str = Form(...)):
     return {"access_token": token, "token_type": "bearer"}
 
 @router.get("/users/{user_id}", response_model=User)
-def get_user_by_id(user_id: str, user=Depends(get_current_user)):
+def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
+    # Verificar que solo puede ver su propio perfil o ser admin
+    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Solo puedes acceder a tu propio perfil")
+    
     user_obj = get_user(user_id)
     if not user_obj:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user_obj
 
 @router.get("/users", response_model=list[User])
-def list_users(user=Depends(get_current_user)):
+def list_users(admin=Depends(admin_required)):
+    """Solo los administradores pueden ver la lista completa de usuarios."""
     return get_all_users()
 
 @router.put("/users/me", response_model=User)

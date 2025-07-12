@@ -6,6 +6,7 @@ Requiere autenticación JWT para acceder.
 
 from fastapi import APIRouter, HTTPException, Depends, Body
 from app.models.game import Game, GameCreate, GameStatus
+from app.models.user import UserRole
 from app.services.game_service import (
     create_game,
     get_game,
@@ -63,11 +64,12 @@ def leave_game_endpoint(game_id: str, user=Depends(get_current_user)):
 
 @router.put("/games/{game_id}", response_model=Game)
 def update_game(game_id: str, data: dict = Body(...), user=Depends(get_current_user)):
-    """Permite al creador modificar nombre, max_players y roles antes de que comience la partida."""
+    """Permite al creador o admin modificar nombre, max_players y roles antes de que comience la partida."""
     name = data.get("name")
     max_players = data.get("max_players")
     roles = data.get("roles")
-    updated = update_game_params(game_id, user.id, name, max_players, roles)
+    is_admin = user.role == UserRole.ADMIN
+    updated = update_game_params(game_id, user.id, name, max_players, roles, is_admin)
     if updated:
         return updated
     raise HTTPException(
@@ -80,8 +82,9 @@ def update_game(game_id: str, data: dict = Body(...), user=Depends(get_current_u
 def update_game_status(
     game_id: str, status: GameStatus = Body(...), user=Depends(get_current_user)
 ):
-    """Permite al creador iniciar, pausar, avanzar fase o detener la partida."""
-    updated = change_game_status(game_id, user.id, status)
+    """Permite al creador o admin iniciar, pausar, avanzar fase o detener la partida."""
+    is_admin = user.role == UserRole.ADMIN
+    updated = change_game_status(game_id, user.id, status, is_admin)
     if updated:
         return updated
     raise HTTPException(
@@ -91,8 +94,9 @@ def update_game_status(
 
 @router.delete("/games/{game_id}")
 def delete_game_by_creator(game_id: str, user=Depends(get_current_user)):
-    """Permite al creador eliminar la partida si está en estado WAITING o PAUSED."""
-    if creator_delete_game(game_id, user.id):
+    """Permite al creador o admin eliminar la partida si está en estado WAITING o PAUSED."""
+    is_admin = user.role == UserRole.ADMIN
+    if creator_delete_game(game_id, user.id, is_admin):
         return {"detail": "Partida eliminada"}
     raise HTTPException(
         status_code=403, detail="No tienes permisos o la partida no puede eliminarse"

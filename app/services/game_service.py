@@ -47,10 +47,16 @@ def leave_game(game_id: str, user_id: str) -> bool:
         return True
     return False
 
-def update_game_params(game_id: str, user_id: str, name: str | None = None, max_players: int | None = None, roles: dict | None = None) -> Optional[Game]:
-    """Permite al creador modificar nombre, max_players y roles antes de que comience la partida."""
+def update_game_params(game_id: str, user_id: str, name: str | None = None, max_players: int | None = None, roles: dict | None = None, is_admin: bool = False) -> Optional[Game]:
+    """Permite al creador o admin modificar nombre, max_players y roles antes de que comience la partida."""
     game = load_game(game_id)
-    if not game or game.creator_id != user_id or game.status != GameStatus.WAITING:
+    if not game:
+        return None
+    # Solo el creador o admin pueden modificar, y solo si está en estado WAITING
+    if not is_admin and (game.creator_id != user_id or game.status != GameStatus.WAITING):
+        return None
+    # Admin puede modificar en cualquier momento, creador solo en WAITING
+    if not is_admin and game.status != GameStatus.WAITING:
         return None
     if name is not None:
         game.name = name
@@ -61,10 +67,13 @@ def update_game_params(game_id: str, user_id: str, name: str | None = None, max_
     save_game(game)
     return game
 
-def change_game_status(game_id: str, user_id: str, new_status: GameStatus) -> Optional[Game]:
-    """Permite al creador iniciar, pausar, avanzar fase o detener la partida."""
+def change_game_status(game_id: str, user_id: str, new_status: GameStatus, is_admin: bool = False) -> Optional[Game]:
+    """Permite al creador o admin iniciar, pausar, avanzar fase o detener la partida."""
     game = load_game(game_id)
-    if not game or game.creator_id != user_id:
+    if not game:
+        return None
+    # Solo el creador o admin pueden cambiar el estado
+    if not is_admin and game.creator_id != user_id:
         return None
     # Lógica de transición de estados
     allowed = False
@@ -86,9 +95,12 @@ def change_game_status(game_id: str, user_id: str, new_status: GameStatus) -> Op
     save_game(game)
     return game
 
-def creator_delete_game(game_id: str, user_id: str) -> bool:
-    """Permite al creador eliminar la partida si está en estado WAITING o PAUSED."""
+def creator_delete_game(game_id: str, user_id: str, is_admin: bool = False) -> bool:
+    """Permite al creador o admin eliminar la partida si está en estado WAITING o PAUSED."""
     game = load_game(game_id)
-    if not game or game.creator_id != user_id or game.status not in [GameStatus.WAITING, GameStatus.PAUSED]:
+    if not game:
+        return False
+    # Admin puede eliminar cualquier partida, creador solo las suyas en WAITING o PAUSED
+    if not is_admin and (game.creator_id != user_id or game.status not in [GameStatus.WAITING, GameStatus.PAUSED]):
         return False
     return delete_game(game_id)

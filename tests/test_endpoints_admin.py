@@ -105,3 +105,59 @@ def test_admin_delete_game():
     # Limpiar usuario creado
     from app.database import delete_user
     assert delete_user(creator["id"]) is True
+
+def test_admin_list_games():
+    """Test para verificar que el admin puede consultar todas las partidas."""
+    token = get_admin_token()
+    
+    # Crear algunos usuarios y partidas para probar
+    user1_data = {"username": "gameuser1", "email": "gameuser1@example.com", "password": "gamepass123"}
+    user2_data = {"username": "gameuser2", "email": "gameuser2@example.com", "password": "gamepass123"}
+    
+    reg1 = client.post("/register", data=user1_data)
+    reg2 = client.post("/register", data=user2_data)
+    user1 = reg1.json()
+    user2 = reg2.json()
+    
+    user1_token = get_token(user1_data["username"], user1_data["password"])
+    user2_token = get_token(user2_data["username"], user2_data["password"])
+    
+    # Crear varias partidas
+    game1_data = {
+        "name": "Partida Test 1",
+        "creator_id": user1["id"],
+        "max_players": 6
+    }
+    game2_data = {
+        "name": "Partida Test 2", 
+        "creator_id": user2["id"],
+        "max_players": 8
+    }
+    
+    resp1 = client.post("/games", json=game1_data, headers={"Authorization": f"Bearer {user1_token}"})
+    resp2 = client.post("/games", json=game2_data, headers={"Authorization": f"Bearer {user2_token}"})
+    
+    assert resp1.status_code == 200
+    assert resp2.status_code == 200
+    
+    game1 = resp1.json()
+    game2 = resp2.json()
+    
+    # El admin debe poder ver todas las partidas
+    response = client.get("/admin/games", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    games_list = response.json()
+    assert isinstance(games_list, list)
+    
+    # Verificar que las partidas creadas están en la lista
+    game_ids = [game["id"] for game in games_list]
+    assert game1["id"] in game_ids
+    assert game2["id"] in game_ids
+    
+    # Limpiar partidas y usuarios creados
+    client.delete(f"/admin/games/{game1['id']}", headers={"Authorization": f"Bearer {token}"})
+    client.delete(f"/admin/games/{game2['id']}", headers={"Authorization": f"Bearer {token}"})
+    
+    from app.database import delete_user
+    assert delete_user(user1["id"]) is True
+    assert delete_user(user2["id"]) is True
