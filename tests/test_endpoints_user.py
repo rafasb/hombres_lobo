@@ -3,6 +3,7 @@ from app.main import app
 import uuid
 from app.database import delete_user, load_all_users
 from app.services.game_service import delete_game
+from app.database import load_game
 
 client = TestClient(app)
 
@@ -130,7 +131,6 @@ def test_leave_game_endpoint():
     game = resp.json()
     gid = game["id"]
     # Simular que el usuario se une a la partida (añadirlo a players)
-    from app.database import load_game, save_game
     g = load_game(gid)
     assert g is not None
     # Añadir usuario como dict serializable directamente a la estructura interna

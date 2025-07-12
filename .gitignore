@@ -28,7 +28,6 @@ venv/
 ENV/
 env/
 .venv/
-.env
 
 # Pytest
 .cache/
