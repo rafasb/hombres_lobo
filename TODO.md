@@ -8,14 +8,14 @@
 3. Implementar autenticación JWT
 4. Crear las interfaces para cada rol
 
-## 
-A) Setup inicial del proyecto Vue
-B) Componentes de autenticación y lobby
-C) Interfaz principal del juego
-D) Integración con WebSockets para tiempo real
+## Fases de desarrollo frontend
+1. Setup inicial del proyecto Vue
+2. Componentes de autenticación y lobby
+3. Interfaz principal del juego
+4. Integración con WebSockets para tiempo real
 
 ### 1. Frontend Development
-- **React/Vue.js** - Interfaz de usuario moderna
+- **Vue.js** - Interfaz de usuario moderna
 - **WebSockets** - Comunicación en tiempo real
 - **State Management** - Redux/Vuex para estado del juego
 
