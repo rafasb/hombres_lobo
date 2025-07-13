@@ -4,7 +4,7 @@ Este documento describe los endpoints creados para que los jugadores con el rol 
 
 ## Endpoints Disponibles
 
-### 1. POST `/games/{game_id}/werewolf-attack`
+### 1. POST `/games/{game_id}/warewolf-attack`
 
 Permite a un hombre lobo seleccionar a un aldeano para devorar durante la fase nocturna.
 
@@ -31,13 +31,13 @@ Permite a un hombre lobo seleccionar a un aldeano para devorar durante la fase n
 
 **Ejemplo de uso:**
 ```bash
-curl -X POST "http://localhost:8000/games/game123/werewolf-attack" \
+curl -X POST "http://localhost:8000/games/game123/warewolf-attack" \
   -H "Authorization: Bearer <jwt_token>" \
   -H "Content-Type: application/json" \
   -d '{"target_id": "villager_user_id"}'
 ```
 
-### 2. GET `/games/{game_id}/werewolf-targets`
+### 2. GET `/games/{game_id}/warewolf-targets`
 
 Obtiene la lista de jugadores que pueden ser atacados por los hombres lobo.
 
@@ -60,7 +60,7 @@ Obtiene la lista de jugadores que pueden ser atacados por los hombres lobo.
 ]
 ```
 
-### 3. GET `/games/{game_id}/werewolf-consensus`
+### 3. GET `/games/{game_id}/warewolf-consensus`
 
 Verifica si los hombres lobo han llegado a un consenso sobre a quién atacar.
 
@@ -76,7 +76,7 @@ Verifica si los hombres lobo han llegado a un consenso sobre a quién atacar.
 }
 ```
 
-### 4. GET `/games/{game_id}/can-werewolf-act`
+### 4. GET `/games/{game_id}/can-warewolf-act`
 
 Verifica si el usuario puede realizar una acción como hombre lobo.
 
@@ -118,9 +118,9 @@ Obtiene la lista de todos los jugadores vivos en la partida.
 ## Flujo de Juego para Hombres Lobo
 
 1. **Fase nocturna iniciada**: La partida cambia a estado `GameStatus.NIGHT`
-2. **Obtener objetivos**: Los hombres lobo pueden usar `GET /werewolf-targets` para ver a quién pueden atacar
-3. **Seleccionar objetivo**: Cada hombre lobo usa `POST /werewolf-attack` para votar por su objetivo
-4. **Verificar consenso**: Se puede usar `GET /werewolf-consensus` para ver si todos han votado y hay acuerdo
+2. **Obtener objetivos**: Los hombres lobo pueden usar `GET /warewolf-targets` para ver a quién pueden atacar
+3. **Seleccionar objetivo**: Cada hombre lobo usa `POST /warewolf-attack` para votar por su objetivo
+4. **Verificar consenso**: Se puede usar `GET /warewolf-consensus` para ver si todos han votado y hay acuerdo
 5. **Resolver ataque**: Una vez que todos los hombres lobo han votado y hay consenso, se puede proceder a la siguiente fase
 
 ## Reglas de Negocio
@@ -135,10 +135,10 @@ Obtiene la lista de todos los jugadores vivos en la partida.
 
 Los endpoints utilizan el servicio `player_action_service.py` que incluye:
 
-- `werewolf_attack()`: Registra el voto de ataque de un hombre lobo
-- `get_werewolf_attack_consensus()`: Determina si hay consenso
-- `get_non_werewolf_players()`: Lista objetivos válidos
-- `can_werewolf_act()`: Verifica permisos de acción
+- `warewolf_attack()`: Registra el voto de ataque de un hombre lobo
+- `get_warewolf_attack_consensus()`: Determina si hay consenso
+- `get_non_warewolf_players()`: Lista objetivos válidos
+- `can_warewolf_act()`: Verifica permisos de acción
 - `reset_night_actions()`: Reinicia acciones para nueva noche
 
 ## Estructura de Datos
@@ -151,16 +151,16 @@ night_actions: Dict[str, Dict[str, str]] = {}
 Ejemplo de estructura:
 ```python
 {
-  "werewolf_attacks": {
-    "werewolf1_id": "target1_id",
-    "werewolf2_id": "target1_id"
+  "warewolf_attacks": {
+    "warewolf1_id": "target1_id",
+    "warewolf2_id": "target1_id"
   }
 }
 ```
 
 ## Testing
 
-Se incluyen tests comprehensivos en `tests/test_werewolf_actions.py` que verifican:
+Se incluyen tests comprehensivos en `tests/test_warewolf_actions.py` que verifican:
 - Ataques exitosos
 - Validación de objetivos
 - Restricciones de fase

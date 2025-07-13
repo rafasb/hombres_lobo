@@ -66,7 +66,7 @@ def assign_roles(game_id: str, user_id: str, is_admin: bool = False) -> Optional
     
     # Añadir hombres lobo
     for _ in range(num_werewolves):
-        available_roles.append(GameRole.WEREWOLF)
+        available_roles.append(GameRole.WAREWOLF)
     
     # Añadir roles especiales (máximo 1 de cada tipo, según disponibilidad)
     special_roles = [GameRole.SEER, GameRole.WITCH, GameRole.HUNTER, GameRole.CUPID]

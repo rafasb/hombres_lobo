@@ -79,9 +79,9 @@ class TestAssignRoles:
         assert len(result.roles) == 10
         
         # Verificar número de hombres lobo (10 // 3 = 3)
-        werewolf_count = sum(1 for role_info in result.roles.values() 
-                           if role_info.role == GameRole.WEREWOLF)
-        assert werewolf_count == 3
+        warewolf_count = sum(1 for role_info in result.roles.values() 
+                           if role_info.role == GameRole.WAREWOLF)
+        assert warewolf_count == 3
         
         # Verificar que hay roles especiales
         roles_list = [role_info.role for role_info in result.roles.values()]
@@ -124,9 +124,9 @@ class TestAssignRoles:
         assert len(result.roles) == 15
         
         # Verificar número de hombres lobo (15 // 3 = 5)
-        werewolf_count = sum(1 for role_info in result.roles.values() 
-                           if role_info.role == GameRole.WEREWOLF)
-        assert werewolf_count == 5
+        warewolf_count = sum(1 for role_info in result.roles.values() 
+                           if role_info.role == GameRole.WAREWOLF)
+        assert warewolf_count == 5
         
         # Verificar distribución total de roles
         roles_list = [role_info.role for role_info in result.roles.values()]
@@ -155,9 +155,9 @@ class TestAssignRoles:
         assert len(result.roles) == 18
         
         # Verificar número de hombres lobo (18 // 3 = 6)
-        werewolf_count = sum(1 for role_info in result.roles.values() 
-                           if role_info.role == GameRole.WEREWOLF)
-        assert werewolf_count == 6
+        warewolf_count = sum(1 for role_info in result.roles.values() 
+                           if role_info.role == GameRole.WAREWOLF)
+        assert warewolf_count == 6
         
         # 18 total - 6 lobos - 4 especiales = 8 aldeanos
         villager_count = sum(1 for role_info in result.roles.values() 
@@ -277,7 +277,7 @@ class TestAssignRoles:
             assert role_info.is_alive is True
             assert role_info.is_revealed is False
             assert role_info.role in [
-                GameRole.WEREWOLF, GameRole.VILLAGER, GameRole.SEER,
+                GameRole.WAREWOLF, GameRole.VILLAGER, GameRole.SEER,
                 GameRole.WITCH, GameRole.HUNTER, GameRole.CUPID
             ]
 

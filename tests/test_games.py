@@ -228,8 +228,8 @@ def test_assign_roles():
     
     # Verificar que hay el número correcto de hombres lobo (10 // 3 = 3)
     roles_list = list(updated_game["roles"].values())
-    werewolf_count = sum(1 for role_info in roles_list if role_info["role"] == "werewolf")
-    assert werewolf_count == 3
+    warewolf_count = sum(1 for role_info in roles_list if role_info["role"] == "warewolf")
+    assert warewolf_count == 3
     
     # Verificar que hay roles especiales
     special_roles = ["seer", "witch", "hunter", "cupid"]
@@ -352,8 +352,8 @@ def test_assign_roles_maximum_players():
     
     # Verificar que hay el número correcto de hombres lobo (18 // 3 = 6)
     roles_list = list(updated_game["roles"].values())
-    werewolf_count = sum(1 for role_info in roles_list if role_info["role"] == "werewolf")
-    assert werewolf_count == 6
+    warewolf_count = sum(1 for role_info in roles_list if role_info["role"] == "warewolf")
+    assert warewolf_count == 6
     
     # Verificar que hay todos los roles especiales
     special_roles = ["seer", "witch", "hunter", "cupid"]

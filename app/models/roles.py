@@ -10,7 +10,7 @@ class GameRole(str, Enum):
     WITCH = "witch"
     WILD_CHILD = "wild_child"
     CUPID = "cupid"
-    WEREWOLF = "werewolf"
+    WAREWOLF = "warewolf"
     LOVER = "lover"  # Estado especial, no rol principal
     # Puedes añadir más roles especiales aquí
 

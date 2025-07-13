@@ -9,7 +9,7 @@ from app.models.roles import GameRole
 from typing import Optional, List, Dict
 
 
-def werewolf_attack(game_id: str, attacker_id: str, target_id: str) -> Optional[Game]:
+def warewolf_attack(game_id: str, attacker_id: str, target_id: str) -> Optional[Game]:
     """
     Permite a un hombre lobo seleccionar a un aldeano para devorar durante la fase nocturna.
     
@@ -38,7 +38,7 @@ def werewolf_attack(game_id: str, attacker_id: str, target_id: str) -> Optional[
         return None
     
     # Verificar que el atacante es un hombre lobo
-    if attacker_role.role != GameRole.WEREWOLF:
+    if attacker_role.role != GameRole.WAREWOLF:
         return None
     
     # Verificar que el objetivo existe y está vivo
@@ -50,7 +50,7 @@ def werewolf_attack(game_id: str, attacker_id: str, target_id: str) -> Optional[
         return None
     
     # Verificar que el objetivo no es un hombre lobo (no pueden atacarse entre ellos)
-    if target_role.role == GameRole.WEREWOLF:
+    if target_role.role == GameRole.WAREWOLF:
         return None
     
     # Verificar que el hombre lobo no ha actuado ya esta noche
@@ -62,16 +62,16 @@ def werewolf_attack(game_id: str, attacker_id: str, target_id: str) -> Optional[
     game.roles[attacker_id].target_player_id = target_id
     
     # Registrar el voto de ataque del hombre lobo
-    if 'werewolf_attacks' not in game.night_actions:
-        game.night_actions['werewolf_attacks'] = {}
+    if 'warewolf_attacks' not in game.night_actions:
+        game.night_actions['warewolf_attacks'] = {}
     
-    game.night_actions['werewolf_attacks'][attacker_id] = target_id
+    game.night_actions['warewolf_attacks'][attacker_id] = target_id
     
     save_game(game)
     return game
 
 
-def get_werewolf_attack_consensus(game_id: str) -> Optional[str]:
+def get_warewolf_attack_consensus(game_id: str) -> Optional[str]:
     """
     Determina si los hombres lobo han llegado a un consenso sobre a quién atacar.
     
@@ -85,27 +85,27 @@ def get_werewolf_attack_consensus(game_id: str) -> Optional[str]:
     if not game:
         return None
     
-    if 'werewolf_attacks' not in game.night_actions:
+    if 'warewolf_attacks' not in game.night_actions:
         return None
     
     # Obtener todos los hombres lobo vivos
-    werewolves = [
+    warewolves = [
         player_id for player_id, role_info in game.roles.items()
-        if role_info.role == GameRole.WEREWOLF and role_info.is_alive
+        if role_info.role == GameRole.WAREWOLF and role_info.is_alive
     ]
     
     # Obtener votos de ataque
-    attack_votes = game.night_actions['werewolf_attacks']
+    attack_votes = game.night_actions['warewolf_attacks']
     
     # Verificar si todos los hombres lobo han votado
-    werewolf_votes = {ww_id: attack_votes.get(ww_id) for ww_id in werewolves if ww_id in attack_votes}
+    warewolf_votes = {ww_id: attack_votes.get(ww_id) for ww_id in warewolves if ww_id in attack_votes}
     
-    if len(werewolf_votes) != len(werewolves):
+    if len(warewolf_votes) != len(warewolves):
         return None  # No todos han votado aún
     
     # Contar votos por objetivo
     vote_counts = {}
-    for target_id in werewolf_votes.values():
+    for target_id in warewolf_votes.values():
         vote_counts[target_id] = vote_counts.get(target_id, 0) + 1
     
     # Encontrar el objetivo con más votos
@@ -147,7 +147,7 @@ def get_alive_players(game_id: str) -> List[Dict[str, str]]:
     return alive_players
 
 
-def get_non_werewolf_players(game_id: str) -> List[Dict[str, str]]:
+def get_non_warewolf_players(game_id: str) -> List[Dict[str, str]]:
     """
     Obtiene la lista de jugadores vivos que no son hombres lobo (objetivos válidos para ataque).
     
@@ -165,7 +165,7 @@ def get_non_werewolf_players(game_id: str) -> List[Dict[str, str]]:
     for player in game.players:
         if (player.id in game.roles and 
             game.roles[player.id].is_alive and 
-            game.roles[player.id].role != GameRole.WEREWOLF):
+            game.roles[player.id].role != GameRole.WAREWOLF):
             valid_targets.append({
                 "id": player.id,
                 "username": player.username
@@ -174,7 +174,7 @@ def get_non_werewolf_players(game_id: str) -> List[Dict[str, str]]:
     return valid_targets
 
 
-def can_werewolf_act(game_id: str, player_id: str) -> bool:
+def can_warewolf_act(game_id: str, player_id: str) -> bool:
     """
     Verifica si un hombre lobo puede realizar una acción nocturna.
     
@@ -202,7 +202,7 @@ def can_werewolf_act(game_id: str, player_id: str) -> bool:
         return False
     
     # Verificar que es un hombre lobo
-    if player_role.role != GameRole.WEREWOLF:
+    if player_role.role != GameRole.WAREWOLF:
         return False
     
     # Verificar que no ha actuado esta noche
