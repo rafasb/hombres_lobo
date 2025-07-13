@@ -174,3 +174,48 @@ class WildChildAvailableModelsResponse(BaseModel):
     success: bool
     message: str
     available_models: List[Dict[str, str]]  # Lista de {id, username}
+
+
+# Modelos para Cupido (Cupid)
+class CupidChooseLoversRequest(BaseModel):
+    """Solicitud para que Cupido elija a los enamorados."""
+    lover1_id: str
+    lover2_id: str
+
+
+class CupidChooseLoversResponse(BaseModel):
+    """Respuesta cuando Cupido elige a los enamorados."""
+    success: bool
+    message: str
+    lover1_id: str
+    lover1_username: str
+    lover2_id: str
+    lover2_username: str
+
+
+class CupidStatusResponse(BaseModel):
+    """Respuesta con el estado actual de Cupido."""
+    success: bool
+    message: str
+    has_chosen_lovers: bool = False
+    lover1_id: Optional[str] = None
+    lover1_username: Optional[str] = None
+    lover2_id: Optional[str] = None
+    lover2_username: Optional[str] = None
+
+
+class CupidAvailableTargetsResponse(BaseModel):
+    """Respuesta con jugadores disponibles para enamorar."""
+    success: bool
+    message: str
+    available_targets: List[Dict[str, str]]  # Lista de {id, username}
+
+
+class LoversStatusResponse(BaseModel):
+    """Respuesta con el estado de los enamorados."""
+    success: bool
+    message: str
+    is_lover: bool = False
+    partner_id: Optional[str] = None
+    partner_username: Optional[str] = None
+    both_alive: bool = False

@@ -196,7 +196,7 @@ class TestWildChildStatus:
         # Elegir modelo y simular transformación
         player_action_service.wild_child_choose_model(game.id, "wild_child123", "model1_123")
         
-        # Simular muerte del modelo - necesitamos recargar el juego después de elegir modelo
+        # Recargar el juego y simular muerte del modelo
         updated_game = game_service.load_game(game.id)
         assert updated_game is not None
         updated_game.roles["model1_123"].is_alive = False
@@ -371,16 +371,14 @@ class TestWildChildGameFlow:
         # Elegir modelo
         player_action_service.wild_child_choose_model(game.id, "wild_child123", "model1_123")
         
-        # Recargar el juego después de elegir modelo
+        # Recargar el juego y marcar modelo como muerto
         updated_game = game_service.load_game(game.id)
         assert updated_game is not None
-        
-        # Marcar modelo como muerto
         updated_game.roles["model1_123"].is_alive = False
         game_service.save_game(updated_game)
         
-        # Procesar verificaciones de muerte directamente con el ID del muerto
-        transformations = player_action_service.check_wild_child_transformation(game.id, "model1_123")
+        # Procesar verificaciones de muerte
+        transformations = player_action_service.process_wild_child_death_check(game.id)
         
         assert len(transformations) == 1
         assert transformations[0]["wild_child_id"] == "wild_child123"

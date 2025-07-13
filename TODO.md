@@ -1,10 +1,5 @@
 # To Do
 
-ASEGURARSE QUE LAS PARTIDAS NO INICIAN SI NO HAY MÁS DE 10 JUAGORES Y MENOS DE 18
-
-Servicios/endpoints que faltan para cubrir completamente los permisos del creador:
-
-Endpoint/servicio para modificar la parametrización de la partida (PUT/PATCH /games/{game_id}).
-Endpoints/servicios para iniciar, pausar, avanzar fase, detener partida (cambio de estado).
-Endpoint para que el creador elimine su propia partida si está en estado "waiting".
-Control estricto de permisos en los puntos anteriores.
+- Integración completa: Conectar todos los sistemas en un flujo de juego unificado
+- Condiciones de victoria: Implementar verificación automática de todas las condiciones de victoria
+- Interfaz de usuario: Desarrollar frontend para interactuar con todos los endpoints
