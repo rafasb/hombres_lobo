@@ -89,6 +89,6 @@ La app declarará el fin del juego cuando se cumpla una de las siguientes condic
 - **Explicación del Juego:** La app proporcionará una guía completa de las reglas y roles.
 - **Reparto de Roles en Secreto:** El Narrador Digital asigna y comunica los roles de forma privada.
 - **RONDAS:**
-  - **Fase de Noche:** Interacciones secretas con la app (votación de linchamiento y acciones de roles especiales).
+  - **Fase de Noche:** Interacciones secretas con la app (acciones de roles especiales).
   - **Fase de Despertar:** El Narrador Digital anuncia las víctimas y eventos de la noche en el chat general.
   - **Fase de Día:** Debate en el chat general y chats privados, seguido de una votación de linchamiento.

@@ -10,7 +10,7 @@ from app.models.player_actions import (
     PlayerInfo,
     WarewolfAttackResponse,
 )
-from app.services.player_warewolf_action_service import (
+from app.services.player_action_service import (
     warewolf_attack,
     get_warewolf_attack_consensus,
     get_alive_players,

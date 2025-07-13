@@ -4,11 +4,16 @@ Define las estructuras de datos para requests y responses de las acciones espec�
 """
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 
 class WarewolfAttackRequest(BaseModel):
     """Modelo para el request de ataque de hombre lobo."""
+    target_id: str
+
+
+class DayVoteRequest(BaseModel):
+    """Modelo para el request de votaci처n diurna."""
     target_id: str
 
 
@@ -18,8 +23,63 @@ class PlayerInfo(BaseModel):
     username: str
 
 
+class VoteCount(BaseModel):
+    """Informaci처n de recuento de votos."""
+    player_id: str
+    username: str
+    vote_count: int
+
+
 class WarewolfAttackResponse(BaseModel):
     """Respuesta del endpoint de ataque de hombre lobo."""
     success: bool
     message: str
     consensus_target: Optional[str] = None
+
+
+class DayVoteResponse(BaseModel):
+    """Respuesta del endpoint de votaci처n diurna."""
+    success: bool
+    message: str
+    vote_counts: List[VoteCount] = []
+    total_votes: int = 0
+    total_players: int = 0
+
+
+class SeerVisionRequest(BaseModel):
+    """Modelo para el request de visi처n de la vidente."""
+    target_id: str
+
+
+class SeerVisionResponse(BaseModel):
+    """Respuesta del endpoint de visi처n de la vidente."""
+    success: bool
+    message: str
+    target_role: Optional[str] = None
+    target_username: Optional[str] = None
+
+
+class SheriffTiebreakerRequest(BaseModel):
+    """Modelo para el request de desempate del alguacil."""
+    target_id: str
+
+
+class SheriffSuccessorRequest(BaseModel):
+    """Modelo para el request de elecci처n de sucesor del alguacil."""
+    successor_id: str
+
+
+class SheriffTiebreakerResponse(BaseModel):
+    """Respuesta del endpoint de desempate del alguacil."""
+    success: bool
+    message: str
+    eliminated_player_id: str
+    eliminated_username: str
+
+
+class SheriffSuccessorResponse(BaseModel):
+    """Respuesta del endpoint de elecci처n de sucesor del alguacil."""
+    success: bool
+    message: str
+    successor_id: str
+    successor_username: str

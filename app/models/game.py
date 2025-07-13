@@ -30,6 +30,7 @@ class Game(GameBase):
     current_round: int = 0
     is_first_night: bool = True  # Indica si es la primera noche (condiciones especiales)
     night_actions: Dict[str, Dict[str, str]] = {}  # Acciones nocturnas por tipo y jugador
+    day_votes: Dict[str, str] = {}  # Votos diurnos: voter_id -> target_id
     # Otros campos: historial, votos, etc.
 
     model_config = ConfigDict(from_attributes=True)
