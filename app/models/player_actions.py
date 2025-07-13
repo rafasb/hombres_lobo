@@ -83,3 +83,52 @@ class SheriffSuccessorResponse(BaseModel):
     message: str
     successor_id: str
     successor_username: str
+
+
+class HunterRevengeRequest(BaseModel):
+    """Modelo para el request de venganza del cazador."""
+    target_id: str
+
+
+class HunterRevengeResponse(BaseModel):
+    """Respuesta del endpoint de venganza del cazador."""
+    success: bool
+    message: str
+    target_id: str
+    target_username: str
+
+
+class WitchHealRequest(BaseModel):
+    """Modelo para el request de curación de la bruja."""
+    target_id: str  # ID del jugador a curar (víctima del ataque de lobos)
+
+
+class WitchPoisonRequest(BaseModel):
+    """Modelo para el request de envenenamiento de la bruja."""
+    target_id: str  # ID del jugador a envenenar
+
+
+class WitchHealResponse(BaseModel):
+    """Respuesta del endpoint de curación de la bruja."""
+    success: bool
+    message: str
+    healed_player_id: str
+    healed_username: str
+
+
+class WitchPoisonResponse(BaseModel):
+    """Respuesta del endpoint de envenenamiento de la bruja."""
+    success: bool
+    message: str
+    poisoned_player_id: str
+    poisoned_username: str
+
+
+class WitchNightInfoResponse(BaseModel):
+    """Respuesta con información de la noche para la bruja."""
+    success: bool
+    message: str
+    attacked_player_id: Optional[str] = None
+    attacked_username: Optional[str] = None
+    can_heal: bool = False
+    can_poison: bool = False
