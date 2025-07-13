@@ -12,9 +12,11 @@ from app.services.game_service import (
     get_game,
     get_all_games,
     update_game_params,
-    change_game_status,
     creator_delete_game,
     join_game,
+)
+from app.services.game_flow_service import (
+    change_game_status,
     assign_roles,
 )
 from app.core.dependencies import get_current_user

@@ -4,7 +4,7 @@ Valida la correcta asignación de roles según las reglas del juego
 """
 
 from unittest.mock import patch
-from app.services.game_service import assign_roles
+from app.services.game_flow_service import assign_roles
 from app.models.game import Game, GameStatus
 from app.models.user import User, UserRole, UserStatus
 from app.models.roles import GameRole
@@ -60,8 +60,8 @@ class TestAssignRoles:
             current_round=0
         )
 
-    @patch('app.services.game_service.load_game')
-    @patch('app.services.game_service.save_game')
+    @patch('app.services.game_flow_service.load_game')
+    @patch('app.services.game_flow_service.save_game')
     def test_assign_roles_valid_game_10_players(self, mock_save, mock_load):
         """Test con 10 jugadores (mínimo requerido)"""
         # Arrange
@@ -107,8 +107,8 @@ class TestAssignRoles:
         assert cupid_role is not None
         assert cupid_role.is_cupid is True
 
-    @patch('app.services.game_service.load_game')
-    @patch('app.services.game_service.save_game')
+    @patch('app.services.game_flow_service.load_game')
+    @patch('app.services.game_flow_service.save_game')
     def test_assign_roles_valid_game_15_players(self, mock_save, mock_load):
         """Test con 15 jugadores (caso medio)"""
         # Arrange
@@ -138,8 +138,8 @@ class TestAssignRoles:
         assert total_special == 4
         assert villager_count == 6
 
-    @patch('app.services.game_service.load_game')
-    @patch('app.services.game_service.save_game')
+    @patch('app.services.game_flow_service.load_game')
+    @patch('app.services.game_flow_service.save_game')
     def test_assign_roles_valid_game_18_players(self, mock_save, mock_load):
         """Test con 18 jugadores (máximo permitido)"""
         # Arrange
@@ -164,7 +164,7 @@ class TestAssignRoles:
                            if role_info.role == GameRole.VILLAGER)
         assert villager_count == 8
 
-    @patch('app.services.game_service.load_game')
+    @patch('app.services.game_flow_service.load_game')
     def test_assign_roles_insufficient_players(self, mock_load):
         """Test con menos de 10 jugadores (debe fallar)"""
         # Arrange
@@ -178,7 +178,7 @@ class TestAssignRoles:
         # Assert
         assert result is None
 
-    @patch('app.services.game_service.load_game')
+    @patch('app.services.game_flow_service.load_game')
     def test_assign_roles_too_many_players(self, mock_load):
         """Test con más de 18 jugadores (debe fallar)"""
         # Arrange
@@ -192,7 +192,7 @@ class TestAssignRoles:
         # Assert
         assert result is None
 
-    @patch('app.services.game_service.load_game')
+    @patch('app.services.game_flow_service.load_game')
     def test_assign_roles_game_not_found(self, mock_load):
         """Test cuando la partida no existe"""
         # Arrange
@@ -204,7 +204,7 @@ class TestAssignRoles:
         # Assert
         assert result is None
 
-    @patch('app.services.game_service.load_game')
+    @patch('app.services.game_flow_service.load_game')
     def test_assign_roles_unauthorized_user(self, mock_load):
         """Test cuando el usuario no es el creador ni admin"""
         # Arrange
@@ -219,8 +219,8 @@ class TestAssignRoles:
         # Assert
         assert result is None
 
-    @patch('app.services.game_service.load_game')
-    @patch('app.services.game_service.save_game')
+    @patch('app.services.game_flow_service.load_game')
+    @patch('app.services.game_flow_service.save_game')
     def test_assign_roles_admin_can_assign(self, mock_save, mock_load):
         """Test que un admin puede asignar roles aunque no sea el creador"""
         # Arrange
@@ -236,7 +236,7 @@ class TestAssignRoles:
         assert result is not None
         assert result.status == GameStatus.STARTED
 
-    @patch('app.services.game_service.load_game')
+    @patch('app.services.game_flow_service.load_game')
     def test_assign_roles_game_already_started(self, mock_load):
         """Test cuando la partida ya ha comenzado"""
         # Arrange
@@ -251,8 +251,8 @@ class TestAssignRoles:
         # Assert
         assert result is None
 
-    @patch('app.services.game_service.load_game')
-    @patch('app.services.game_service.save_game')
+    @patch('app.services.game_flow_service.load_game')
+    @patch('app.services.game_flow_service.save_game')
     def test_assign_roles_all_players_get_roles(self, mock_save, mock_load):
         """Test que todos los jugadores reciben exactamente un rol"""
         # Arrange
@@ -281,9 +281,9 @@ class TestAssignRoles:
                 GameRole.WITCH, GameRole.HUNTER, GameRole.CUPID
             ]
 
-    @patch('app.services.game_service.load_game')
-    @patch('app.services.game_service.save_game')
-    @patch('app.services.game_service.random.shuffle')
+    @patch('app.services.game_flow_service.load_game')
+    @patch('app.services.game_flow_service.save_game')
+    @patch('app.services.game_flow_service.random.shuffle')
     def test_assign_roles_randomization(self, mock_shuffle, mock_save, mock_load):
         """Test que los roles se mezclan aleatoriamente"""
         # Arrange
