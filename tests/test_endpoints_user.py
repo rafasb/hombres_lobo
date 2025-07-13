@@ -140,22 +140,25 @@ def test_leave_game_endpoint():
     # Simular que el usuario se une a la partida (añadirlo a players)
     g = load_game(gid)
     assert g is not None
-    # Añadir usuario como dict serializable directamente a la estructura interna
-    if hasattr(g, '__dict__'):
-        if not hasattr(g, 'players') or g.players is None:
-            g.players = []
-        g.players.append(user)
-        # Forzar serialización manual
-        from app.database import save_json, load_json
-        games = load_json('games') or {}
-        game_dict = g.model_dump()
-        import datetime
-        if isinstance(game_dict.get('created_at'), datetime.datetime):
-            game_dict['created_at'] = game_dict['created_at'].isoformat()
-        games[gid] = game_dict
-        save_json('games', games)
-    else:
-        raise AssertionError('No se pudo manipular la partida para el test')
+    # Crear objeto User desde el diccionario
+    from app.models.user import User
+    from datetime import datetime
+    user_obj = User(
+        id=user["id"],
+        username=user["username"],
+        email=user["email"],
+        hashed_password=user["hashed_password"],
+        status=user["status"],
+        role=user["role"],
+        created_at=datetime.fromisoformat(user["created_at"]) if isinstance(user["created_at"], str) else user["created_at"],
+        updated_at=datetime.fromisoformat(user["updated_at"]) if isinstance(user["updated_at"], str) else user["updated_at"]
+    )
+    # Añadir usuario a la partida y guardar usando la función apropiada
+    if not hasattr(g, 'players') or g.players is None:
+        g.players = []
+    g.players.append(user_obj)
+    from app.database import save_game
+    save_game(g)
     # Abandonar la partida
     leave_resp = client.post(f"/games/{gid}/leave", headers={"Authorization": f"Bearer {token}"})
     assert leave_resp.status_code == 200

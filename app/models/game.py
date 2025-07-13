@@ -28,6 +28,7 @@ class Game(GameBase):
     status: GameStatus = GameStatus.WAITING
     created_at: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.UTC))
     current_round: int = 0
+    is_first_night: bool = True  # Indica si es la primera noche (condiciones especiales)
     # Otros campos: historial, votos, etc.
 
     model_config = ConfigDict(from_attributes=True)
