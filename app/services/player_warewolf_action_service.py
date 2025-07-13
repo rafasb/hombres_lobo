@@ -212,27 +212,3 @@ def can_warewolf_act(game_id: str, player_id: str) -> bool:
     return True
 
 
-def reset_night_actions(game_id: str) -> Optional[Game]:
-    """
-    Reinicia las acciones nocturnas de todos los jugadores para una nueva noche.
-    
-    Args:
-        game_id: ID de la partida
-    
-    Returns:
-        Game actualizado si fue exitoso, None en caso contrario
-    """
-    game = load_game(game_id)
-    if not game:
-        return None
-    
-    # Reiniciar el estado de acciones nocturnas para todos los jugadores
-    for player_id in game.roles:
-        game.roles[player_id].has_acted_tonight = False
-        game.roles[player_id].target_player_id = None
-    
-    # Limpiar las acciones nocturnas registradas
-    game.night_actions = {}
-    
-    save_game(game)
-    return game

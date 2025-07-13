@@ -3,7 +3,7 @@ Tests para las acciones de los jugadores durante las partidas.
 Prueba específicamente la funcionalidad de ataque de los hombres lobo.
 """
 
-from app.services.player_action_service import (
+from app.services.player_warewolf_action_service import (
     warewolf_attack,
     get_warewolf_attack_consensus,
     get_non_warewolf_players,
