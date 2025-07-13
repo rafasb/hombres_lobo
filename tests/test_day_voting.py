@@ -11,9 +11,8 @@ from app.services.player_action_service import (
     get_voting_summary,
     reset_day_votes,
 )
-from app.models.game import Game, GameStatus
+from app.models.game_and_roles import Game, GameStatus, GameRole, RoleInfo
 from app.models.user import User
-from app.models.roles import GameRole, RoleInfo
 from app.database import save_game
 
 

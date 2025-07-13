@@ -4,8 +4,7 @@ Incluye funciones para cambiar estados de partida y asignar roles.
 """
 
 from app.database import save_game, load_game
-from app.models.game import Game, GameStatus
-from app.models.roles import GameRole, RoleInfo
+from app.models.game_and_roles import Game, GameStatus, GameRole, RoleInfo
 from typing import Optional
 import random
 

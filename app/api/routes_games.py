@@ -5,7 +5,7 @@ Requiere autenticación JWT para acceder.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Body
-from app.models.game import Game, GameCreate, GameStatus
+from app.models.game_and_roles import Game, GameCreate, GameStatus
 from app.models.user import UserRole
 from app.services.game_service import (
     create_game,

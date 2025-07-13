@@ -4,7 +4,7 @@ Incluye funciones para crear, obtener y listar partidas usando la base de datos 
 """
 
 from app.database import save_game, load_game, load_all_games
-from app.models.game import Game, GameStatus
+from app.models.game_and_roles import Game, GameStatus
 from typing import Optional, List
 
 # Lógica relacionada con partidas

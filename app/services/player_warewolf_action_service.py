@@ -4,8 +4,7 @@ Incluye funciones para que los jugadores realicen sus acciones nocturnas especí
 """
 
 from app.database import save_game, load_game
-from app.models.game import Game, GameStatus
-from app.models.roles import GameRole
+from app.models.game_and_roles import Game, GameStatus, GameRole
 from typing import Optional, List, Dict
 
 

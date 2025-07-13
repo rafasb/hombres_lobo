@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from app.api import routes_games, routes_admin, routes_users, routes_players_voting, routes_warewolfs, routes_special_roles, routes_sheriff, routes_hunter, routes_witch
+from app.api import routes_games, routes_admin, routes_users, routes_players_voting, routes_warewolfs, routes_special_roles, routes_sheriff, routes_hunter, routes_witch, routes_wild_child
 
 app = FastAPI()
 
@@ -21,3 +21,4 @@ app.include_router(routes_special_roles.router)
 app.include_router(routes_sheriff.router)
 app.include_router(routes_hunter.router)
 app.include_router(routes_witch.router)
+app.include_router(routes_wild_child.router)

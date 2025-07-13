@@ -3,7 +3,7 @@ import json
 import uuid
 from typing import Any, List, Optional
 from app.models.user import User
-from app.models.game import Game
+from app.models.game_and_roles import Game
 from datetime import datetime, UTC
 from app.core.security import hash_password
 from app.models.user import UserRole

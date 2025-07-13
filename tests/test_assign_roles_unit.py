@@ -5,9 +5,8 @@ Valida la correcta asignación de roles según las reglas del juego
 
 from unittest.mock import patch
 from app.services.game_flow_service import assign_roles
-from app.models.game import Game, GameStatus
+from app.models.game_and_roles import Game, GameStatus, GameRole
 from app.models.user import User, UserRole, UserStatus
-from app.models.roles import GameRole
 import uuid
 import datetime
 

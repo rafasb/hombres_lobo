@@ -1,6 +1,6 @@
 from app.database import save_user, load_user, load_all_users, save_game, load_game, load_all_games, delete_user, delete_game
 from app.models.user import User, UserRole, UserStatus
-from app.models.game import Game, GameStatus
+from app.models.game_and_roles import Game, GameStatus
 import uuid
 
 def test_save_and_load_user():

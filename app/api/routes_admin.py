@@ -5,7 +5,7 @@ Incluye endpoints para gestión de usuarios (solo accesibles por admin).
 
 from fastapi import APIRouter, HTTPException, Body, Depends
 from app.models.user import User, UserRole, UserStatus, UserUpdate
-from app.models.game import Game
+from app.models.game_and_roles import Game
 from app.services.user_service import get_user, get_all_users, update_user
 from app.services.game_service import delete_game, get_all_games
 from app.core.dependencies import admin_required

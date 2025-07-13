@@ -4,7 +4,7 @@ Define las estructuras de datos para requests y responses de las acciones espec�
 """
 
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 
 class WarewolfAttackRequest(BaseModel):
@@ -132,3 +132,45 @@ class WitchNightInfoResponse(BaseModel):
     attacked_username: Optional[str] = None
     can_heal: bool = False
     can_poison: bool = False
+
+
+# Modelos para El Niño Salvaje
+
+class WildChildChooseModelRequest(BaseModel):
+    """Modelo para elegir el jugador modelo del Niño Salvaje."""
+    model_player_id: str  # ID del jugador modelo a seguir
+
+
+class WildChildChooseModelResponse(BaseModel):
+    """Respuesta del endpoint de elección de modelo."""
+    success: bool
+    message: str
+    model_player_id: str
+    model_username: str
+
+
+class WildChildStatusResponse(BaseModel):
+    """Respuesta con el estado actual del Niño Salvaje."""
+    success: bool
+    message: str
+    has_model: bool = False
+    model_player_id: Optional[str] = None
+    model_username: Optional[str] = None
+    is_transformed: bool = False
+    current_role: str  # "wild_child" o "warewolf"
+
+
+class WildChildTransformationResponse(BaseModel):
+    """Respuesta cuando el Niño Salvaje se transforma."""
+    success: bool
+    message: str
+    transformed: bool
+    new_role: str
+    reason: str  # Motivo de la transformación
+
+
+class WildChildAvailableModelsResponse(BaseModel):
+    """Respuesta con jugadores disponibles como modelo."""
+    success: bool
+    message: str
+    available_models: List[Dict[str, str]]  # Lista de {id, username}

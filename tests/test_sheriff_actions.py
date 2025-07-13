@@ -5,9 +5,8 @@ Verifica el correcto funcionamiento de desempate de votaciones y elección de su
 
 import pytest
 from unittest.mock import patch
-from app.models.game import Game, GameStatus
+from app.models.game_and_roles import Game, GameStatus, GameRole, RoleInfo
 from app.models.user import User
-from app.models.roles import GameRole, RoleInfo
 from app.services.player_action_service import (
     is_sheriff,
     can_sheriff_break_tie,

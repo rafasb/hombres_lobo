@@ -1,5 +1,8 @@
+from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Dict
+from .user import User
 from enum import Enum
-from pydantic import BaseModel
+import datetime
 from typing import Optional
 
 class GameRole(str, Enum):
@@ -47,3 +50,35 @@ class RoleInfo(BaseModel):
     # Campos generales para habilidades nocturnas
     has_acted_tonight: Optional[bool] = None   # Si ya actuó en esta noche
     target_player_id: Optional[str] = None     # ID del jugador objetivo de la acción nocturna
+
+
+class GameStatus(str, Enum):
+    WAITING = "waiting"      # Esperando jugadores
+    STARTED = "started"      # En curso
+    NIGHT = "night"          # Fase de noche
+    DAY = "day"              # Fase de día
+    PAUSED = "paused"        # Pausada
+    FINISHED = "finished"    # Finalizada
+
+class GameBase(BaseModel):
+    name: str
+    max_players: int = Field(..., gt=3, lt=25)
+
+class GameCreate(GameBase):
+    creator_id: str
+
+class Game(GameBase):
+    id: str
+    creator_id: str
+    players: List[User] = []
+    roles: Dict[str, RoleInfo] = {}  # player_id -> RoleInfo
+    status: GameStatus = GameStatus.WAITING
+    created_at: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.UTC))
+    current_round: int = 0
+    is_first_night: bool = True  # Indica si es la primera noche (condiciones especiales)
+    night_actions: Dict[str, Dict[str, str]] = {}  # Acciones nocturnas por tipo y jugador
+    day_votes: Dict[str, str] = {}  # Votos diurnos: voter_id -> target_id
+    # Otros campos: historial, votos, etc.
+
+    model_config = ConfigDict(from_attributes=True)
+
