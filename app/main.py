@@ -1,15 +1,21 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes_games, routes_admin, routes_users, routes_players_voting, routes_warewolfs, routes_special_roles, routes_sheriff, routes_hunter, routes_witch, routes_wild_child, routes_cupid, routes_game_flow
 
-app = FastAPI()
+app = FastAPI(
+    title="Hombres Lobo API",
+    description="Backend API for the Hombres Lobo game",
+    version="1.0.0"
+)
 
-# Montar archivos estáticos
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# Configuración de plantillas Jinja2
-templates = Jinja2Templates(directory="app/templates")
+# Configure CORS for frontend communication
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:8080", "http://localhost:5173"],  # Vue.js development servers
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Incluir rutas
 app.include_router(routes_users.router)

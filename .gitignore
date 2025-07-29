@@ -68,8 +68,21 @@ Thumbs.db
 
 # Node
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.pnpm-debug.log*
 
-# Others
+# Vue.js / Vite
+frontend/dist/
+frontend/.vite/
+frontend/.env.local
+frontend/.env.*.local
+
+# Editor files
+.vscode/
+.idea/
 *.bak
 *.swp
 *.tmp
