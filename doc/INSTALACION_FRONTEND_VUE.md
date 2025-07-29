@@ -240,19 +240,22 @@ npm run type-check
 - [x] Dev server arranca en puerto 5173
 - [x] Estructura de proyecto creada correctamente
 
-### 📋 Funcionalidades Base (PENDIENTE - FASE 3)
-- [ ] PrimeVue configurado en main.ts
-- [ ] Proxy para backend configurado en vite.config.ts
-- [ ] Enrutamiento funcionando
-- [ ] Estado global con Pinia configurado
-- [ ] Componentes PrimeVue renderizando
-- [ ] API calls a backend exitosas
-- [ ] Responsive design verificado
+### ✅ Funcionalidades Base (COMPLETADO - FASE 3)
+- [x] PrimeVue configurado en main.ts
+- [x] Proxy para backend configurado en vite.config.ts
+- [x] Enrutamiento funcionando
+- [x] Estado global con Pinia configurado
+- [x] Componentes PrimeVue renderizando
+- [x] API calls a backend exitosas ✅ VERIFICADO
+- [x] Responsive design verificado
 
-### 🎯 Estado Actual: FASE 2 COMPLETADA
+### 🎯 Estado Actual: FASE 3 COMPLETADA
 **Fecha de completado:** 29 Julio 2025  
 **Servidor frontend:** ✅ Funcionando en http://localhost:5173  
-**Servidor backend:** ✅ Funcionando en http://localhost:8000
+**Servidor backend:** ✅ Funcionando en http://localhost:8000  
+**Comunicación:** ✅ EXITOSA - Proxy y servicios API verificados
+
+**Próximo paso:** FASE 4 - Autenticación (ver SIGUIENTE_PASO.md)
 
 ---
 

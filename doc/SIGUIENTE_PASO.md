@@ -1,348 +1,514 @@
-# 🔄 FASE 3: Configuraciones Base - Plan de Acción Inmediato
+# 🔄 FASE 4: Autenticación - Plan de Acción Inmediato
 
 ## 🎯 Objetivo de Esta Fase
-Configurar el frontend Vue.js 3 para comunicarse con el backend FastAPI y establecer la base para el desarrollo de funcionalidades.
+Implementar el sistema de autenticación completo en el frontend Vue.js 3, incluyendo login, register, gestión de tokens JWT y protección de rutas.
 
 ## ⏱️ Tiempo Estimado
 **Duración:** 2-3 días  
-**Prioridad:** ALTA (Bloquea siguientes fases)
+**Prioridad:** ALTA (Funcionalidad crítica)
+
+## ✅ PRERREQUISITOS COMPLETADOS
+- ✅ PrimeVue configurado y funcionando
+- ✅ Proxy backend configurado (`/api` → `localhost:8000`)
+- ✅ Servicios API base creados con interceptors JWT
+- ✅ Comunicación frontend-backend verificada exitosamente
 
 ---
 
 ## 📋 TAREAS ESPECÍFICAS
 
-### 1️⃣ CONFIGURAR PRIMEVUE EN MAIN.TS
+### 1️⃣ CREAR STORE DE AUTENTICACIÓN CON PINIA
 **Prioridad:** 🔴 CRÍTICA  
-**Tiempo:** 30 minutos  
-**Archivo:** `frontend/src/main.ts`
+**Tiempo:** 45 minutos  
+**Archivo:** `frontend/src/stores/auth.ts`
 
 #### Acción
-Modificar el archivo para importar y configurar PrimeVue:
+Crear el store centralizado para gestión de autenticación:
 
 ```typescript
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import PrimeVue from 'primevue/config'
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { apiService } from '@/services/api'
+import { useRouter } from 'vue-router'
 
-import App from './App.vue'
-import router from './router'
+interface User {
+  id: number
+  username: string
+  email: string
+}
 
-// CSS de PrimeVue
-import 'primevue/resources/themes/aura-light-green/theme.css'
-import 'primevue/resources/primevue.min.css'
-import 'primeicons/primeicons.css'
-import 'primeflex/primeflex.css'
+interface LoginCredentials {
+  username: string
+  password: string
+}
 
-const app = createApp(App)
+interface RegisterData {
+  username: string
+  email: string
+  password: string
+}
 
-app.use(createPinia())
-app.use(router)
-app.use(PrimeVue)
+export const useAuthStore = defineStore('auth', () => {
+  // Estado reactivo
+  const user = ref<User | null>(null)
+  const token = ref<string | null>(localStorage.getItem('access_token'))
+  const isLoading = ref(false)
+  const error = ref<string>('')
 
-app.mount('#app')
-```
+  // Computed
+  const isAuthenticated = computed(() => !!token.value && !!user.value)
 
-#### Verificación
-- [ ] Frontend sigue funcionando en puerto 5173
-- [ ] Estilos PrimeVue se cargan correctamente
-- [ ] No hay errores en consola del navegador
-
----
-
-### 2️⃣ CONFIGURAR PROXY BACKEND EN VITE.CONFIG.TS
-**Prioridad:** 🔴 CRÍTICA  
-**Tiempo:** 15 minutos  
-**Archivo:** `frontend/vite.config.ts`
-
-#### Acción
-Modificar la configuración de Vite para proxificar llamadas al backend:
-
-```typescript
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'
-
-export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+  // Acciones
+  const login = async (credentials: LoginCredentials) => {
+    try {
+      isLoading.value = true
+      error.value = ''
+      
+      const response = await apiService.post('/auth/login', credentials)
+      const { access_token, user: userData } = response.data
+      
+      token.value = access_token
+      user.value = userData
+      localStorage.setItem('access_token', access_token)
+      
+      return true
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Error de autenticación'
+      return false
+    } finally {
+      isLoading.value = false
     }
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+  }
+
+  const register = async (data: RegisterData) => {
+    try {
+      isLoading.value = true
+      error.value = ''
+      
+      const response = await apiService.post('/auth/register', data)
+      const { access_token, user: userData } = response.data
+      
+      token.value = access_token
+      user.value = userData
+      localStorage.setItem('access_token', access_token)
+      
+      return true
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Error de registro'
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const logout = () => {
+    user.value = null
+    token.value = null
+    localStorage.removeItem('access_token')
+    // Redirigir a login si es necesario
+  }
+
+  const checkAuth = async () => {
+    if (token.value) {
+      try {
+        const response = await apiService.get('/auth/me')
+        user.value = response.data
+      } catch (err) {
+        logout()
       }
     }
   }
-})
-```
 
-#### Verificación
-- [ ] Reiniciar dev server
-- [ ] Probar que `http://localhost:5173/api/docs` redirecciona a backend
-- [ ] Verificar comunicación frontend-backend
-
----
-
-### 3️⃣ CREAR SERVICIOS API BASE
-**Prioridad:** 🟡 ALTA  
-**Tiempo:** 45 minutos  
-**Archivo:** `frontend/src/services/api.ts`
-
-#### Acción
-Crear el servicio base para comunicación HTTP:
-
-```typescript
-import axios, { AxiosInstance, AxiosResponse } from 'axios'
-
-// Configuración base de Axios
-const api: AxiosInstance = axios.create({
-  baseURL: '/api', // Usa el proxy configurado en Vite
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
+  return {
+    // Estado
+    user,
+    token,
+    isLoading,
+    error,
+    // Computed
+    isAuthenticated,
+    // Acciones
+    login,
+    register,
+    logout,
+    checkAuth
   }
 })
-
-// Interceptor para requests (agregar token JWT si existe)
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
-
-// Interceptor para responses (manejo de errores)
-api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expirado, redirigir a login
-      localStorage.removeItem('access_token')
-      window.location.href = '/login'
-    }
-    return Promise.reject(error)
-  }
-)
-
-// Funciones de utilidad
-export const apiService = {
-  get: <T>(url: string) => api.get<T>(url),
-  post: <T>(url: string, data?: any) => api.post<T>(url, data),
-  put: <T>(url: string, data?: any) => api.put<T>(url, data),
-  delete: <T>(url: string) => api.delete<T>(url),
-}
-
-export default api
 ```
 
 #### Verificación
-- [ ] Archivo se crea sin errores TypeScript
-- [ ] Imports de Axios funcionan correctamente
+- [ ] Store se crea sin errores TypeScript
+- [ ] Imports de Pinia funcionan correctamente
+- [ ] Tipos TypeScript definidos correctamente
 
 ---
 
-### 4️⃣ CREAR ESTRUCTURA DE CARPETAS
-**Prioridad:** 🟡 ALTA  
-**Tiempo:** 15 minutos  
-
-#### Acción
-Crear la estructura de carpetas estándar:
-
-```bash
-mkdir -p frontend/src/components/common
-mkdir -p frontend/src/components/auth
-mkdir -p frontend/src/components/games
-mkdir -p frontend/src/components/game
-mkdir -p frontend/src/services
-mkdir -p frontend/src/types
-mkdir -p frontend/src/composables
-mkdir -p frontend/src/utils
-```
-
-#### Verificación
-- [ ] Todas las carpetas se crean correctamente
-- [ ] Estructura visible en VS Code
-
----
-
-### 5️⃣ PROBAR COMUNICACIÓN FRONTEND-BACKEND
+### 2️⃣ CREAR COMPONENTE DE LOGIN
 **Prioridad:** 🔴 CRÍTICA  
 **Tiempo:** 30 minutos  
+**Archivo:** `frontend/src/components/auth/LoginForm.vue`
 
 #### Acción
-Crear un componente de prueba para verificar la comunicación:
+Crear formulario de login con PrimeVue:
 
-**Archivo:** `frontend/src/components/common/ApiTest.vue`
 ```vue
 <template>
-  <div class="api-test">
-    <h3>Test de Comunicación API</h3>
-    <Button @click="testConnection" label="Probar Conexión" />
-    <div v-if="result" class="result">
-      <p><strong>Estado:</strong> {{ result.status }}</p>
-      <p><strong>Respuesta:</strong> {{ result.data }}</p>
-    </div>
-    <div v-if="error" class="error">
-      <p><strong>Error:</strong> {{ error }}</p>
-    </div>
+  <div class="login-form">
+    <form @submit.prevent="handleLogin" class="p-fluid">
+      <div class="field">
+        <label for="username">Usuario</label>
+        <InputText 
+          id="username"
+          v-model="credentials.username" 
+          :class="{ 'p-invalid': !!authStore.error }"
+          placeholder="Ingresa tu usuario"
+          required
+        />
+      </div>
+      
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <Password 
+          id="password"
+          v-model="credentials.password"
+          :class="{ 'p-invalid': !!authStore.error }"
+          placeholder="Ingresa tu contraseña"
+          :feedback="false"
+          required
+        />
+      </div>
+
+      <Message v-if="authStore.error" severity="error" :closable="false">
+        {{ authStore.error }}
+      </Message>
+
+      <Button 
+        type="submit"
+        label="Iniciar Sesión"
+        :loading="authStore.isLoading"
+        class="w-full"
+      />
+    </form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
 import Button from 'primevue/button'
-import { apiService } from '@/services/api'
+import Message from 'primevue/message'
 
-const result = ref<any>(null)
-const error = ref<string>('')
+const router = useRouter()
+const authStore = useAuthStore()
 
-const testConnection = async () => {
-  try {
-    error.value = ''
-    const response = await apiService.get('/docs')
-    result.value = {
-      status: 'Conexión exitosa',
-      data: 'Backend respondiendo correctamente'
-    }
-  } catch (err: any) {
-    error.value = err.message || 'Error de conexión'
-    result.value = null
+const credentials = ref({
+  username: '',
+  password: ''
+})
+
+const handleLogin = async () => {
+  const success = await authStore.login(credentials.value)
+  if (success) {
+    router.push('/dashboard') // Redirigir después del login
   }
 }
 </script>
 
 <style scoped>
-.api-test {
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin: 1rem;
+.login-form {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 2rem;
 }
-.result {
-  margin-top: 1rem;
-  padding: 0.5rem;
-  background-color: #d4edda;
-  border-radius: 4px;
+
+.field {
+  margin-bottom: 1rem;
 }
-.error {
-  margin-top: 1rem;
-  padding: 0.5rem;
-  background-color: #f8d7da;
-  border-radius: 4px;
+
+label {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  display: block;
 }
 </style>
 ```
 
-#### Integrar en App.vue temporalmente:
+#### Verificación
+- [ ] Componente se renderiza sin errores
+- [ ] Campos de formulario funcionan
+- [ ] Botón de submit responde
+- [ ] Mensajes de error se muestran
+
+---
+
+### 3️⃣ CREAR VISTA DE LOGIN
+**Prioridad:** 🟡 ALTA  
+**Tiempo:** 15 minutos  
+**Archivo:** `frontend/src/views/LoginView.vue`
+
+#### Acción
+Crear la vista completa de login:
+
 ```vue
 <template>
-  <div id="app">
-    <ApiTest />
-    <RouterView />
+  <div class="login-view">
+    <div class="login-container">
+      <div class="login-header">
+        <h1>Hombres Lobo</h1>
+        <p>Inicia sesión para jugar</p>
+      </div>
+      
+      <LoginForm />
+      
+      <div class="login-footer">
+        <p>¿No tienes cuenta? 
+          <router-link to="/register" class="register-link">
+            Regístrate aquí
+          </router-link>
+        </p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import ApiTest from '@/components/common/ApiTest.vue'
+import LoginForm from '@/components/auth/LoginForm.vue'
+</script>
+
+<style scoped>
+.login-view {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-container {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  overflow: hidden;
+  min-width: 400px;
+}
+
+.login-header {
+  text-align: center;
+  padding: 2rem 2rem 1rem;
+  background: #f8f9fa;
+}
+
+.login-header h1 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.login-footer {
+  text-align: center;
+  padding: 1rem 2rem 2rem;
+}
+
+.register-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+</style>
+```
+
+#### Verificación
+- [ ] Vista se carga correctamente
+- [ ] Estilos se aplican
+- [ ] Navegación funciona
+
+---
+
+### 4️⃣ CONFIGURAR RUTAS DE AUTENTICACIÓN
+**Prioridad:** 🟡 ALTA  
+**Tiempo:** 20 minutos  
+**Archivo:** `frontend/src/router/index.ts`
+
+#### Acción
+Agregar las rutas de autenticación al router:
+
+```typescript
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/LoginView.vue'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+      meta: { guest: true }
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
+      meta: { guest: true }
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/DashboardView.vue'),
+      meta: { requiresAuth: true }
+    }
+  ]
+})
+
+// Guard de navegación
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next('/login')
+  } else if (to.meta.guest && authStore.isAuthenticated) {
+    next('/dashboard')
+  } else {
+    next()
+  }
+})
+
+export default router
+```
+
+#### Verificación
+- [ ] Rutas se configuran sin errores
+- [ ] Guards de navegación funcionan
+- [ ] Redirecciones automáticas operan
+
+---
+
+### 5️⃣ PROBAR FLUJO DE AUTENTICACIÓN
+**Prioridad:** 🔴 CRÍTICA  
+**Tiempo:** 30 minutos  
+
+#### Acción
+Crear un componente de prueba temporal en App.vue:
+
+```vue
+<template>
+  <div id="app">
+    <div v-if="!authStore.isAuthenticated">
+      <LoginView />
+    </div>
+    <div v-else>
+      <h1>¡Autenticado exitosamente!</h1>
+      <p>Usuario: {{ authStore.user?.username }}</p>
+      <Button @click="authStore.logout" label="Cerrar Sesión" />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import LoginView from '@/views/LoginView.vue'
+import Button from 'primevue/button'
+
+const authStore = useAuthStore()
+
+onMounted(() => {
+  authStore.checkAuth()
+})
 </script>
 ```
 
 #### Verificación
-- [ ] Componente se renderiza sin errores
-- [ ] Botón responde al click
-- [ ] Comunicación con backend funciona
-- [ ] Errores se manejan correctamente
+- [ ] Login funciona con credenciales válidas
+- [ ] Errores se muestran con credenciales inválidas
+- [ ] Token se guarda en localStorage
+- [ ] Logout limpia el estado
+- [ ] Persistencia funciona al recargar página
 
 ---
 
 ## 🔧 COMANDOS NECESARIOS
 
-### Preparar Entorno
+### Verificar Backend Funcionando
 ```bash
-cd /home/rafasb/desarrollo/hombres_lobo/frontend
-npm run dev
+curl http://localhost:8000/auth/login -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"username": "test", "password": "test"}'
 ```
 
-### Verificar Backend
+### Instalar Componentes PrimeVue (si es necesario)
 ```bash
-cd /home/rafasb/desarrollo/hombres_lobo/backend
-# Activar entorno virtual si es necesario
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### Probar Conexión
-```bash
-# En otra terminal
-curl http://localhost:8000/docs
-curl http://localhost:5173/api/docs
+# Ya están instalados, pero por si acaso:
+npm install primevue primeicons
 ```
 
 ---
 
 ## ✅ CRITERIOS DE ÉXITO
 
-### ✅ PrimeVue Funcionando
-- [ ] Estilos PrimeVue cargados
-- [ ] Componentes PrimeVue disponibles
-- [ ] Tema Aura Light Green aplicado
+### ✅ Store Funcionando
+- [ ] Estados reactivos actualizándose
+- [ ] Acciones ejecutándose sin errores
+- [ ] Persistencia en localStorage
 
-### ✅ Comunicación Establecida
-- [ ] Proxy funcionando `/api` → backend
-- [ ] Axios configurado correctamente
-- [ ] Interceptors JWT listos
+### ✅ Componentes Renderizando
+- [ ] LoginForm con estilos PrimeVue
+- [ ] Validación de campos funcionando
+- [ ] Mensajes de error mostrándose
 
-### ✅ Estructura Lista
-- [ ] Carpetas creadas
-- [ ] Servicios base funcionando
-- [ ] Test de comunicación exitoso
+### ✅ Navegación Funcionando
+- [ ] Guards protegiendo rutas
+- [ ] Redirecciones automáticas
+- [ ] Enlaces entre vistas
+
+### ✅ Integración Backend
+- [ ] Llamadas API exitosas
+- [ ] Manejo de errores HTTP
+- [ ] Tokens JWT gestionados correctamente
 
 ---
 
 ## 🚨 POSIBLES PROBLEMAS Y SOLUCIONES
 
-### Error: PrimeVue no se carga
-**Solución:** Verificar que todas las dependencias estén instaladas:
-```bash
-npm install primevue primeicons primeflex
-```
+### Error: Store no definido
+**Solución:** Verificar que Pinia esté configurado en main.ts
 
-### Error: Proxy no funciona
-**Solución:** Verificar que backend esté ejecutándose en puerto 8000:
-```bash
-curl http://localhost:8000/docs
-```
+### Error: Componentes PrimeVue no se cargan
+**Solución:** Verificar imports correctos y PrimeVue configurado
 
-### Error: CORS
-**Solución:** Verificar configuración CORS en backend incluye puerto 5173
+### Error: Rutas no funcionan
+**Solución:** Verificar que vue-router esté instalado y configurado
 
-### Error: TypeScript
-**Solución:** Verificar tipos en `tsconfig.json` y reinstalar dependencias
+### Error: API calls fallan
+**Solución:** Verificar que backend esté corriendo en puerto 8000
 
 ---
 
 ## 📊 PROGRESO ESPERADO
 
 **Al completar esta fase:**
-- ✅ Frontend y backend comunicándose correctamente
-- ✅ PrimeVue configurado y funcionando
-- ✅ Base sólida para desarrollar autenticación (Fase 4)
-- ✅ Estructura de proyecto profesional establecida
+- ✅ Sistema de autenticación completo funcionando
+- ✅ Interfaz de login moderna y responsive
+- ✅ Gestión de estado centralizada con Pinia
+- ✅ Navegación protegida implementada
+- ✅ Base sólida para desarrollar gestión de juegos (Fase 5)
 
-**Preparado para:** Fase 4 - Implementación de autenticación JWT
+**Preparado para:** Fase 5 - Gestión de Juegos
 
 ---
 
-> **⚠️ IMPORTANTE:** Esta fase es crítica. Sin completar estos pasos, las siguientes fases no pueden avanzar. Cada tarea debe verificarse antes de continuar.
+> **⚠️ IMPORTANTE:** Esta fase establece la seguridad de toda la aplicación. Cada componente debe probarse minuciosamente antes de continuar.
