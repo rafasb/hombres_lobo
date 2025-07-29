@@ -1,81 +1,95 @@
-# TODO - Reorientación Frontend Vue.js 3
+# 📋 TODO - Lista de Tareas del Proyecto
 
-## 🔄 ESTADO ACTUAL: REORIENTACIÓN ARQUITECTURAL
+## 🎯 ESTADO ACTUAL
+**Progreso:** 2/8 fases completadas (25%)  
+**Última actualización:** 29 Julio 2025
 
-### ❌ FRONTEND ANTERIOR (A ELIMINAR)
-- Jinja2 Templates en `/app/templates/` - **ELIMINAR COMPLETAMENTE**
-- Archivos estáticos en `/app/static/` - **ELIMINAR COMPLETAMENTE** 
-- Dependencias Jinja2 en FastAPI - **REFACTORIZAR A API PURA**
+## 📚 DOCUMENTACIÓN REORGANIZADA
+- **📄 PLANIFICACION_GLOBAL.md** - Vista general del proyecto (8 fases)
+- **📄 SIGUIENTE_PASO.md** - Plan detallado inmediato (Fase 3)
 
-### ✅ BACKEND EXISTENTE (FUNCIONAL)
-- API REST FastAPI completa y funcional
-- Modelos Pydantic definidos
-- Sistema completo de Hombres Lobo implementado
-- Base de datos JSON funcional
+## ✅ FASES COMPLETADAS
 
----
+### ✅ Fase 1: Restructuración Backend (COMPLETADA - 29 Jul)
+- [x] Crear estructura `/backend/` y `/frontend/`
+- [x] Mover código existente a nueva estructura
+- [x] Eliminar dependencias frontend legacy
+- [x] Refactorizar `main.py` para API REST pura
+- [x] Configurar CORS para comunicación frontend
+- [x] Verificar API funcionando correctamente
 
-## 🚀 PLAN DE MIGRACIÓN INMEDIATO
-
-### **FASE 1: LIMPIEZA Y RESTRUCTURACIÓN** (⏳ SIGUIENTE PRIORIDAD)
-1. [ ] **CRÍTICO: Crear estructura backend/frontend separada**
-2. [ ] **CRÍTICO: Eliminar templates y static del backend actual**
-3. [ ] **CRÍTICO: Refactorizar main.py para API REST pura**
-4. [ ] **CRÍTICO: Configurar CORS para comunicación frontend-backend**
-
-### **FASE 2: CREAR PROYECTO VUE.JS 3** (📋 PENDIENTE)
-1. [ ] Inicializar proyecto Vue.js 3 con TypeScript
-2. [ ] Configurar Vite + Vue Router + Pinia
-3. [ ] Instalar Vuetify/PrimeVue para UI components
-4. [ ] Configurar Axios para comunicación con API
-
-### **FASE 3: MIGRAR FUNCIONALIDADES** (📋 PENDIENTE)
-1. [ ] Implementar autenticación JWT en frontend
-2. [ ] Crear vistas principales (Login, Register, Games, Game)
-3. [ ] Implementar gestión de estado con Pinia
-4. [ ] Crear componentes de juego por roles
+### ✅ Fase 2: Instalación Frontend Vue.js (COMPLETADA - 29 Jul)
+- [x] Crear proyecto Vue.js 3 con TypeScript
+- [x] Instalar PrimeVue + PrimeIcons + PrimeFlex
+- [x] Instalar Axios y dependencias
+- [x] Configurar Vite y herramientas de desarrollo
+- [x] Verificar servidor de desarrollo funcionando
 
 ---
 
-## ❗ TAREAS CRÍTICAS INMEDIATAS
+## 🔄 EN PROGRESO: FASE 3 - CONFIGURACIONES BASE
 
-### 🔥 ALTA PRIORIDAD (Esta semana)
-1. **Eliminar código frontend obsoleto:**
-   ```bash
-   rm -rf app/templates/
-   rm -rf app/static/
-   ```
+### ⏳ SIGUIENTE PRIORIDAD (Ver SIGUIENTE_PASO.md para detalles)
+- [ ] **Configurar PrimeVue en main.ts**
+- [ ] **Configurar proxy backend en vite.config.ts**
+- [ ] **Crear servicios API base**
+- [ ] **Crear estructura de carpetas**
+- [ ] **Probar comunicación frontend-backend**
 
-2. **Refactorizar main.py:**
-   - Eliminar Jinja2Templates
-   - Eliminar StaticFiles
-   - Agregar CORS middleware
-   - Convertir todos los endpoints a JSON-only
 
-3. **Crear nueva estructura:**
-   ```
-   /home/rafasb/desarrollo/hombres_lobo/
-   ├── backend/     # ← Mover contenido actual
-   └── frontend/    # ← Nuevo proyecto Vue.js 3
-   ```
+---
 
-### 📋 ARQUITECTURA OBJETIVO
-```
-backend/
-├── app/
-│   ├── main.py          # FastAPI + CORS (JSON only)
-│   ├── api/             # REST endpoints
-│   ├── models/          # Pydantic models
-│   ├── services/        # Business logic
-│   └── database.py      # Data persistence
-└── tests/               # Backend tests
+## 📋 FASES PENDIENTES (Ver PLANIFICACION_GLOBAL.md para detalles)
 
-frontend/
-├── src/
-│   ├── views/           # Vue pages
-│   ├── components/      # Vue components
-│   ├── stores/          # Pinia stores
-│   ├── services/        # API services
+### **FASE 4: Autenticación** (📋 PENDIENTE - 2-3 días)
+- [ ] Implementar login/register en frontend
+- [ ] Configurar JWT token management
+- [ ] Crear guards de navegación
+
+### **FASE 5: Gestión de Juegos** (📋 PENDIENTE - 3-4 días)
+- [ ] Crear interfaces para gestión de juegos
+- [ ] Implementar lobby y salas de espera
+- [ ] Conectar con endpoints de backend
+
+### **FASE 6: Interfaz de Juego** (📋 PENDIENTE - 5-7 días)
+- [ ] Crear interfaz completa del juego
+- [ ] Implementar todos los roles especiales
+- [ ] Gestionar fases del juego
+
+### **FASE 7: Funcionalidades Avanzadas** (📋 PENDIENTE - 3-4 días)
+- [ ] Optimizar UX/UI
+- [ ] Implementar funcionalidades premium
+- [ ] Añadir responsive design completo
+
+### **FASE 8: Testing y Optimización** (📋 PENDIENTE - 2-3 días)
+- [ ] Asegurar calidad del código
+- [ ] Optimizar performance
+- [ ] Preparar para producción
+
+---
+
+## 🎯 PRÓXIMA ACCIÓN INMEDIATA
+
+**📄 Consultar:** `SIGUIENTE_PASO.md` para plan detallado de Fase 3  
+**🔧 Comando:** `cd frontend && npm run dev`  
+**🌐 URLs:** Frontend: 5173 | Backend: 8000  
+
+**Tiempo estimado para Fase 3:** 2-3 días  
+**Prioridad:** � CRÍTICA (bloquea desarrollo posterior)
+
+---
+
+## 📊 CRONOGRAMA RESUMIDO
+
+| Fase | Estado | Duración | Fecha Objetivo |
+|------|--------|----------|----------------|
+| 1-2 | ✅ Completadas | 2 días | 29 Jul 2025 |
+| 3 | 🔄 En progreso | 2-3 días | 1 Ago 2025 |
+| 4-5 | 📋 Pendientes | 5-7 días | 8 Ago 2025 |
+| 6 | 📋 Pendiente | 5-7 días | 15 Ago 2025 |
+| 7-8 | 📋 Pendientes | 5-7 días | 22 Ago 2025 |
+
+**Entrega estimada:** 22 Agosto 2025
 │   └── router/          # Vue Router
 ├── package.json
 └── vite.config.js

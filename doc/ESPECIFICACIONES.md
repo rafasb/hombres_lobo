@@ -192,13 +192,5 @@ La aplicación web "Hombres Lobo" será una plataforma orientada a dispositivos 
 - **Componentes Reutilizables:** UI consistente con componentes modulares.
 - **API First:** Backend como API REST pura, sin dependencia del frontend.
 
-## 7. Próximos Pasos
-1. Reestructurar proyecto actual para separar backend/frontend.
-2. Migrar código backend actual a estructura API REST.
-3. Crear proyecto Vue.js 3 desde cero.
-4. Configurar comunicación entre ambos.
-5. Migrar funcionalidades existentes a la nueva arquitectura.
-
 ---
 
-> **Nota:** Esta planificación es una guía inicial y puede ajustarse según las necesidades del proyecto y el feedback recibido durante el desarrollo.
