@@ -2,6 +2,11 @@
 
 Aplicación web orientada a móviles basada en FastAPI, Jinja2 y Bootstrap.
 
+## Arrancar el backend
+```bash
+/home/rafasb/desarrollo/hombres_lobo/venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
 # Descripción del juego
 
 ## Roles y Funciones en la App (El Narrador Digital)
@@ -92,3 +97,4 @@ La app declarará el fin del juego cuando se cumpla una de las siguientes condic
   - **Fase de Noche:** Interacciones secretas con la app (acciones de roles especiales).
   - **Fase de Despertar:** El Narrador Digital anuncia las víctimas y eventos de la noche en el chat general.
   - **Fase de Día:** Debate en el chat general y chats privados, seguido de una votación de linchamiento.
+
