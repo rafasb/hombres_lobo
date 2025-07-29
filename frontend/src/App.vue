@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import ApiTest from '@/components/common/ApiTest.vue'
+import { onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+
+onMounted(() => {
+  authStore.checkAuth()
+})
 </script>
 
 <template>
   <div id="app">
-    <h1>Hombres Lobo - Prueba de Conexión</h1>
-    <ApiTest />
     <RouterView />
   </div>
 </template>
 
 <style scoped>
 #app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+  min-height: 100vh;
 }
 </style>
