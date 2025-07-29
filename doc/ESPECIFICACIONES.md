@@ -16,7 +16,7 @@ La aplicación web "Hombres Lobo" será una plataforma orientada a dispositivos 
 ### Frontend:
 - **Framework:** Vue.js 3 (Composition API)
 - **Build Tool:** Vite
-- **UI Framework:** Vuetify 3 o PrimeVue (componentes mobile-first)
+- **UI Framework:** PrimeVue (componentes mobile-first)
 - **State Management:** Pinia (para gestión de estado global)
 - **Router:** Vue Router 4
 - **HTTP Client:** Axios

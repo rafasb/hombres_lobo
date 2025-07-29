@@ -63,7 +63,6 @@
 │   ├── INSTALACION_FRONTEND_VUE.md    # 📄 Documentación instalación
 │   ├── TODO.md                        # 📄 Lista tareas
 │   ├── ESTADO_PROYECTO.md             # 📄 Este documento
-│   └── ACCION_INMEDIATA.md            # 📄 Resumen logros
 │
 └── migration_backup/          # ✅ Backup seguridad
 ```
