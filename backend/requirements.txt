@@ -1,0 +1,10 @@
+fastapi[cors]
+uvicorn
+pydantic
+pytest
+httpx
+python-multipart
+passlib[bcrypt]
+python-jose
+python-dotenv
+email_validator
