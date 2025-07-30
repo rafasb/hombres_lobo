@@ -57,8 +57,13 @@ const router = createRouter({
 })
 
 // Guard de navegación
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+
+  // Asegurar que el store está inicializado
+  if (!authStore.isInitialized) {
+    await authStore.initialize()
+  }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')

@@ -13,7 +13,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Configuración JWT
 SECRET_KEY = "supersecretkey"  # Cambiar por una clave segura en producción
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 horas (8 * 60 = 480 minutos)
 
 def hash_password(password: str) -> str:
     """Genera un hash seguro para la contraseña."""

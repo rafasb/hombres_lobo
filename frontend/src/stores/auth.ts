@@ -30,9 +30,38 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('access_token'))
   const isLoading = ref(false)
   const error = ref<string>('')
+  const isInitialized = ref(false)
 
   // Computed
   const isAuthenticated = computed(() => !!token.value && !!user.value)
+
+  // Inicialización automática
+  const initialize = async () => {
+    if (isInitialized.value) return
+
+    if (token.value) {
+      await checkAuth()
+    }
+    isInitialized.value = true
+  }
+
+  // Verificar si el token está próximo a expirar
+  const isTokenExpiringSoon = () => {
+    if (!token.value) return false
+
+    try {
+      // Decodificar el token para obtener la fecha de expiración
+      const payload = JSON.parse(atob(token.value.split('.')[1]))
+      const exp = payload.exp * 1000 // Convertir a millisegundos
+      const now = Date.now()
+      const timeUntilExpiry = exp - now
+
+      // Si queda menos de 30 minutos, considerar que está expirando pronto
+      return timeUntilExpiry < (30 * 60 * 1000)
+    } catch {
+      return true // Si no se puede decodificar, asumir que está expirado
+    }
+  }
 
   // Acciones
   const login = async (credentials: LoginCredentials) => {
@@ -109,10 +138,13 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const response = await api.get<User>('/users/me')
         user.value = response.data
+        return true
       } catch (err) {
         logout()
+        return false
       }
     }
+    return false
   }
 
   return {
@@ -121,12 +153,15 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isLoading,
     error,
+    isInitialized,
     // Computed
     isAuthenticated,
     // Acciones
     login,
     register,
     logout,
-    checkAuth
+    checkAuth,
+    initialize,
+    isTokenExpiringSoon
   }
 })
