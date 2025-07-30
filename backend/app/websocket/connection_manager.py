@@ -2,7 +2,7 @@
 Connection Manager para WebSocket
 Maneja conexiones, rooms de juegos y broadcast de mensajes
 """
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set
 from fastapi import WebSocket
 import json
 import asyncio

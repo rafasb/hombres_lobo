@@ -4,8 +4,7 @@ Maneja eventos específicos del juego: iniciar, unirse, fases, etc.
 """
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages import (
-    MessageType, GameStartedMessage, PhaseChangedMessage, 
-    PlayerEliminatedMessage, SystemMessage
+    MessageType, GameStartedMessage, PhaseChangedMessage
 )
 from app.services.game_state_service import game_state_manager
 from app.models.game_and_roles import GameStatus
@@ -108,7 +107,7 @@ class GameHandler:
     async def _send_game_status(self, game_id: str, game_state):
         """Enviar estado del juego a todos los conectados"""
         status_message = {
-            "type": MessageType.SYSTEM_MESSAGE,
+            "type": MessageType.SYSTEM_MESSAGE.value,
             "message": f"Estado del juego: {game_state.phase.value}",
             "data": {
                 "game_id": game_id,
@@ -137,7 +136,7 @@ class GameHandler:
     async def _send_error(self, connection_id: str, error_code: str, message: str):
         """Enviar mensaje de error"""
         error_message = {
-            "type": MessageType.ERROR,
+            "type": MessageType.ERROR.value,
             "error_code": error_code,
             "message": message
         }

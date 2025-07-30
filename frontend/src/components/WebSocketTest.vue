@@ -86,7 +86,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useGameWebSocket } from '@/composables/useGameWebSocket'
+import { useRealtimeGameStore } from '@/stores/realtime-game'
 import { useAuthStore } from '@/stores/auth'
 
 // PrimeVue components
@@ -96,7 +96,7 @@ import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 
 const authStore = useAuthStore()
-const { isConnected, isConnecting, connectionError, connectToGame, disconnect: disconnectWS, getStatus } = useGameWebSocket()
+const realtimeGameStore = useRealtimeGameStore()
 
 // Local state
 const testGameId = ref('test-game-123')
@@ -108,24 +108,28 @@ const messages = ref<Array<{
 }>>([])
 
 // Computed
+const isConnected = computed(() => realtimeGameStore.isConnected)
+const isConnecting = computed(() => realtimeGameStore.isConnecting)
+const connectionError = computed(() => realtimeGameStore.connectionError)
+
 const connectionStatus = computed(() => {
-  if (isConnecting) return 'Conectando...'
-  if (isConnected) return 'Conectado'
-  if (connectionError) return 'Error'
+  if (isConnecting.value) return 'Conectando...'
+  if (isConnected.value) return 'Conectado'
+  if (connectionError.value) return 'Error'
   return 'Desconectado'
 })
 
 const connectionSeverity = computed(() => {
-  if (isConnecting) return 'info'
-  if (isConnected) return 'success'
-  if (connectionError) return 'danger'
+  if (isConnecting.value) return 'info'
+  if (isConnected.value) return 'success'
+  if (connectionError.value) return 'danger'
   return 'secondary'
 })
 
 const connectionIcon = computed(() => {
-  if (isConnecting) return 'pi pi-spin pi-spinner'
-  if (isConnected) return 'pi pi-check-circle'
-  if (connectionError) return 'pi pi-times-circle'
+  if (isConnecting.value) return 'pi pi-spin pi-spinner'
+  if (isConnected.value) return 'pi pi-check-circle'
+  if (connectionError.value) return 'pi pi-times-circle'
   return 'pi pi-circle'
 })
 
@@ -136,7 +140,7 @@ const connect = async () => {
   addMessage('SENT', `Conectando a juego: ${testGameId.value}`)
 
   try {
-    const success = await connectToGame(testGameId.value)
+    const success = await realtimeGameStore.connectToGame(testGameId.value)
     if (success) {
       addMessage('RECEIVED', 'Conexión WebSocket establecida')
     } else {
@@ -148,13 +152,13 @@ const connect = async () => {
 }
 
 const disconnect = () => {
-  disconnectWS()
+  realtimeGameStore.disconnectFromGame()
   addMessage('SENT', 'Desconectando...')
   addMessage('RECEIVED', 'Desconectado')
 }
 
 const testStatus = () => {
-  const success = getStatus()
+  const success = realtimeGameStore.requestGameStatus()
   if (success) {
     addMessage('SENT', 'Solicitando estado del juego')
   } else {
