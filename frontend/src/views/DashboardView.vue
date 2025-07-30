@@ -15,6 +15,12 @@
 
       <div class="actions">
         <Button
+          @click="router.push('/games')"
+          label="Gestión de Juegos"
+          icon="pi pi-users"
+          class="games-btn"
+        />
+        <Button
           @click="authStore.logout"
           label="Cerrar Sesión"
           severity="secondary"

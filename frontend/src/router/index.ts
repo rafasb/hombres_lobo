@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
 
 const router = createRouter({
@@ -27,6 +27,25 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('../views/DashboardView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/games',
+      name: 'games',
+      component: () => import('../views/GamesView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/games/:gameId',
+      name: 'game-lobby',
+      component: () => import('../views/GameLobbyView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/games/:gameId/view',
+      name: 'game-view',
+      component: () => import('../views/GameLobbyView.vue'),
+      meta: { requiresAuth: true },
+      props: { viewOnly: true }
     }
   ]
 })

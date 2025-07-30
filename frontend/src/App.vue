@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from './stores/auth'
+import Toast from 'primevue/toast'
 
 const authStore = useAuthStore()
 
@@ -12,6 +13,7 @@ onMounted(() => {
 <template>
   <div id="app">
     <RouterView />
+    <Toast />
   </div>
 </template>
 
