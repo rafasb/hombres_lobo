@@ -7,7 +7,7 @@ from app.websocket.messages import (
     MessageType, GameStartedMessage, PhaseChangedMessage
 )
 from app.services.game_state_service import game_state_manager
-from app.models.game_and_roles import GameStatus
+from app.services.game_phases_service import GamePhase
 import logging
 
 logger = logging.getLogger(__name__)
@@ -62,8 +62,17 @@ class GameHandler:
             # Verificar que sea el creador (por ahora saltamos esta verificación)
             # TODO: Verificar permisos de inicio
             
-            # Cambiar estado a jugando
-            game_state.change_phase(GameStatus.STARTED, duration_minutes=10)
+            # Iniciar sistema de fases integrado
+            await game_state.start_game_phases()
+            
+            # Configurar callbacks para eventos de fase
+            game_state.phase_controller.add_phase_change_callback(
+                lambda old_phase, new_phase: self._on_phase_changed(game_id, old_phase, new_phase)
+            )
+            
+            game_state.phase_controller.add_phase_timer_callback(
+                lambda phase, time_remaining: self._on_phase_timer(game_id, phase, time_remaining)
+            )
             
             # Notificar inicio de juego
             start_message = GameStartedMessage(
@@ -73,17 +82,57 @@ class GameHandler:
             
             await connection_manager.broadcast_to_game(
                 game_id,
-                start_message.model_dump()
+                start_message.model_dump(mode='json')
             )
-            
-            # Enviar cambio de fase
-            await self._send_phase_change(game_id, game_state)
             
             logger.info(f"Juego {game_id} iniciado por {user_id}")
             
         except Exception as e:
             logger.error(f"Error en start_game: {e}")
             await self._send_error(connection_id, "START_ERROR", "Error iniciando juego")
+    
+    async def _on_phase_changed(self, game_id: str, old_phase: GamePhase, new_phase: GamePhase):
+        """Callback cuando cambia la fase del juego"""
+        try:
+            # Obtener información de fase
+            game_state = await game_state_manager.get_or_create_game_state(game_id)
+            if not game_state:
+                return
+                
+            phase_info = game_state.phase_controller.get_phase_info()
+            
+            # Crear mensaje de cambio de fase
+            phase_message = PhaseChangedMessage(
+                phase=new_phase.value,
+                duration=phase_info["duration"]
+            )
+            
+            # Broadcast a todos los jugadores
+            await connection_manager.broadcast_to_game(
+                game_id,
+                phase_message.model_dump(mode='json')
+            )
+            
+            logger.info(f"Juego {game_id}: Fase cambiada de {old_phase.value} a {new_phase.value}")
+            
+        except Exception as e:
+            logger.error(f"Error en callback de cambio de fase: {e}")
+    
+    async def _on_phase_timer(self, game_id: str, phase: GamePhase, time_remaining: int):
+        """Callback para updates de timer de fase"""
+        try:
+            # Enviar update de timer
+            timer_message = {
+                "type": MessageType.PHASE_TIMER.value,
+                "phase": phase.value,
+                "time_remaining": time_remaining,
+                "game_id": game_id
+            }
+            
+            await connection_manager.broadcast_to_game(game_id, timer_message)
+            
+        except Exception as e:
+            logger.error(f"Error en callback de timer: {e}")
     
     async def handle_get_game_status(self, connection_id: str, message_data: dict):
         """Obtener estado actual del juego"""

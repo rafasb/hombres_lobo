@@ -23,9 +23,9 @@ class MessageHandler:
             MessageType.HEARTBEAT: self.handle_heartbeat,
             MessageType.CHAT_MESSAGE: self.handle_chat_message,
             # Game handlers
-            "join_game": game_handler.handle_join_game,
-            "start_game": game_handler.handle_start_game, 
-            "get_game_status": game_handler.handle_get_game_status,
+            MessageType.JOIN_GAME: game_handler.handle_join_game,
+            MessageType.START_GAME: game_handler.handle_start_game, 
+            MessageType.GET_GAME_STATUS: game_handler.handle_get_game_status,
         }
     
     async def handle_message(self, connection_id: str, message_data: dict):
@@ -143,7 +143,7 @@ class MessageHandler:
 # Instancia global del message handler
 message_handler = MessageHandler()
 
-async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str):
+async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> None:
     """Endpoint principal de WebSocket"""
     connection_id = None
     

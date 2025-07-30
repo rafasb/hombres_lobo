@@ -1,11 +1,12 @@
 """
 Game State Service
-Maneja el estado del juego en memoria - versión básica para WebSocket
+Maneja el estado del juego en memoria integrado con sistema de fases
 """
 from typing import Dict, List, Set
 from datetime import datetime, timedelta
 import asyncio
 from app.models.game_and_roles import Game, GameStatus
+from app.services.game_phases_service import GamePhaseController, GamePhase, phase_manager
 
 class GameState:
     """Estado de un juego en memoria"""
@@ -14,14 +15,40 @@ class GameState:
         self.game_id = game_id
         self.game_data = game_data
         self.connected_players: Set[str] = set()
-        self.phase = GameStatus.WAITING  # Usar GameStatus en lugar de GamePhase
-        self.phase_start_time = datetime.now()
-        self.phase_duration = timedelta(minutes=5)  
+        
+        # Integración con sistema de fases
+        self.phase_controller: GamePhaseController = phase_manager.get_or_create_controller(game_id)
+        
+        # Estado del juego
         self.votes: Dict[str, str] = {}  # voter_id -> target_id
         self.night_actions: Dict[str, dict] = {}  # player_id -> action_data
         self.eliminated_players: Set[str] = set()
-        self.phase_timer_task = None
         self.is_active = True
+        
+        # Legacy compatibility
+        self.phase_start_time = datetime.now()
+        self.phase_duration = timedelta(minutes=5)
+        self.phase_timer_task = None
+    
+    @property
+    def phase(self) -> GameStatus:
+        """Obtener fase actual convertida a GameStatus para compatibilidad"""
+        phase_mapping = {
+            GamePhase.WAITING: GameStatus.WAITING,
+            GamePhase.STARTING: GameStatus.STARTED,
+            GamePhase.NIGHT: GameStatus.NIGHT,
+            GamePhase.DAY: GameStatus.DAY,
+            GamePhase.VOTING: GameStatus.DAY,
+            GamePhase.TRIAL: GameStatus.DAY,
+            GamePhase.EXECUTION: GameStatus.DAY,
+            GamePhase.FINISHED: GameStatus.FINISHED
+        }
+        return phase_mapping.get(self.phase_controller.current_phase, GameStatus.WAITING)
+    
+    @property
+    def current_game_phase(self) -> GamePhase:
+        """Obtener fase actual del juego"""
+        return self.phase_controller.current_phase
         
     def add_connected_player(self, user_id: str):
         """Agregar jugador conectado"""
@@ -89,16 +116,34 @@ class GameState:
         self.night_actions.clear()
         
     def change_phase(self, new_phase: GameStatus, duration_minutes: int = 5):
-        """Cambiar fase del juego"""
-        self.phase = new_phase
+        """Cambiar fase del juego (legacy compatibility)"""
+        # Convertir GameStatus a GamePhase
+        status_to_phase = {
+            GameStatus.WAITING: GamePhase.WAITING,
+            GameStatus.STARTED: GamePhase.STARTING,
+            GameStatus.NIGHT: GamePhase.NIGHT,
+            GameStatus.DAY: GamePhase.DAY,
+            GameStatus.PAUSED: GamePhase.DAY,  # Mapear paused a day por ahora
+            GameStatus.FINISHED: GamePhase.FINISHED
+        }
+        
+        game_phase = status_to_phase.get(new_phase, GamePhase.WAITING)
+        
+        # Usar el controlador de fases
+        import asyncio
+        asyncio.create_task(self.phase_controller.change_phase(game_phase, force=True))
+        
+        # Actualizar valores legacy para compatibilidad
         self.phase_start_time = datetime.now()
         self.phase_duration = timedelta(minutes=duration_minutes)
-        
+    
+    async def start_game_phases(self):
+        """Iniciar el sistema de fases para el juego"""
+        await self.phase_controller.start_game()
+    
     def get_phase_time_remaining(self) -> int:
         """Obtener tiempo restante de la fase en segundos"""
-        elapsed = datetime.now() - self.phase_start_time
-        remaining = self.phase_duration - elapsed
-        return max(0, int(remaining.total_seconds()))
+        return self.phase_controller.get_time_remaining()
     
     def is_phase_expired(self) -> bool:
         """Verificar si la fase ha expirado"""

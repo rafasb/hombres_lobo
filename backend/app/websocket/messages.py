@@ -2,7 +2,7 @@
 Modelos para mensajes WebSocket
 Define los tipos de mensajes y su estructura
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, Dict, List
 from datetime import datetime
 from enum import Enum
@@ -12,6 +12,11 @@ class MessageType(str, Enum):
     PLAYER_CONNECTED = "player_connected"
     PLAYER_DISCONNECTED = "player_disconnected" 
     PLAYER_LEFT_GAME = "player_left_game"
+    
+    # Comandos de juego
+    JOIN_GAME = "join_game"
+    START_GAME = "start_game"
+    GET_GAME_STATUS = "get_game_status"
     
     # Fases del juego
     PHASE_CHANGED = "phase_changed"
@@ -42,116 +47,123 @@ class MessageType(str, Enum):
     ERROR = "error"
     SUCCESS = "success"
 
-class WebSocketMessage(BaseModel):
+class BaseWebSocketMessage(BaseModel):
+    """Clase base para todos los mensajes WebSocket"""
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+class WebSocketMessage(BaseWebSocketMessage):
     """Mensaje base para WebSocket"""
     type: MessageType
     game_id: str | None = None
     user_id: str | None = None
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
     data: Dict[str, Any] = {}
 
-class PlayerConnectionMessage(BaseModel):
+class PlayerConnectionMessage(BaseWebSocketMessage):
     """Mensaje de conexión/desconexión de jugador"""
     type: MessageType
     user_id: str
     username: str
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class PhaseChangedMessage(BaseModel):
+class PhaseChangedMessage(BaseWebSocketMessage):
     """Mensaje de cambio de fase"""
     type: MessageType = MessageType.PHASE_CHANGED
     phase: str  # night, day, voting, trial, execution
     duration: int  # segundos
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class PhaseTimerMessage(BaseModel):
+class PhaseTimerMessage(BaseWebSocketMessage):
     """Mensaje de timer de fase"""
     type: MessageType = MessageType.PHASE_TIMER
     phase: str
     time_remaining: int  # segundos
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class VoteMessage(BaseModel):
+class VoteMessage(BaseWebSocketMessage):
     """Mensaje de voto"""
     type: MessageType = MessageType.VOTE_CAST
     voter_id: str
     target_id: str
     vote_type: str  # day_vote, sheriff_vote, etc
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class VotingResultsMessage(BaseModel):
+class VotingResultsMessage(BaseWebSocketMessage):
     """Resultados de votación"""
     type: MessageType = MessageType.VOTING_RESULTS
     vote_type: str
     results: Dict[str, int]  # target_id -> vote_count
     eliminated_player: str | None = None
     is_tie: bool = False
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class ChatMessage(BaseModel):
+class ChatMessage(BaseWebSocketMessage):
     """Mensaje de chat"""
     type: MessageType = MessageType.CHAT_MESSAGE
     sender_id: str
     sender_name: str
     message: str
     channel: str  # all, living, dead, wolves
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class SystemMessage(BaseModel):
+class SystemMessage(BaseWebSocketMessage):
     """Mensaje del sistema"""
     type: MessageType = MessageType.SYSTEM_MESSAGE
     message: str
     message_key: str | None = None  # Para i18n
     params: Dict[str, Any] = {}
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class RoleActionMessage(BaseModel):
+class RoleActionMessage(BaseWebSocketMessage):
     """Mensaje de acción de rol"""
     type: MessageType = MessageType.ROLE_ACTION
     actor_id: str
     action: str  # see, heal, poison, shoot, etc
     target_id: str | None = None
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class PlayerEliminatedMessage(BaseModel):
+class PlayerEliminatedMessage(BaseWebSocketMessage):
     """Mensaje de jugador eliminado"""
     type: MessageType = MessageType.PLAYER_ELIMINATED
     player_id: str
     player_name: str
     role: str | None = None
     elimination_type: str  # vote, night_kill, poison, etc
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class GameStartedMessage(BaseModel):
+class GameStartedMessage(BaseWebSocketMessage):
     """Mensaje de juego iniciado"""
     type: MessageType = MessageType.GAME_STARTED
     players: List[Dict[str, Any]]
     roles_assigned: bool = True
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class GameEndedMessage(BaseModel):
+class GameEndedMessage(BaseWebSocketMessage):
     """Mensaje de juego terminado"""
     type: MessageType = MessageType.GAME_ENDED
     winning_team: str  # wolves, villagers, lovers, etc
     winners: List[str]  # user_ids
     final_roles: Dict[str, str]  # user_id -> role
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class ErrorMessage(BaseModel):
+class ErrorMessage(BaseWebSocketMessage):
     """Mensaje de error"""
     type: MessageType = MessageType.ERROR
     error_code: str
     message: str
     details: Dict[str, Any] = {}
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
-class SuccessMessage(BaseModel):
+class SuccessMessage(BaseWebSocketMessage):
     """Mensaje de éxito"""
     type: MessageType = MessageType.SUCCESS
     action: str
     message: str
     data: Dict[str, Any] = {}
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
 # Tipos de mensajes para validación
 MESSAGE_MODELS = {

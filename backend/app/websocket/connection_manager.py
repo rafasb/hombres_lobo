@@ -117,23 +117,39 @@ class ConnectionManager:
                     "timestamp": datetime.now().isoformat()
                 })
 
-    async def send_personal_message(self, connection_id: str, message: dict):
+    async def send_personal_message(self, connection_id: str, message):
         """Enviar mensaje a conexión específica"""
         if connection_id in self.active_connections:
             websocket = self.active_connections[connection_id]
             try:
-                await websocket.send_text(json.dumps(message))
+                # Si el mensaje es un modelo Pydantic, usar su serialización
+                # Si es un dict simple, serializarlo con json.dumps
+                if hasattr(message, 'json'):
+                    message_text = message.json()
+                else:
+                    message_text = json.dumps(message, default=str)
+                await websocket.send_text(message_text)
             except Exception as e:
                 print(f"Error enviando mensaje personal a {connection_id}: {e}")
                 await self.disconnect(connection_id)
 
-    async def broadcast_to_game(self, game_id: str, message: dict, exclude_connection: str | None = None):
+    async def broadcast_to_game(self, game_id: str, message, exclude_connection: str | None = None):
         """Broadcast mensaje a todos en un juego"""
         if game_id not in self.game_rooms:
             return
         
-        message["game_id"] = game_id
-        message_text = json.dumps(message)
+        # Agregar game_id al mensaje si es un dict
+        if isinstance(message, dict):
+            message["game_id"] = game_id
+            message_text = json.dumps(message, default=str)
+        else:
+            # Si es un modelo Pydantic, agregar game_id a través del dict
+            if hasattr(message, 'dict'):
+                message_dict = message.dict()
+                message_dict["game_id"] = game_id
+                message_text = json.dumps(message_dict, default=str)
+            else:
+                message_text = message.json() if hasattr(message, 'json') else str(message)
         
         disconnected_connections = []
         
@@ -150,9 +166,13 @@ class ConnectionManager:
         for connection_id in disconnected_connections:
             await self.disconnect(connection_id)
 
-    async def broadcast_to_all(self, message: dict):
+    async def broadcast_to_all(self, message):
         """Broadcast mensaje a todas las conexiones activas"""
-        message_text = json.dumps(message)
+        if hasattr(message, 'json'):
+            message_text = message.json()
+        else:
+            message_text = json.dumps(message, default=str)
+            
         disconnected_connections = []
         
         for connection_id, websocket in self.active_connections.items():
