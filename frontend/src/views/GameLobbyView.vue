@@ -1,6 +1,15 @@
 <template>
   <div class="game-lobby-view">
-    <!-- Loading state -->
+    <!        <div class="game-actions">
+          <!-- Solo el host puede iniciar el juego -->
+          <Button
+            v-if="isHost && canStartGame"
+            :label="isConnected ? 'Iniciar Juego (Tiempo Real)' : 'Iniciar Juego'"
+            icon="pi pi-play"
+            @click="isConnected ? startGameRealtime() : startGame()"
+            :loading="isStartingGame"
+            :class="isConnected ? 'p-button-success' : 'p-button-warning'"
+          /> state -->
     <div v-if="isLoading" class="loading-container">
       <ProgressSpinner />
       <p>Cargando sala de espera...</p>
@@ -28,6 +37,15 @@
           <h1 class="game-title">
             <i class="pi pi-users"></i>
             {{ currentGame.name }}
+            <!-- WebSocket connection indicator -->
+            <Tag
+              v-if="isConnected"
+              value="Tiempo Real"
+              severity="success"
+              icon="pi pi-circle-fill"
+              class="realtime-indicator"
+              style="margin-left: 1rem; font-size: 0.75rem;"
+            />
           </h1>
           <div class="game-meta">
             <Tag :value="gameStatusLabel" :severity="gameStatusSeverity" />
@@ -185,6 +203,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useGamesStore } from '../stores/games'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from 'primevue/usetoast'
+import { useGameWebSocket } from '../composables/useGameWebSocket'
 
 // PrimeVue components
 import Card from 'primevue/card'
@@ -206,6 +225,19 @@ const router = useRouter()
 const gamesStore = useGamesStore()
 const authStore = useAuthStore()
 const toast = useToast()
+
+// WebSocket integration
+const {
+  isConnected,
+  isConnecting,
+  connectionError,
+  gameState,
+  connectToGame,
+  disconnect,
+  startGame: startGameWebSocket,
+  joinGame: joinGameWebSocket,
+  getStatus
+} = useGameWebSocket()
 
 // Reactive state
 const isLoading = ref(true)
@@ -335,6 +367,58 @@ const startGame = async () => {
     })
   } finally {
     isStartingGame.value = false
+  }
+}
+
+// WebSocket specific functions
+const reconnectWebSocket = async () => {
+  if (gameId.value) {
+    await connectToGame(gameId.value)
+    if (isConnected) {
+      toast.add({
+        severity: 'success',
+        summary: 'Conectado',
+        detail: 'Conexión en tiempo real restablecida',
+        life: 3000
+      })
+    }
+  }
+}
+
+const startGameRealtime = async () => {
+  if (!isConnected) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Sin conexión',
+      detail: 'No hay conexión en tiempo real para iniciar el juego',
+      life: 5000
+    })
+    return
+  }
+
+  try {
+    isStartingGame.value = true
+    const success = startGameWebSocket()
+
+    if (success) {
+      toast.add({
+        severity: 'info',
+        summary: 'Iniciando juego',
+        detail: 'Enviando solicitud de inicio...',
+        life: 3000
+      })
+    }
+  } catch (err: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Error enviando solicitud de inicio',
+      life: 5000
+    })
+  } finally {
+    setTimeout(() => {
+      isStartingGame.value = false
+    }, 2000)
   }
 }
 

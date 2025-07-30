@@ -21,6 +21,13 @@
           class="games-btn"
         />
         <Button
+          @click="router.push('/test-websocket')"
+          label="Test WebSocket"
+          icon="pi pi-bolt"
+          severity="info"
+          class="test-ws-btn"
+        />
+        <Button
           @click="authStore.logout"
           label="Cerrar Sesión"
           severity="secondary"

@@ -46,6 +46,12 @@ const router = createRouter({
       component: () => import('../views/GameLobbyView.vue'),
       meta: { requiresAuth: true },
       props: { viewOnly: true }
+    },
+    {
+      path: '/test-websocket',
+      name: 'test-websocket',
+      component: () => import('../components/WebSocketTest.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
