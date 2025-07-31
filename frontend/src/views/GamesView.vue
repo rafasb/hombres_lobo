@@ -15,20 +15,36 @@
         </p>
       </div>
 
-      <div class="header-stats" v-if="!isLoading">
-        <div class="stat-card">
-          <i class="pi pi-play-circle"></i>
-          <div class="stat-info">
-            <span class="stat-number">{{ availableGames.length }}</span>
-            <span class="stat-label">Disponibles</span>
+      <div class="header-actions">
+        <div class="header-stats" v-if="!isLoading">
+          <div class="stat-card">
+            <i class="pi pi-play-circle"></i>
+            <div class="stat-info">
+              <span class="stat-number">{{ availableGames.length }}</span>
+              <span class="stat-label">Disponibles</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <i class="pi pi-bookmark"></i>
+            <div class="stat-info">
+              <span class="stat-number">{{ myGames.length }}</span>
+              <span class="stat-label">Mis Juegos</span>
+            </div>
           </div>
         </div>
-        <div class="stat-card">
-          <i class="pi pi-bookmark"></i>
-          <div class="stat-info">
-            <span class="stat-number">{{ myGames.length }}</span>
-            <span class="stat-label">Mis Juegos</span>
+
+        <div class="user-actions">
+          <div class="user-info">
+            <i class="pi pi-user"></i>
+            <span>{{ authStore.user?.username }}</span>
           </div>
+          <Button
+            label="Cerrar Sesión"
+            icon="pi pi-sign-out"
+            severity="secondary"
+            size="small"
+            @click="handleLogout"
+          />
         </div>
       </div>
     </div>
@@ -72,18 +88,21 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
+import Button from 'primevue/button'
 import Badge from 'primevue/badge'
 import GamesList from '../components/games/GamesList.vue'
 import CreateGameModal from '../components/games/CreateGameModal.vue'
 import DebugGamesStore from '../components/DebugGamesStore.vue'
 import { useGamesStore } from '../stores/games'
+import { useAuthStore } from '../stores/auth'
 
 // Composables
 const router = useRouter()
 const toast = useToast()
 
-// Store
+// Stores
 const gamesStore = useGamesStore()
+const authStore = useAuthStore()
 const {
   isLoading,
   availableGames,
@@ -186,6 +205,30 @@ const handleRefresh = async () => {
   }
 }
 
+const handleLogout = async () => {
+  try {
+    await authStore.logout()
+
+    toast.add({
+      severity: 'success',
+      summary: 'Sesión Cerrada',
+      detail: 'Has cerrado sesión exitosamente',
+      life: 3000
+    })
+
+    // Redirigir a la página de login
+    router.push('/login')
+
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo cerrar la sesión',
+      life: 3000
+    })
+  }
+}
+
 // Lifecycle
 onMounted(async () => {
   // Cargar juegos al montar el componente
@@ -214,6 +257,13 @@ onMounted(async () => {
   min-width: 300px;
 }
 
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
 .page-title {
   display: flex;
   align-items: center;
@@ -233,6 +283,27 @@ onMounted(async () => {
 .header-stats {
   display: flex;
   gap: 1rem;
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface-100);
+  border-radius: 20px;
+  color: var(--text-color-secondary);
+  font-size: 0.9rem;
+}
+
+.user-info i {
+  color: var(--primary-color);
 }
 
 .stat-card {
@@ -293,8 +364,18 @@ onMounted(async () => {
     align-items: stretch;
   }
 
+  .header-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
   .header-stats {
     justify-content: space-around;
+  }
+
+  .user-actions {
+    justify-content: space-between;
   }
 
   .stat-card {
@@ -319,6 +400,15 @@ onMounted(async () => {
 
   .stat-card {
     justify-content: flex-start;
+  }
+
+  .user-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .user-info {
+    justify-content: center;
   }
 }
 </style>

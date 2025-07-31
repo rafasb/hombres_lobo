@@ -55,12 +55,15 @@
             @click="showSettings = true"
             title="Configuración"
           />
+          <Menu ref="userMenu" :model="userMenuItems" popup />
           <Button
-            icon="pi pi-sign-out"
-            severity="danger"
+            icon="pi pi-user"
+            severity="secondary"
             text
-            @click="handleDisconnect"
-            title="Salir del juego"
+            @click="toggleUserMenu"
+            aria-haspopup="true"
+            aria-controls="user_menu"
+            title="Opciones de usuario"
           />
         </div>
       </div>
@@ -215,6 +218,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRealtimeGameStore } from '@/stores/realtime-game'
+import { useAuthStore } from '@/stores/auth'
 import { useGamePhase } from '@/composables/useGamePhase'
 import { useVoting } from '@/composables/useVoting'
 import { useToast } from 'primevue/usetoast'
@@ -224,6 +228,7 @@ import VotingPanel from '@/components/game/VotingPanel.vue'
 import PlayersGrid from '@/components/game/PlayersGrid.vue'
 
 import Button from 'primevue/button'
+import Menu from 'primevue/menu'
 import ProgressSpinner from 'primevue/progressspinner'
 import Dialog from 'primevue/dialog'
 import Checkbox from 'primevue/checkbox'
@@ -236,6 +241,7 @@ const router = useRouter()
 const toast = useToast()
 
 const realtimeGameStore = useRealtimeGameStore()
+const authStore = useAuthStore()
 
 const {
   isNight,
@@ -249,11 +255,34 @@ const {
 
 // Estado local
 const showSettings = ref(false)
+const userMenu = ref()
 const settings = ref({
   soundEnabled: true,
   notificationsEnabled: true,
   volume: 50
 })
+
+// Menú del usuario
+const userMenuItems = ref([
+  {
+    label: `Usuario: ${authStore.user?.username}`,
+    disabled: true,
+    class: 'user-info-menu-item'
+  },
+  {
+    separator: true
+  },
+  {
+    label: 'Salir del juego',
+    icon: 'pi pi-sign-out',
+    command: () => handleDisconnect()
+  },
+  {
+    label: 'Cerrar sesión',
+    icon: 'pi pi-power-off',
+    command: () => handleLogout()
+  }
+])
 
 // Computeds
 const gameState = computed(() => realtimeGameStore.gameState)
@@ -369,6 +398,34 @@ const handleDisconnect = async () => {
     })
   } catch (error) {
     console.error('Error al desconectar:', error)
+  }
+}
+
+const toggleUserMenu = (event: Event) => {
+  userMenu.value.toggle(event)
+}
+
+const handleLogout = async () => {
+  try {
+    await authStore.logout()
+
+    toast.add({
+      severity: 'success',
+      summary: 'Sesión Cerrada',
+      detail: 'Has cerrado sesión exitosamente',
+      life: 3000
+    })
+
+    // Redirigir a la página de login
+    await router.push('/login')
+
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo cerrar la sesión',
+      life: 3000
+    })
   }
 }
 
@@ -629,5 +686,17 @@ const goToLobby = async () => {
   .error-actions {
     flex-direction: column;
   }
+}
+
+/* Estilos para el menú del usuario */
+:deep(.user-info-menu-item) {
+  font-weight: 600;
+  background: var(--surface-100);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+:deep(.p-menu .p-menuitem-link) {
+  border-radius: 4px;
 }
 </style>

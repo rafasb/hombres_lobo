@@ -67,6 +67,15 @@
         </template>
       </Column>
 
+      <Column field="id" header="Sala" sortable style="min-width: 80px">
+        <template #body="{ data }">
+          <div class="room-code">
+            <i class="pi pi-hashtag"></i>
+            <span class="code">{{ data.id.slice(-4).toUpperCase() }}</span>
+          </div>
+        </template>
+      </Column>
+
       <Column field="players" header="Jugadores" sortable style="min-width: 120px">
         <template #body="{ data }">
           <div class="players-info">
@@ -300,6 +309,22 @@ onMounted(() => {
 
 .game-name .name {
   font-weight: 600;
+}
+
+.room-code {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.room-code .code {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: var(--primary-color);
+  background-color: var(--primary-color-text);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
 }
 
 .players-info {

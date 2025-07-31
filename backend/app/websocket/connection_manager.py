@@ -159,7 +159,7 @@ class ConnectionManager:
                 try:
                     await websocket.send_text(message_text)
                 except Exception as e:
-                    print(f"Error broadcasting a {connection_id}: {e}")
+                    print(f"Error enviando mensaje a conexión {connection_id}: {e}")
                     disconnected_connections.append(connection_id)
         
         # Limpiar conexiones muertas

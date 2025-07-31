@@ -6,9 +6,11 @@ from app.websocket.connection_manager import connection_manager
 from app.websocket.messages import (
     MessageType, GameStartedMessage, PhaseChangedMessage
 )
-from app.services.game_state_service import game_state_manager
+from app.services.game_state_service import game_state_manager, GameState
 from app.services.game_phases_service import GamePhase
 from app.services.voting_service import voting_service, VoteType
+from app.services.game_service import join_game, get_game
+from app.services.user_service import get_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,11 +35,62 @@ class GameHandler:
                 await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
                 return
             
-            # Agregar jugador al estado
+            # Verificar si el usuario está en la base de datos del juego
+            user_in_game = False
+            if game_state.game_data and game_state.game_data.players:
+                user_in_game = any(player.id == user_id for player in game_state.game_data.players)
+            
+            # Si no está en la base de datos, añadirlo automáticamente
+            if not user_in_game:
+                try:
+                    # Obtener información del usuario
+                    user = get_user(user_id)
+                    if user:
+                        # Intentar añadir el usuario al juego en la base de datos
+                        result = join_game(game_id, user)
+                        if result:
+                            # Recargar el estado del juego para incluir el nuevo jugador
+                            game_state = await game_state_manager.get_or_create_game_state(game_id)
+                except Exception as e:
+                    logger.error(f"Error añadiendo usuario {user_id} a la base de datos del juego {game_id}: {e}")
+            
+            # Verificar que el game_state sea válido después de posibles modificaciones
+            if not game_state:
+                await self._send_error(connection_id, "GAME_NOT_FOUND", "Error cargando estado del juego")
+                return
+            
+            # Agregar jugador al estado en memoria
             game_state.add_connected_player(user_id)
             
-            # Notificar estado actual del juego
+            # Notificar estado actual del juego a todos los conectados
             await self._send_game_status(game_id, game_state)
+            
+            # *** NUEVA LÓGICA: Verificar si se alcanzó el número máximo de jugadores para auto-inicio ***
+            if game_state.game_data and game_state.game_data.players:
+                current_players = len(game_state.game_data.players)
+                
+                # Obtener información actualizada del juego desde la base de datos
+                game_info = get_game(game_id)
+                if not game_info:
+                    logger.warning(f"No se pudo obtener información del juego {game_id} para auto-inicio")
+                    return
+                
+                max_players = game_info.max_players
+                
+                logger.info(f"Juego {game_id}: {current_players}/{max_players} jugadores")
+                
+                # Si se alcanzó el máximo de jugadores y el juego está en estado WAITING, iniciarlo automáticamente
+                if (current_players >= max_players and 
+                    game_state.game_data.status.value == "waiting" and
+                    not (game_state.phase_controller and game_state.phase_controller.is_active)):
+                    
+                    logger.info(f"Auto-iniciando juego {game_id} - Máximo de jugadores alcanzado ({current_players}/{max_players})")
+                    
+                    try:
+                        # Iniciar el juego automáticamente
+                        await self._auto_start_game(game_id, game_state)
+                    except Exception as e:
+                        logger.error(f"Error en auto-inicio del juego {game_id}: {e}")
             
             logger.info(f"Jugador {user_id} se unió al juego {game_id}")
             
@@ -91,6 +144,53 @@ class GameHandler:
         except Exception as e:
             logger.error(f"Error en start_game: {e}")
             await self._send_error(connection_id, "START_ERROR", "Error iniciando juego")
+    
+    async def _auto_start_game(self, game_id: str, game_state: GameState):
+        """Iniciar juego automáticamente cuando se alcanza el máximo de jugadores"""
+        try:
+            logger.info(f"Iniciando juego automáticamente: {game_id}")
+            
+            # Iniciar sistema de fases integrado
+            await game_state.start_game_phases()
+            
+            # Configurar callbacks para eventos de fase
+            game_state.phase_controller.add_phase_change_callback(
+                lambda old_phase, new_phase: self._on_phase_changed(game_id, old_phase, new_phase)
+            )
+            
+            game_state.phase_controller.add_phase_timer_callback(
+                lambda phase, time_remaining: self._on_phase_timer(game_id, phase, time_remaining)
+            )
+            
+            # Notificar inicio automático de juego
+            start_message = GameStartedMessage(
+                players=[{"id": p, "name": f"Player {p}"} for p in game_state.connected_players],
+                roles_assigned=True
+            )
+            
+            await connection_manager.broadcast_to_game(
+                game_id,
+                start_message.model_dump(mode='json')
+            )
+            
+            # Notificar que el juego se inició automáticamente
+            auto_start_notification = {
+                "type": "game_auto_started",
+                "message": "¡El juego se ha iniciado automáticamente al completarse todos los jugadores!"
+            }
+            
+            await connection_manager.broadcast_to_game(game_id, auto_start_notification)
+            
+            logger.info(f"Juego {game_id} iniciado automáticamente")
+            
+        except Exception as e:
+            logger.error(f"Error en auto-inicio del juego {game_id}: {e}")
+            # Notificar error a todos los jugadores
+            error_notification = {
+                "type": "auto_start_error",
+                "message": "Error al iniciar el juego automáticamente. Puedes intentar iniciarlo manualmente."
+            }
+            await connection_manager.broadcast_to_game(game_id, error_notification)
     
     async def handle_force_next_phase(self, connection_id: str, message_data: dict):
         """Manejar cambio forzado a la siguiente fase (solo creador)"""
