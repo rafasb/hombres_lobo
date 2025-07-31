@@ -1,0 +1,234 @@
+.game-lobby-view {
+  min-height: 100vh;
+  background: var(--surface-50);
+  padding: 2rem;
+}
+
+.loading-container,
+.error-container,
+.no-game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.error-content h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-color);
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.lobby-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.game-header {
+  background: var(--surface-0);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.game-info {
+  flex: 1;
+}
+
+.game-title {
+  margin: 0 0 1rem 0;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.game-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.game-id {
+  color: var(--text-color-secondary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+.created-by {
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+.game-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.lobby-content {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.players-section {
+  grid-column: 1;
+}
+
+.settings-section,
+.info-section {
+  grid-column: 2;
+}
+
+.settings-section {
+  margin-bottom: 2rem;
+}
+
+.section-header {
+  padding: 1.5rem 1.5rem 1rem 1.5rem ;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.section-header h3 {
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-color);
+}
+
+.players-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.players-bar {
+  flex: 1;
+  height: 6px;
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
+.game-info-content {
+  padding: 0;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--surface-200);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.info-value {
+  color: var(--text-color-secondary);
+}
+
+.rules-section {
+  margin-top: 1rem;
+}
+
+.rules-section h4 {
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+.roles-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.role-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: var(--surface-100);
+  border-radius: 4px;
+}
+
+.role-name {
+  font-size: 0.875rem;
+  color: var(--text-color);
+}
+
+.status-messages {
+  margin-top: 2rem;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .lobby-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .settings-section,
+  .info-section {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .game-lobby-view {
+    padding: 1rem;
+  }
+
+  .game-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+
+  .game-actions {
+    justify-content: stretch;
+  }
+
+  .game-actions .p-button {
+    flex: 1;
+  }
+
+  .game-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

@@ -101,7 +101,7 @@
         </template>
       </Column>
 
-      <Column header="Acciones" style="min-width: 160px">
+      <Column header="Acciones" style="min-width: 220px">
         <template #body="{ data }">
           <div class="action-buttons">
             <Button
@@ -124,6 +124,13 @@
               icon="pi pi-arrow-right"
               class="p-button-sm"
               @click="$emit('enter-game', data.id)"
+            />
+            <Button
+              v-if="canDeleteGame(data)"
+              label="Eliminar"
+              icon="pi pi-trash"
+              class="p-button-sm p-button-danger"
+              @click="$emit('delete-game', data.id)"
             />
           </div>
         </template>
@@ -157,6 +164,7 @@ const emit = defineEmits<{
   'join-game': [gameId: string]
   'view-game': [gameId: string]
   'enter-game': [gameId: string]
+  'delete-game': [gameId: string]
   'refresh': []
 }>()
 
@@ -249,6 +257,11 @@ const canEnterGame = (game: any): boolean => {
     game.players.some((player: any) => player.id === userId) ||
     game.creator_id === userId
   )
+}
+
+const canDeleteGame = (game: any): boolean => {
+  const userRole = authStore.user?.role
+  return userRole === 'admin'
 }
 
 // Lifecycle

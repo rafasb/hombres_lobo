@@ -58,6 +58,7 @@
           @join-game="handleJoinGame"
           @view-game="handleViewGame"
           @enter-game="handleEnterGame"
+          @delete-game="handleDeleteGame"
           @refresh="handleRefresh"
         />
       </TabPanel>
@@ -69,6 +70,7 @@
           @join-game="handleJoinGame"
           @view-game="handleViewGame"
           @enter-game="handleEnterGame"
+          @delete-game="handleDeleteGame"
           @refresh="handleRefresh"
         />
       </TabPanel>
@@ -184,6 +186,41 @@ const handleEnterGame = (gameId: string) => {
   router.push(`/game/${gameId}`)
 }
 
+const handleDeleteGame = async (gameId: string) => {
+  try {
+    // Confirmar con el usuario
+    const confirmed = window.confirm('¿Estás seguro de que quieres eliminar esta partida? Esta acción no se puede deshacer.')
+
+    if (!confirmed) return
+
+    const success = await gamesStore.deleteGame(gameId)
+
+    if (success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Partida Eliminada',
+        detail: 'La partida ha sido eliminada exitosamente',
+        life: 3000
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Error al Eliminar',
+        detail: 'No se pudo eliminar la partida',
+        life: 5000
+      })
+    }
+
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error al Eliminar',
+      detail: error.response?.data?.detail || 'No se pudo eliminar la partida',
+      life: 5000
+    })
+  }
+}
+
 const handleRefresh = async () => {
   try {
     await fetchGames()
@@ -236,179 +273,4 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-.games-view {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.header-content {
-  flex: 1;
-  min-width: 300px;
-}
-
-.header-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1rem;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0 0 0.5rem 0;
-  color: var(--primary-color);
-  font-size: 2rem;
-  font-weight: 700;
-}
-
-.page-subtitle {
-  color: var(--text-color-secondary);
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.header-stats {
-  display: flex;
-  gap: 1rem;
-}
-
-.user-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: var(--surface-100);
-  border-radius: 20px;
-  color: var(--text-color-secondary);
-  font-size: 0.9rem;
-}
-
-.user-info i {
-  color: var(--primary-color);
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: var(--surface-50);
-  border: 1px solid var(--surface-200);
-  border-radius: 8px;
-  padding: 1rem;
-  min-width: 120px;
-}
-
-.stat-card i {
-  font-size: 1.5rem;
-  color: var(--primary-color);
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-number {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-color);
-  line-height: 1.2;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: var(--text-color-secondary);
-}
-
-.games-tabs {
-  margin-top: 1rem;
-}
-
-.games-tabs :deep(.p-tabview-nav-link) {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.games-tabs :deep(.p-tabview-panels) {
-  padding: 1.5rem 0 0 0;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .games-view {
-    padding: 0.5rem;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header-actions {
-    flex-direction: column-reverse;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .header-stats {
-    justify-content: space-around;
-  }
-
-  .user-actions {
-    justify-content: space-between;
-  }
-
-  .stat-card {
-    flex: 1;
-    min-width: auto;
-    justify-content: center;
-  }
-
-  .page-title {
-    font-size: 1.5rem;
-  }
-
-  .page-subtitle {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-stats {
-    flex-direction: column;
-  }
-
-  .stat-card {
-    justify-content: flex-start;
-  }
-
-  .user-actions {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .user-info {
-    justify-content: center;
-  }
-}
-</style>
+<style src="../assets/styles/games-view.css" scoped></style>
