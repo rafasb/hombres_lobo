@@ -25,7 +25,8 @@ class MessageHandler:
             MessageType.CHAT_MESSAGE: self.handle_chat_message,
             # Game handlers
             MessageType.JOIN_GAME: game_handler.handle_join_game,
-            MessageType.START_GAME: game_handler.handle_start_game, 
+            MessageType.START_GAME: game_handler.handle_start_game,
+            MessageType.RESTART_GAME: game_handler.handle_restart_game,
             MessageType.GET_GAME_STATUS: game_handler.handle_get_game_status,
             MessageType.FORCE_NEXT_PHASE: game_handler.handle_force_next_phase,
             # Voting handlers

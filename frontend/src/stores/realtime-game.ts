@@ -68,7 +68,7 @@ export interface GameState {
 
 export const useRealtimeGameStore = defineStore('realtimeGame', () => {
   const authStore = useAuthStore()
-  const { connectionState, connect, disconnect, on, off, sendChatMessage, joinGame, startGame, getGameStatus } = useWebSocket()
+  const { connectionState, connect, disconnect, on, off, sendChatMessage, joinGame, startGame, restartGame, getGameStatus } = useWebSocket()
 
   // Estado del juego
   const gameState = ref<GameState>({
@@ -195,6 +195,9 @@ export const useRealtimeGameStore = defineStore('realtimeGame', () => {
     // Handler para inicio de juego
     on('game_started', handleGameStarted)
 
+    // Handler para reinicio de juego
+    on('game_restarted', handleGameRestarted)
+
     // Handler para eliminación de jugadores
     on('player_eliminated', handlePlayerEliminated)
 
@@ -221,6 +224,7 @@ export const useRealtimeGameStore = defineStore('realtimeGame', () => {
     off('player_connected')
     off('player_disconnected')
     off('game_started')
+    off('game_restarted')
     off('player_eliminated')
     off('voting_started')
     off('vote_cast')
@@ -302,6 +306,35 @@ export const useRealtimeGameStore = defineStore('realtimeGame', () => {
     }
 
     console.log('¡Juego iniciado!')
+  }
+
+  function handleGameRestarted(message: WebSocketMessage): void {
+    // Resetear estado del juego al estado inicial
+    gameState.value.phase = {
+      current: 'waiting',
+      timeRemaining: 0,
+      duration: 0
+    }
+
+    gameState.value.deadPlayers = []
+    gameState.value.livingPlayers = gameState.value.players.map(p => p.id)
+
+    // Resetear votación
+    gameState.value.votingSession = null
+    gameState.value.userVote = null
+
+    // Actualizar el estado de los jugadores a vivos
+    gameState.value.players = gameState.value.players.map(player => ({
+      ...player,
+      isAlive: true
+    }))
+
+    console.log('¡Juego reiniciado!', message)
+
+    // Mostrar notificación si hay un admin identificado
+    if (message.admin) {
+      console.log(`Partida reiniciada por el administrador: ${message.admin}`)
+    }
   }
 
   function handlePlayerEliminated(message: WebSocketMessage): void {
@@ -518,6 +551,10 @@ export const useRealtimeGameStore = defineStore('realtimeGame', () => {
     return startGame()
   }
 
+  function requestRestartGame(): boolean {
+    return restartGame()
+  }
+
   function requestGameStatus(): void {
     getGameStatus()
   }
@@ -572,6 +609,7 @@ export const useRealtimeGameStore = defineStore('realtimeGame', () => {
     sendMessage,
     requestJoinGame,
     requestStartGame,
+    requestRestartGame,
     requestGameStatus,
     resetGameState,
 

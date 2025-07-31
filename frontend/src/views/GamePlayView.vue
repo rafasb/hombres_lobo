@@ -236,6 +236,9 @@ import Slider from 'primevue/slider'
 import Message from 'primevue/message'
 import Divider from 'primevue/divider'
 
+// Importar estilos CSS
+import '@/assets/styles/game-play-view.css'
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -262,27 +265,53 @@ const settings = ref({
   volume: 50
 })
 
-// Menú del usuario
-const userMenuItems = ref([
-  {
-    label: `Usuario: ${authStore.user?.username}`,
-    disabled: true,
-    class: 'user-info-menu-item'
-  },
-  {
-    separator: true
-  },
-  {
-    label: 'Salir del juego',
-    icon: 'pi pi-sign-out',
-    command: () => handleDisconnect()
-  },
-  {
-    label: 'Cerrar sesión',
-    icon: 'pi pi-power-off',
-    command: () => handleLogout()
+// Menú del usuario (computed para actualizarse reactivamente)
+const userMenuItems = computed(() => {
+  const baseItems: Array<any> = [
+    {
+      label: `Usuario: ${authStore.user?.username}`,
+      disabled: true,
+      class: 'user-info-menu-item'
+    },
+    {
+      separator: true
+    }
+  ]
+
+  // Añadir botón de reinicio solo para el creador del juego
+  const currentUserId = authStore.user?.id
+  const gameData = gameState.value
+
+  if (currentUserId && gameData?.gameId) {
+    // Aquí podrías añadir lógica para verificar si es el creador
+    // Por ahora lo añadimos para todos (para testing)
+    baseItems.push({
+      label: 'Reiniciar partida',
+      icon: 'pi pi-refresh',
+      command: () => handleRestartGame(),
+      class: 'restart-game-menu-item'
+    })
+
+    baseItems.push({
+      separator: true
+    })
   }
-])
+
+  baseItems.push(
+    {
+      label: 'Salir del juego',
+      icon: 'pi pi-sign-out',
+      command: () => handleDisconnect()
+    },
+    {
+      label: 'Cerrar sesión',
+      icon: 'pi pi-power-off',
+      command: () => handleLogout()
+    }
+  )
+
+  return baseItems
+})
 
 // Computeds
 const gameState = computed(() => realtimeGameStore.gameState)
@@ -432,263 +461,56 @@ const handleLogout = async () => {
 const goToLobby = async () => {
   await router.push('/games')
 }
+
+const handleRestartGame = async () => {
+  try {
+    // Confirmar con el usuario
+    const confirmed = window.confirm('¿Estás seguro de que quieres reiniciar la partida? Esta acción no se puede deshacer.')
+
+    if (!confirmed) return
+
+    // Enviar comando de reinicio al WebSocket
+    const success = realtimeGameStore.requestRestartGame()
+
+    if (success) {
+      toast.add({
+        severity: 'info',
+        summary: 'Reiniciando partida...',
+        detail: 'Se ha enviado la solicitud de reinicio',
+        life: 3000
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudo enviar la solicitud de reinicio',
+        life: 3000
+      })
+    }
+
+  } catch (error) {
+    console.error('Error al reiniciar partida:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo reiniciar la partida',
+      life: 3000
+    })
+  }
+}
 </script>
 
-<style scoped>
-.game-play-view {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 1rem;
+<style>
+/* Estilos específicos que requieren :deep() para PrimeVue */
+:deep(.restart-game-menu-item) {
+  color: var(--orange-500) !important;
 }
 
-.loading-overlay,
-.error-overlay {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+:deep(.restart-game-menu-item:hover) {
+  background-color: var(--orange-50) !important;
+  color: var(--orange-600) !important;
 }
 
-.loading-content,
-.error-content {
-  text-align: center;
-  background: white;
-  padding: 3rem;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-}
-
-.loading-content h3,
-.error-content h3 {
-  margin: 1rem 0 0.5rem 0;
-  color: var(--text-color);
-}
-
-.loading-content p,
-.error-content p {
-  margin: 0 0 1.5rem 0;
-  color: var(--text-color-secondary);
-}
-
-.error-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
-
-.game-content {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.game-title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.game-title h2 {
-  margin: 0;
-  color: var(--text-color);
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text-color-secondary);
-}
-
-.connection-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.connection-indicator.connected {
-  background: #10b981;
-}
-
-.game-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.game-grid {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.left-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.right-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.chat-placeholder,
-.role-actions-placeholder,
-.info-panel {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.chat-header,
-.role-actions-header {
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.chat-header h4,
-.role-actions-header h4,
-.info-panel h4 {
-  margin: 0;
-  color: var(--text-color);
-}
-
-.info-items {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.info-label {
-  font-weight: 500;
-  color: var(--text-color-secondary);
-}
-
-.info-value {
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.debug-info {
-  margin-top: 1rem;
-}
-
-.debug-text {
-  font-size: 0.75rem;
-  background: var(--surface-100);
-  padding: 0.5rem;
-  border-radius: 4px;
-  overflow-x: auto;
-}
-
-.no-game-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
-
-.no-game-message {
-  text-align: center;
-  background: white;
-  padding: 3rem;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-}
-
-.no-game-message h3 {
-  margin: 1rem 0 0.5rem 0;
-  color: var(--text-color);
-}
-
-.no-game-message p {
-  margin: 0 0 1.5rem 0;
-  color: var(--text-color-secondary);
-}
-
-.settings-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.setting-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.setting-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-}
-
-@media (max-width: 1200px) {
-  .game-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .right-column {
-    order: -1;
-  }
-}
-
-@media (max-width: 768px) {
-  .game-play-view {
-    padding: 0.5rem;
-  }
-
-  .game-header {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
-  }
-
-  .game-title {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .loading-content,
-  .error-content,
-  .no-game-message {
-    padding: 2rem;
-    margin: 1rem;
-  }
-
-  .error-actions {
-    flex-direction: column;
-  }
-}
-
-/* Estilos para el menú del usuario */
 :deep(.user-info-menu-item) {
   font-weight: 600;
   background: var(--surface-100);

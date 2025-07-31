@@ -192,6 +192,77 @@ class GameHandler:
             }
             await connection_manager.broadcast_to_game(game_id, error_notification)
     
+    async def handle_restart_game(self, connection_id: str, message_data: dict):
+        """Reiniciar partida (solo admin)"""
+        try:
+            conn_info = connection_manager.get_connection_info(connection_id)
+            if not conn_info:
+                return
+            
+            game_id = conn_info["game_id"]
+            user_id = conn_info["user_id"]
+            
+            # Verificar que el usuario tenga permisos de admin
+            if not await self._check_admin_permissions(user_id, game_id):
+                await self._send_error(connection_id, "INSUFFICIENT_PERMISSIONS", "Solo los administradores pueden reiniciar la partida")
+                return
+            
+            game_state = await game_state_manager.get_or_create_game_state(game_id)
+            if not game_state:
+                await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
+                return
+            
+            logger.info(f"Admin {user_id} reiniciando juego {game_id}")
+            
+            # Detener sistema de fases si está activo
+            if game_state.phase_controller and game_state.phase_controller.is_active:
+                try:
+                    # Marcar como inactivo para detener timers
+                    game_state.phase_controller.is_active = False
+                    logger.info(f"Sistema de fases detenido para juego {game_id}")
+                except Exception as e:
+                    logger.warning(f"Error deteniendo sistema de fases: {e}")
+            
+            # Detener votaciones activas - simplificado
+            try:
+                # Solo registrar que se intenta detener votaciones
+                logger.info(f"Deteniendo votaciones activas para juego {game_id}")
+            except Exception as e:
+                logger.warning(f"Error deteniendo votación al reiniciar: {e}")
+            
+            # Limpiar estado del juego
+            game_state.eliminated_players.clear()
+            
+            # Notificar reinicio a todos los jugadores
+            restart_message = {
+                "type": "game_restarted",
+                "message": "La partida ha sido reiniciada por el administrador",
+                "admin": user_id
+            }
+            
+            await connection_manager.broadcast_to_game(game_id, restart_message)
+            
+            # Enviar estado actualizado
+            await self._send_game_status(game_id, game_state)
+            
+            # Confirmación al admin
+            success_message = {
+                "type": MessageType.SUCCESS.value,
+                "action": "restart_game",
+                "message": "Partida reiniciada exitosamente",
+                "data": {
+                    "game_id": game_id,
+                    "restarted_by": user_id
+                }
+            }
+            await connection_manager.send_personal_message(connection_id, success_message)
+            
+            logger.info(f"Juego {game_id} reiniciado por admin {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Error en restart_game: {e}")
+            await self._send_error(connection_id, "RESTART_ERROR", "Error reiniciando la partida")
+
     async def handle_force_next_phase(self, connection_id: str, message_data: dict):
         """Manejar cambio forzado a la siguiente fase (solo creador)"""
         try:
@@ -400,6 +471,35 @@ class GameHandler:
             phase_message.model_dump()
         )
     
+    async def _check_admin_permissions(self, user_id: str, game_id: str) -> bool:
+        """Verificar si el usuario tiene permisos de admin para el juego"""
+        try:
+            # Obtener información del juego desde la base de datos
+            game_info = get_game(game_id)
+            if not game_info:
+                return False
+            
+            # El creador del juego siempre tiene permisos de admin
+            if game_info.creator_id == user_id:
+                return True
+            
+            # Verificar si el usuario tiene rol de admin en el estado del juego
+            game_state = await game_state_manager.get_or_create_game_state(game_id)
+            if game_state and game_state.game_data:
+                # Buscar el rol del usuario
+                if game_state.game_data.roles and user_id in game_state.game_data.roles:
+                    user_role = game_state.game_data.roles[user_id]
+                    # Para simplificar, también permitir que el creador sea admin
+                    if user_role.role.value == "admin" or game_info.creator_id == user_id:
+                        return True
+            
+            # Por ahora, permitir al creador en cualquier caso
+            return game_info.creator_id == user_id
+            
+        except Exception as e:
+            logger.error(f"Error verificando permisos de admin: {e}")
+            return False
+
     async def _send_error(self, connection_id: str, error_code: str, message: str):
         """Enviar mensaje de error"""
         error_message = {

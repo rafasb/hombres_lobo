@@ -214,6 +214,16 @@ class WebSocketService {
   }
 
   /**
+   * Reiniciar juego
+   */
+  restartGame(): boolean {
+    return this.send({
+      type: 'restart_game',
+      timestamp: new Date().toISOString()
+    })
+  }
+
+  /**
    * Obtener estado del juego
    */
   getGameStatus(): void {
@@ -366,6 +376,7 @@ export function useWebSocket() {
     sendChatMessage: websocketService.sendChatMessage.bind(websocketService),
     joinGame: websocketService.joinGame.bind(websocketService),
     startGame: websocketService.startGame.bind(websocketService),
+    restartGame: websocketService.restartGame.bind(websocketService),
     getGameStatus: websocketService.getGameStatus.bind(websocketService),
     castVote: websocketService.castVote.bind(websocketService),
     getVotingStatus: websocketService.getVotingStatus.bind(websocketService),

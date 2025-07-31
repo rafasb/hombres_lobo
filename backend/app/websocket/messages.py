@@ -16,6 +16,7 @@ class MessageType(str, Enum):
     # Comandos de juego
     JOIN_GAME = "join_game"
     START_GAME = "start_game"
+    RESTART_GAME = "restart_game"
     GET_GAME_STATUS = "get_game_status"
     FORCE_NEXT_PHASE = "force_next_phase"
     
