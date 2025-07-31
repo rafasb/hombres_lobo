@@ -131,6 +131,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 import { useGamesStore } from '../../stores/games'
+import { useAuthStore } from '../../stores/auth'
 
 // Props
 interface Props {
@@ -152,6 +153,7 @@ const emit = defineEmits<{
 
 // Store
 const gamesStore = useGamesStore()
+const authStore = useAuthStore()
 const { isLoading } = gamesStore
 
 // Computed
@@ -166,8 +168,7 @@ const filters = ref({
 
 // Helper para obtener ID del usuario actual
 const getCurrentUserId = (): string => {
-  const authStore = JSON.parse(localStorage.getItem('auth') || '{}')
-  return authStore.user?.id || ''
+  return authStore.user?.id?.toString() || ''
 }
 
 // Funciones de utilidad
@@ -228,7 +229,9 @@ const canJoinGame = (game: any): boolean => {
 }
 
 const canViewGame = (game: any): boolean => {
-  return game.status !== 'waiting'
+  // Solo los administradores pueden ver juegos en curso
+  const userRole = authStore.user?.role
+  return userRole === 'admin' && game.status !== 'waiting'
 }
 
 const canEnterGame = (game: any): boolean => {

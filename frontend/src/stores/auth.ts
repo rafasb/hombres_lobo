@@ -6,6 +6,7 @@ interface User {
   id: number
   username: string
   email: string
+  role?: 'admin' | 'player'  // Añadimos role como opcional por si no viene del backend
 }
 
 interface LoginCredentials {

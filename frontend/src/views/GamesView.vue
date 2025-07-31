@@ -116,14 +116,8 @@ const handleCreateGame = async (gameData: { name: string; max_players: number })
       life: 3000
     })
 
-    // TODO: Navegar a la sala de espera cuando esté implementada
-    // router.push(`/games/${newGame.id}`)
-    toast.add({
-      severity: 'info',
-      summary: 'Información',
-      detail: 'Sala de espera será implementada en el siguiente paso',
-      life: 4000
-    })
+    // Navegar a la sala de juego
+    router.push(`/game/${newGame.id}`)
 
   } catch (error: any) {
     toast.add({
@@ -147,14 +141,8 @@ const handleJoinGame = async (gameId: string) => {
         life: 3000
       })
 
-      // TODO: Navegar a la sala de espera cuando esté implementada
-      // router.push(`/games/${gameId}`)
-      toast.add({
-        severity: 'info',
-        summary: 'Información',
-        detail: 'Sala de espera será implementada en el siguiente paso',
-        life: 4000
-      })
+      // Navegar a la sala de juego
+      router.push(`/game/${gameId}`)
     }
 
   } catch (error: any) {
@@ -168,25 +156,13 @@ const handleJoinGame = async (gameId: string) => {
 }
 
 const handleViewGame = (gameId: string) => {
-  // TODO: Navegar a vista de solo lectura cuando esté implementada
-  // router.push(`/games/${gameId}/view`)
-  toast.add({
-    severity: 'info',
-    summary: 'Información',
-    detail: 'Vista de juego será implementada en el siguiente paso',
-    life: 3000
-  })
+  // Navegar a vista de solo lectura (espectador)
+  router.push(`/game/${gameId}?mode=spectator`)
 }
 
 const handleEnterGame = (gameId: string) => {
-  // TODO: Navegar al juego cuando esté implementado
-  // router.push(`/games/${gameId}`)
-  toast.add({
-    severity: 'info',
-    summary: 'Información',
-    detail: 'Sala de espera será implementada en el siguiente paso',
-    life: 3000
-  })
+  // Navegar al juego
+  router.push(`/game/${gameId}`)
 }
 
 const handleRefresh = async () => {

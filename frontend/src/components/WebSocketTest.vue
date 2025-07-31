@@ -158,10 +158,10 @@ const disconnect = () => {
 }
 
 const testStatus = () => {
-  const success = realtimeGameStore.requestGameStatus()
-  if (success) {
+  try {
+    realtimeGameStore.requestGameStatus()
     addMessage('SENT', 'Solicitando estado del juego')
-  } else {
+  } catch (error) {
     addMessage('RECEIVED', 'Error enviando solicitud de estado')
   }
 }

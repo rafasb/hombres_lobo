@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../services/api'
+import { useAuthStore } from './auth'
 
 // Interfaces basadas en el backend confirmado
 interface User {
@@ -57,6 +58,9 @@ interface GameCreate {
 }
 
 export const useGamesStore = defineStore('games', () => {
+  // Acceso al store de autenticación
+  const authStore = useAuthStore()
+
   // Estado reactivo
   const games = ref<Game[]>([])
   const currentGame = ref<Game | null>(null)
@@ -64,9 +68,17 @@ export const useGamesStore = defineStore('games', () => {
   const error = ref<string>('')
 
   // Computed
-  const availableGames = computed(() =>
-    games.value.filter(game => game.status === 'waiting')
-  )
+  const availableGames = computed(() => {
+    const userRole = authStore.user?.role
+
+    if (userRole === 'admin') {
+      // Los administradores pueden ver todos los juegos
+      return games.value
+    } else {
+      // Los jugadores normales solo ven juegos disponibles para unirse
+      return games.value.filter(game => game.status === 'waiting')
+    }
+  })
 
   const myGames = computed(() => {
     const userId = getCurrentUserId()

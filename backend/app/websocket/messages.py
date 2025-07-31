@@ -17,6 +17,11 @@ class MessageType(str, Enum):
     JOIN_GAME = "join_game"
     START_GAME = "start_game"
     GET_GAME_STATUS = "get_game_status"
+    FORCE_NEXT_PHASE = "force_next_phase"
+    
+    # Comandos de votación
+    CAST_VOTE = "cast_vote"
+    GET_VOTING_STATUS = "get_voting_status"
     
     # Fases del juego
     PHASE_CHANGED = "phase_changed"
@@ -81,6 +86,11 @@ class PhaseTimerMessage(BaseWebSocketMessage):
     type: MessageType = MessageType.PHASE_TIMER
     phase: str
     time_remaining: int  # segundos
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+class ForceNextPhaseMessage(BaseWebSocketMessage):
+    """Mensaje para forzar cambio a la siguiente fase"""
+    type: MessageType = MessageType.FORCE_NEXT_PHASE
     timestamp: datetime = Field(default_factory=datetime.now)
 
 class VoteMessage(BaseWebSocketMessage):
@@ -171,6 +181,7 @@ MESSAGE_MODELS = {
     MessageType.PLAYER_DISCONNECTED: PlayerConnectionMessage,
     MessageType.PHASE_CHANGED: PhaseChangedMessage,
     MessageType.PHASE_TIMER: PhaseTimerMessage,
+    MessageType.FORCE_NEXT_PHASE: ForceNextPhaseMessage,
     MessageType.VOTE_CAST: VoteMessage,
     MessageType.VOTING_RESULTS: VotingResultsMessage,
     MessageType.CHAT_MESSAGE: ChatMessage,

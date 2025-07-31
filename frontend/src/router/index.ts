@@ -48,6 +48,12 @@ const router = createRouter({
       props: { viewOnly: true }
     },
     {
+      path: '/game/:gameId',
+      name: 'game-play',
+      component: () => import('../views/GamePlayView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/test-websocket',
       name: 'test-websocket',
       component: () => import('../components/WebSocketTest.vue'),

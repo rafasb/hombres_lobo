@@ -8,6 +8,7 @@ from app.websocket.messages import (
 )
 from app.services.game_state_service import game_state_manager
 from app.services.game_phases_service import GamePhase
+from app.services.voting_service import voting_service, VoteType
 import logging
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,65 @@ class GameHandler:
             logger.error(f"Error en start_game: {e}")
             await self._send_error(connection_id, "START_ERROR", "Error iniciando juego")
     
+    async def handle_force_next_phase(self, connection_id: str, message_data: dict):
+        """Manejar cambio forzado a la siguiente fase (solo creador)"""
+        try:
+            # Obtener información de conexión
+            conn_info = connection_manager.get_connection_info(connection_id)
+            if not conn_info:
+                return
+            
+            game_id = conn_info["game_id"]
+            user_id = conn_info["user_id"]
+            
+            # Obtener estado del juego
+            game_state = await game_state_manager.get_or_create_game_state(game_id)
+            if not game_state:
+                await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
+                return
+            
+            # TODO: Verificar que sea el creador del juego
+            # Por ahora permitimos a todos los usuarios (para testing)
+            
+            # Verificar que el juego esté iniciado
+            if not game_state.phase_controller or not game_state.phase_controller.is_active:
+                await self._send_error(connection_id, "GAME_NOT_STARTED", "El juego no está iniciado")
+                return
+            
+            # Obtener la siguiente fase
+            current_phase = game_state.phase_controller.current_phase
+            phase_config = game_state.phase_controller.phase_config.get(current_phase)
+            
+            if not phase_config:
+                await self._send_error(connection_id, "INVALID_PHASE", "Fase actual inválida")
+                return
+            
+            next_phase = phase_config.next_phase
+            
+            # Forzar cambio de fase
+            success = await game_state.phase_controller.change_phase(next_phase, force=True)
+            
+            if success:
+                # Enviar confirmación al creador
+                success_message = {
+                    "type": MessageType.SUCCESS.value,
+                    "action": "force_next_phase",
+                    "message": f"Fase cambiada manualmente de {current_phase.value} a {next_phase.value}",
+                    "data": {
+                        "old_phase": current_phase.value,
+                        "new_phase": next_phase.value
+                    }
+                }
+                await connection_manager.send_personal_message(connection_id, success_message)
+                
+                logger.info(f"Usuario {user_id} forzó cambio de fase en juego {game_id}: {current_phase.value} -> {next_phase.value}")
+            else:
+                await self._send_error(connection_id, "PHASE_CHANGE_FAILED", "No se pudo cambiar la fase")
+                
+        except Exception as e:
+            logger.error(f"Error en force_next_phase: {e}")
+            await self._send_error(connection_id, "FORCE_PHASE_ERROR", "Error forzando cambio de fase")
+    
     async def _on_phase_changed(self, game_id: str, old_phase: GamePhase, new_phase: GamePhase):
         """Callback cuando cambia la fase del juego"""
         try:
@@ -113,10 +173,53 @@ class GameHandler:
                 phase_message.model_dump(mode='json')
             )
             
+            # *** INTEGRACIÓN CON SISTEMA DE VOTACIONES ***
+            # Si entramos en fase de VOTING, iniciar votación automáticamente
+            if new_phase == GamePhase.VOTING:
+                await self._start_day_voting(game_id, game_state)
+            
             logger.info(f"Juego {game_id}: Fase cambiada de {old_phase.value} a {new_phase.value}")
             
         except Exception as e:
             logger.error(f"Error en callback de cambio de fase: {e}")
+    
+    async def _start_day_voting(self, game_id: str, game_state):
+        """Iniciar votación diurna automáticamente"""
+        try:
+            # Obtener jugadores vivos (por ahora todos los conectados)
+            eligible_voters = list(game_state.connected_players)
+            vote_targets = list(game_state.connected_players)
+            
+            # Crear sesión de votación
+            await voting_service.create_voting_session(
+                game_id=game_id,
+                vote_type=VoteType.DAY_VOTE,
+                eligible_voters=eligible_voters,
+                vote_targets=vote_targets,
+                duration_seconds=120  # 2 minutos
+            )
+            
+            # Iniciar votación
+            success = await voting_service.start_voting_session(game_id)
+            
+            if success:
+                # Notificar inicio de votación
+                voting_message = {
+                    "type": MessageType.VOTING_STARTED.value,
+                    "vote_type": "day_vote",
+                    "duration": 120,
+                    "eligible_voters": eligible_voters,
+                    "vote_targets": vote_targets,
+                    "game_id": game_id
+                }
+                
+                await connection_manager.broadcast_to_game(game_id, voting_message)
+                logger.info(f"Votación diurna iniciada para juego {game_id}")
+            else:
+                logger.error(f"Error iniciando votación para juego {game_id}")
+                
+        except Exception as e:
+            logger.error(f"Error iniciando votación diurna: {e}")
     
     async def _on_phase_timer(self, game_id: str, phase: GamePhase, time_remaining: int):
         """Callback para updates de timer de fase"""
@@ -155,12 +258,27 @@ class GameHandler:
     
     async def _send_game_status(self, game_id: str, game_state):
         """Enviar estado del juego a todos los conectados"""
+        # Obtener información completa de jugadores
+        players_info = []
+        if game_state.game_data and game_state.game_data.players:
+            players_info = [
+                {
+                    "id": player.id,
+                    "name": player.username,
+                    "is_alive": player.id not in game_state.eliminated_players,
+                    "is_connected": player.id in game_state.connected_players,
+                    "role": game_state.game_data.roles.get(player.id, {}).get("role") if game_state.game_data.roles else None
+                }
+                for player in game_state.game_data.players
+            ]
+        
         status_message = {
             "type": MessageType.SYSTEM_MESSAGE.value,
             "message": f"Estado del juego: {game_state.phase.value}",
             "data": {
                 "game_id": game_id,
                 "phase": game_state.phase.value,
+                "players": players_info,
                 "connected_players": list(game_state.connected_players),
                 "living_players": game_state.get_living_players(),
                 "dead_players": game_state.get_dead_players(),

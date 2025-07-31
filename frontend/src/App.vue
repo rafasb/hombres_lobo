@@ -6,7 +6,7 @@ import Toast from 'primevue/toast'
 const authStore = useAuthStore()
 
 onMounted(() => {
-  authStore.checkAuth()
+  authStore.initialize()
 })
 </script>
 

@@ -8,6 +8,7 @@ from app.websocket.messages import (
     MessageType, ErrorMessage, SuccessMessage, SystemMessage
 )
 from app.websocket.game_handlers import game_handler
+from app.websocket.voting_handlers import voting_handler
 from app.core.security import verify_access_token
 from app.services.user_service import get_user
 import json
@@ -26,6 +27,10 @@ class MessageHandler:
             MessageType.JOIN_GAME: game_handler.handle_join_game,
             MessageType.START_GAME: game_handler.handle_start_game, 
             MessageType.GET_GAME_STATUS: game_handler.handle_get_game_status,
+            MessageType.FORCE_NEXT_PHASE: game_handler.handle_force_next_phase,
+            # Voting handlers
+            MessageType.CAST_VOTE: voting_handler.handle_cast_vote,
+            MessageType.GET_VOTING_STATUS: voting_handler.handle_get_voting_status,
         }
     
     async def handle_message(self, connection_id: str, message_data: dict):

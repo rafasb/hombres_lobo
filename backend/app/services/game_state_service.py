@@ -172,18 +172,22 @@ class GameStateManager:
         if game_id in self.active_games:
             return self.active_games[game_id]
         
-        # Por ahora crear un estado básico
-        # TODO: Cargar desde base de datos cuando esté disponible
-        from app.models.game_and_roles import Game
+        # Cargar juego desde base de datos
+        from app.services.game_service import get_game
         
-        game_data = Game(
-            id=game_id,
-            name=f"Juego {game_id}",
-            creator_id="temp",
-            max_players=10,
-            players=[],
-            status=GameStatus.WAITING
-        )
+        game_data = get_game(game_id)
+        
+        if not game_data:
+            # Si no existe en BD, crear uno básico para desarrollo
+            from app.models.game_and_roles import Game
+            game_data = Game(
+                id=game_id,
+                name=f"Juego {game_id}",
+                creator_id="temp",
+                max_players=10,
+                players=[],
+                status=GameStatus.WAITING
+            )
         
         # Crear nuevo estado
         game_state = GameState(game_id, game_data)

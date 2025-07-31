@@ -216,17 +216,52 @@ class WebSocketService {
   /**
    * Obtener estado del juego
    */
-  getGameStatus(): boolean {
-    return this.send({
-      type: 'get_game_status',
-      timestamp: new Date().toISOString()
+  getGameStatus(): void {
+    this.send({
+      type: 'get_game_status'
     })
   }
+
+  /**
+   * Emitir un voto
+   */
+  castVote(targetPlayerId: string): void {
+    this.send({
+      type: 'cast_vote',
+      data: {
+        target_player_id: targetPlayerId
+      }
+    })
+  }
+
+  /**
+   * Obtener estado de votación actual
+   */
+  getVotingStatus(): void {
+    this.send({
+      type: 'get_voting_status'
+    })
+  }
+
+  /**
+   * Forzar siguiente fase (solo para creador)
+   */
+  forceNextPhase(): void {
+    this.send({
+      type: 'force_next_phase'
+    })
+  }
+
+  /**
+   * Enviar heartbeat
+   */
 
   /**
    * Manejar mensaje entrante
    */
   private handleMessage(message: WebSocketMessage): void {
+    console.log('WebSocket mensaje recibido:', message.type, message)
+
     // Manejar heartbeat
     if (message.type === 'heartbeat') {
       this.connectionState.value.lastHeartbeat = new Date()
@@ -242,6 +277,7 @@ class WebSocketService {
 
     // Emitir evento a handlers suscritos
     const handlers = this.eventHandlers.get(message.type) || []
+    console.log(`Handlers para ${message.type}:`, handlers.length)
     handlers.forEach(handler => {
       try {
         handler(message)
@@ -330,6 +366,9 @@ export function useWebSocket() {
     sendChatMessage: websocketService.sendChatMessage.bind(websocketService),
     joinGame: websocketService.joinGame.bind(websocketService),
     startGame: websocketService.startGame.bind(websocketService),
-    getGameStatus: websocketService.getGameStatus.bind(websocketService)
+    getGameStatus: websocketService.getGameStatus.bind(websocketService),
+    castVote: websocketService.castVote.bind(websocketService),
+    getVotingStatus: websocketService.getVotingStatus.bind(websocketService),
+    forceNextPhase: websocketService.forceNextPhase.bind(websocketService)
   }
 }
