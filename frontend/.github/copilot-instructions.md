@@ -11,8 +11,8 @@
 - En el directorio superior al directorio `frontend/`, encontrarás el el directorio `doc` que contiene información sobre el proyecto, su estructura y detalles de implementación.
 - No incluyas en las vistas código typescript, traslada este código al subdirectorio `src/services/` o `src/composables/` según corresponda.
 - Dispones de la documentación del backend en el fichero `frontend/openapi.json`. Consulta el fichero cuando necesites información sobre las rutas y los datos que maneja el backend.
-- Sugiere siempre el siguiente paso a seguir, pero que sea de un alcance razonable, no un paso completo del proyecto.
-
+- Sugiere siempre el siguiente paso a seguir, pero que sea de un alcance razonable, no un paso completo del proyecto. No te embarques un pasos con demasiadas tareas sin preguntar antes.
+- Al crear nuevas vistas, asegurate de que es modular, separando la vista pura, con el template en el directorio `src/views`, la lógica de negocio reutilizable en un fichero separado en el directorio `src/composables`, el wrapper simplificado que une ambos en `src\components\` y los estilos en un fichero CSS dedicado en el directorio `src\styles`.
 
 ## 📊 Proyecto Hombres Lobo
 

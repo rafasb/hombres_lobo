@@ -1,0 +1,212 @@
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
+import { gameService, type Game } from '../services/gameService'
+
+export function useGamesList() {
+  const router = useRouter()
+  const auth = useAuthStore()
+  
+  // Estado reactivo
+  const games = ref<Game[]>([])
+  const loading = ref(false)
+  const showCreateModal = ref(false)
+  const notification = ref<{ message: string, type: 'success' | 'error' } | null>(null)
+  
+  const newGame = ref({
+    name: '',
+    maxPlayers: 8
+  })
+
+  // Opciones para número de jugadores
+  const playerOptions = Array.from({ length: 22 }, (_, i) => i + 4) // De 4 a 25 jugadores
+
+  // Computed properties
+  const hasGames = computed(() => games.value.length > 0)
+  
+  // Métodos de carga
+  const loadGames = async () => {
+    try {
+      loading.value = true
+      games.value = await gameService.getGames()
+    } catch (error) {
+      showNotification('Error al cargar las partidas', 'error')
+      console.error('Error loading games:', error)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Métodos de gestión de partidas
+  const createGame = async () => {
+    if (!auth.user) return
+    
+    try {
+      loading.value = true
+      await gameService.createGame(newGame.value.name, newGame.value.maxPlayers, auth.user.id)
+      showNotification('Partida creada correctamente', 'success')
+      closeCreateModal()
+      await loadGames()
+    } catch (error) {
+      showNotification('Error al crear la partida', 'error')
+      console.error('Error creating game:', error)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const joinGame = async (gameId: string) => {
+    try {
+      loading.value = true
+      await gameService.joinGame(gameId)
+      showNotification('Te has unido a la partida', 'success')
+      await loadGames()
+    } catch (error) {
+      showNotification('Error al unirse a la partida', 'error')
+      console.error('Error joining game:', error)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const leaveGame = async (gameId: string) => {
+    try {
+      loading.value = true
+      await gameService.leaveGame(gameId)
+      showNotification('Has abandonado la partida', 'success')
+      await loadGames()
+    } catch (error) {
+      showNotification('Error al abandonar la partida', 'error')
+      console.error('Error leaving game:', error)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const viewGame = (gameId: string) => {
+    router.push(`/partida/${gameId}`)
+  }
+
+  // Métodos de validación
+  const canJoinGame = (game: Game): boolean => {
+    if (!auth.user) return false
+    if (game.status !== 'waiting') return false
+    if (game.players.length >= game.max_players) return false
+    return !game.players.some(player => player.id === auth.user!.id)
+  }
+
+  const canLeaveGame = (game: Game): boolean => {
+    if (!auth.user) return false
+    if (game.status !== 'waiting') return false
+    return game.players.some(player => player.id === auth.user!.id)
+  }
+
+  const canViewGame = (game: Game): boolean => {
+    if (!auth.user) return false
+    return game.players.some(player => player.id === auth.user!.id)
+  }
+
+  // Métodos de utilidad
+  const getCreatorName = (game: Game): string => {
+    const creator = game.players.find(player => player.id === game.creator_id)
+    return creator?.username || 'Desconocido'
+  }
+
+  const getStatusText = (status: string): string => {
+    const statusMap: { [key: string]: string } = {
+      'waiting': 'Esperando',
+      'started': 'Iniciada',
+      'night': 'Noche',
+      'day': 'Día',
+      'paused': 'Pausada',
+      'finished': 'Finalizada'
+    }
+    return statusMap[status] || status
+  }
+
+  const getGameCardClass = (status: string): string => {
+    return `game-card-${status}`
+  }
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  // Métodos del modal
+  const closeCreateModal = () => {
+    showCreateModal.value = false
+    newGame.value = {
+      name: '',
+      maxPlayers: 8
+    }
+  }
+
+  const openCreateModal = () => {
+    showCreateModal.value = true
+  }
+
+  // Método de notificaciones
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    notification.value = { message, type }
+    setTimeout(() => {
+      notification.value = null
+    }, 5000)
+  }
+
+  // Métodos de navegación
+  const navigateToProfile = () => {
+    router.push('/perfil')
+  }
+
+  const navigateToAdmin = () => {
+    router.push('/admin')
+  }
+
+  const navigateToGames = () => {
+    router.push('/partidas')
+  }
+
+  const updateNewGame = (gameData: { name: string, maxPlayers: number }) => {
+    newGame.value = gameData
+  }
+
+  return {
+    // Estado
+    games,
+    loading,
+    showCreateModal,
+    notification,
+    newGame,
+    playerOptions,
+    hasGames,
+    auth,
+    
+    // Métodos
+    loadGames,
+    createGame,
+    joinGame,
+    leaveGame,
+    viewGame,
+    canJoinGame,
+    canLeaveGame,
+    canViewGame,
+    getCreatorName,
+    getStatusText,
+    getGameCardClass,
+    formatDate,
+    closeCreateModal,
+    openCreateModal,
+    showNotification,
+    navigateToProfile,
+    navigateToAdmin,
+    navigateToGames,
+    updateNewGame
+  }
+}

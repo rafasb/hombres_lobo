@@ -3,6 +3,7 @@ import Login from './components/Login.vue'
 import Register from './components/Register.vue'
 import Profile from './components/Profile.vue'
 import Admin from './components/Admin.vue'
+import GamesList from './components/GamesList.vue'
 import { useAuthStore } from './stores/authStore'
 
 const routes = [
@@ -10,7 +11,8 @@ const routes = [
   { path: '/register', component: Register },
   { path: '/perfil', component: Profile },
   { path: '/admin', component: Admin },
-  { path: '/', redirect: '/login' },
+  { path: '/partidas', component: GamesList },
+  { path: '/', redirect: '/partidas' },
 ]
 
 const router = createRouter({
@@ -20,7 +22,7 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
-  if (to.path === '/perfil' && !auth.isAuthenticated) {
+  if ((to.path === '/perfil' || to.path === '/partidas') && !auth.isAuthenticated) {
     next({ path: '/login', state: { redirected: true } })
   } else if (to.path === '/admin' && (!auth.isAuthenticated || !auth.isAdmin)) {
     next({ path: '/login', state: { redirected: true } })
