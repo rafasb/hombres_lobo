@@ -1,18 +1,17 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
 ## Instrucciones para Copilot en el Proyecto Hombres Lobo
-- Proporciona sugerencias de código y explicaciones relacionadas con el desarrollo del juego "Hombres Lobo".
-- Se trata de una aplicación web SPA (Single Page Application), Que debe estar orientada a móviles. Asegura la característica SPA y respetar el diseño responsivo.
+- Se trata de una aplicación web SPA (Single Page Application), que debe estar orientada a móviles. Asegura la característica SPA y respetar el diseño responsivo.
 - El backend está desarrollado en Python con FastAPI.
 - El backend reside en el directorio `backend/` y el frontend en `frontend/`.
 - Manten los ficheros con el tamaño mínimo, separando las funcionalidades en componentes pequeños y reutilizables. 
 - Sigue las buenas prácticas de desarrollo de software, incluyendo la separación de preocupaciones y la reutilización de componentes.
 - Siempre que introduzcaz cambios en un fichero, analiza las dependencias y consecuencias para determinar si es necesario actualizar otros ficheros relacionados.
 - En el directorio superior al directorio `frontend/`, encontrarás el el directorio `doc` que contiene información sobre el proyecto, su estructura y detalles de implementación.
-- No incluyas en las vistas código typescript, traslada este código al subdirectorio `src/services/` o `src/composables/` según corresponda.
 - Dispones de la documentación del backend en el fichero `frontend/openapi.json`. Consulta el fichero cuando necesites información sobre las rutas y los datos que maneja el backend.
 - Sugiere siempre el siguiente paso a seguir, pero que sea de un alcance razonable, no un paso completo del proyecto. No te embarques un pasos con demasiadas tareas sin preguntar antes.
 - Al crear nuevas vistas, asegurate de que es modular, separando la vista pura, con el template en el directorio `src/views`, la lógica de negocio reutilizable en un fichero separado en el directorio `src/composables`, el wrapper simplificado que une ambos en `src\components\` y los estilos en un fichero CSS dedicado en el directorio `src\styles`.
+- Recuerda utilizar Pinia para la gestión del estado de la aplicación y Vue Router para la navegación entre vistas.
 
 ## 📊 Proyecto Hombres Lobo
 
