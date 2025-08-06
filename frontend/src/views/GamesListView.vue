@@ -97,6 +97,15 @@
           >
             Ver Partida
           </button>
+          
+          <button 
+            v-if="canDeleteGame(game)" 
+            class="btn btn-delete"
+            @click="deleteGame(game.id)"
+            :disabled="loading"
+          >
+            🗑️ Eliminar
+          </button>
         </div>
       </div>
     </div>
@@ -146,6 +155,7 @@ interface Props {
   canJoinGame: (game: any) => boolean
   canLeaveGame: (game: any) => boolean
   canViewGame: (game: any) => boolean
+  canDeleteGame: (game: any) => boolean
   getCreatorName: (game: any) => string
   getStatusText: (status: string) => string
   getGameCardClass: (status: string) => string
@@ -156,6 +166,7 @@ interface Emits {
   (e: 'createGame'): void
   (e: 'joinGame', gameId: string): void
   (e: 'leaveGame', gameId: string): void
+  (e: 'deleteGame', gameId: string): void
   (e: 'viewGame', gameId: string): void
   (e: 'closeCreateModal'): void
   (e: 'openCreateModal'): void
@@ -172,6 +183,7 @@ const emit = defineEmits<Emits>()
 const createGame = () => emit('createGame')
 const joinGame = (gameId: string) => emit('joinGame', gameId)
 const leaveGame = (gameId: string) => emit('leaveGame', gameId)
+const deleteGame = (gameId: string) => emit('deleteGame', gameId)
 const viewGame = (gameId: string) => emit('viewGame', gameId)
 const closeCreateModal = () => emit('closeCreateModal')
 const openCreateModal = () => emit('openCreateModal')

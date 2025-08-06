@@ -11,6 +11,7 @@
     :canJoinGame="canJoinGame"
     :canLeaveGame="canLeaveGame"
     :canViewGame="canViewGame"
+    :canDeleteGame="canDeleteGame"
     :getCreatorName="getCreatorName"
     :getStatusText="getStatusText"
     :getGameCardClass="getGameCardClass"
@@ -18,6 +19,7 @@
     @createGame="createGame"
     @joinGame="joinGame"
     @leaveGame="leaveGame"
+    @deleteGame="deleteGame"
     @viewGame="viewGame"
     @closeCreateModal="closeCreateModal"
     @openCreateModal="openCreateModal"
@@ -48,10 +50,12 @@ const {
   createGame,
   joinGame,
   leaveGame,
+  deleteGame,
   viewGame,
   canJoinGame,
   canLeaveGame,
   canViewGame,
+  canDeleteGame,
   getCreatorName,
   getStatusText,
   getGameCardClass,

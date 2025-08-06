@@ -83,6 +83,25 @@ export function useGamesList() {
     }
   }
 
+  const deleteGame = async (gameId: string) => {
+    if (!auth.isAdmin) return
+    
+    const confirmDelete = confirm('¿Estás seguro de que quieres eliminar esta partida? Esta acción no se puede deshacer.')
+    if (!confirmDelete) return
+    
+    try {
+      loading.value = true
+      await gameService.deleteGame(gameId)
+      showNotification('Partida eliminada correctamente', 'success')
+      await loadGames()
+    } catch (error) {
+      showNotification('Error al eliminar la partida', 'error')
+      console.error('Error deleting game:', error)
+    } finally {
+      loading.value = false
+    }
+  }
+
   const viewGame = (gameId: string) => {
     router.push(`/partida/${gameId}`)
   }
@@ -104,6 +123,10 @@ export function useGamesList() {
   const canViewGame = (game: Game): boolean => {
     if (!auth.user) return false
     return game.players.some(player => player.id === auth.user!.id)
+  }
+
+  const canDeleteGame = (game: Game): boolean => {
+    return auth.isAdmin
   }
 
   // Métodos de utilidad
@@ -193,10 +216,12 @@ export function useGamesList() {
     createGame,
     joinGame,
     leaveGame,
+    deleteGame,
     viewGame,
     canJoinGame,
     canLeaveGame,
     canViewGame,
+    canDeleteGame,
     getCreatorName,
     getStatusText,
     getGameCardClass,

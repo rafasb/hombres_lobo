@@ -89,5 +89,17 @@ export const gameService = {
         'Authorization': `Bearer ${token}`
       }
     })
+  },
+
+  /**
+   * Eliminar una partida (solo administradores)
+   */
+  async deleteGame(gameId: string): Promise<void> {
+    const token = localStorage.getItem('access_token')
+    await axios.delete(`${API_BASE_URL}/games/${gameId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
   }
 }

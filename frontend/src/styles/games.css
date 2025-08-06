@@ -287,6 +287,18 @@
   transform: translateY(-1px);
 }
 
+.btn-delete {
+  background: linear-gradient(45deg, #e74c3c, #c0392b);
+  color: white;
+  font-weight: 500;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(45deg, #c0392b, #a93226);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
 /* Estado vacío */
 .empty-state {
   text-align: center;
