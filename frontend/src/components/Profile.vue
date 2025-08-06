@@ -1,20 +1,52 @@
 <template>
   <div class="profile-container">
-    <h2>Perfil de usuario</h2>
-    <div v-if="auth.user">
-      <p><strong>Usuario:</strong> {{ auth.user.username }}</p>
-      <p><strong>ID:</strong> {{ auth.user.id }}</p>
-      <p><strong>Rol:</strong> {{ auth.user.role }}</p>
-      <button @click="handleLogout">Cerrar sesión</button>
-      <button v-if="auth.isAdmin" @click="router.push('/admin')">Administración de usuarios</button>
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <span class="avatar-text">{{ auth.user?.username?.charAt(0).toUpperCase() || 'U' }}</span>
+      </div>
+      <h2>Perfil de usuario</h2>
     </div>
-    <div v-else>
-      <p>No hay datos de usuario.</p>
+    
+    <div v-if="auth.user" class="profile-content">
+      <div class="profile-info">
+        <div class="info-card">
+          <div class="info-label">Usuario</div>
+          <div class="info-value">{{ auth.user.username }}</div>
+        </div>
+        
+        <div class="info-card">
+          <div class="info-label">ID</div>
+          <div class="info-value user-id">{{ auth.user.id }}</div>
+        </div>
+        
+        <div class="info-card">
+          <div class="info-label">Rol</div>
+          <div class="info-value" :class="roleClass">{{ roleText }}</div>
+        </div>
+      </div>
+      
+      <div class="profile-actions">
+        <button v-if="auth.isAdmin" @click="router.push('/admin')" class="admin-btn">
+          <span class="btn-icon">⚙️</span>
+          Administración de usuarios
+        </button>
+        <button @click="handleLogout" class="logout-btn">
+          <span class="btn-icon">🚪</span>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+    
+    <div v-else class="profile-empty">
+      <div class="empty-icon">❓</div>
+      <p>No hay datos de usuario disponibles</p>
+      <button @click="router.push('/login')" class="login-btn">Iniciar sesión</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 
@@ -25,45 +57,14 @@ const handleLogout = () => {
   auth.logout()
   router.push('/login')
 }
+
+const roleClass = computed(() => {
+  return auth.user?.role === 'admin' ? 'role-admin' : 'role-player'
+})
+
+const roleText = computed(() => {
+  return auth.user?.role === 'admin' ? 'Administrador' : 'Jugador'
+})
 </script>
 
-<style scoped>
-.profile-container {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
-
-h2 {
-  text-align: center;
-  color: #333;
-}
-
-.profile-error {
-  color: red;
-  text-align: center;
-}
-
-.logout-btn, .admin-btn {
-  display: block;
-  width: 100%;
-  padding: 10px;
-  margin: 10px 0;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.logout-btn {
-  background-color: #d9534f;
-  color: white;
-}
-
-.admin-btn {
-  background-color: #5bc0de;
-  color: white;
-}
-</style>
+<style src="../styles/profile.css"></style>
