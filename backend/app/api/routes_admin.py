@@ -4,9 +4,9 @@ Incluye endpoints para gestión de usuarios (solo accesibles por admin).
 """
 
 from fastapi import APIRouter, HTTPException, Body, Depends
-from app.models.user import User, UserRole, UserStatus, UserUpdate
+from app.models.user import User, UserRole, UserUpdate
 from app.models.game_and_roles import Game
-from app.services.user_service import get_user, get_all_users, update_user
+from app.services.user_service import get_user, get_all_users, update_user, delete_user
 from app.services.game_service import delete_game, get_all_games
 from app.core.dependencies import admin_required
 
@@ -39,9 +39,12 @@ def admin_delete_user(user_id: str, admin=Depends(admin_required)):
     user = get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    user.status = UserStatus.BANNED
-    update_user(user, UserUpdate())
-    return {"detail": "Usuario eliminado (baneado)"}
+    
+    # Eliminar físicamente el usuario del archivo JSON
+    if delete_user(user_id):
+        return {"detail": "Usuario eliminado"}
+    else:
+        raise HTTPException(status_code=500, detail="Error al eliminar el usuario")
 
 @router.put("/admin/users/{user_id}/role", response_model=User)
 def admin_update_user_role(user_id: str, role: UserRole, admin=Depends(admin_required)):

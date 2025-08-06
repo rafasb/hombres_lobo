@@ -1,39 +1,20 @@
-# .
+# Proyecto Frontend - Hombres Lobo
 
-This template should help get you started developing with Vue 3 in Vite.
+Este proyecto utiliza Vite, Vue.js 3 y TypeScript para el desarrollo del frontend. Los estilos se implementan utilizando CSS puro, con un archivo dedicado para cada vista.
 
-## Recommended IDE Setup
+## Comandos principales
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- `npm install`: Instalar dependencias.
+- `npm run dev`: Iniciar el servidor de desarrollo.
+- `npm run build`: Generar la versión de producción.
+- `npm run preview`: Previsualizar la versión de producción.
 
-## Type Support for `.vue` Imports in TS
+## Estructura del proyecto
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+- **src/**: Contiene el código fuente.
+- **src/views/**: Vistas principales de la aplicación.
+- **src/styles/**: Archivos CSS para cada vista.
 
-## Customize configuration
+## Notas
 
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+- Asegúrate de que cada vista tenga su propio archivo CSS en la carpeta `src/styles/`.

@@ -3,7 +3,7 @@ Módulo de servicios para la gestión de usuarios.
 Incluye funciones para crear, obtener, actualizar y listar usuarios usando la base de datos JSON.
 """
 
-from app.database import save_user, load_user, load_all_users
+from app.database import save_user, load_user, load_all_users, delete_user as db_delete_user
 from app.models.user import User, UserUpdate, UserRole
 from typing import Optional, List
 from datetime import datetime, UTC
@@ -34,3 +34,7 @@ def get_user(user_id: str) -> Optional[User]:
 
 def get_all_users() -> List[User]:
     return load_all_users()
+
+def delete_user(user_id: str) -> bool:
+    """Elimina un usuario de la base de datos físicamente."""
+    return db_delete_user(user_id)
