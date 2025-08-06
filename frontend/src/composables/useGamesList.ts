@@ -84,7 +84,16 @@ export function useGamesList() {
   }
 
   const deleteGame = async (gameId: string) => {
-    if (!auth.isAdmin) return
+    if (!auth.user) return
+    
+    // Verificar que el usuario tenga permisos (admin o creador de la partida)
+    const game = games.value.find(g => g.id === gameId)
+    if (!game) return
+    
+    if (!auth.isAdmin && game.creator_id !== auth.user.id) {
+      showNotification('No tienes permisos para eliminar esta partida', 'error')
+      return
+    }
     
     const confirmDelete = confirm('¿Estás seguro de que quieres eliminar esta partida? Esta acción no se puede deshacer.')
     if (!confirmDelete) return
@@ -126,7 +135,8 @@ export function useGamesList() {
   }
 
   const canDeleteGame = (game: Game): boolean => {
-    return auth.isAdmin
+    if (!auth.user) return false
+    return auth.isAdmin || game.creator_id === auth.user.id
   }
 
   // Métodos de utilidad
