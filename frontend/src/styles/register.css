@@ -1,5 +1,5 @@
-/* Estilos para la página de login */
-.login-container {
+/* Estilos para la página de registro */
+.register-container {
   max-width: 400px;
   margin: 80px auto;
   padding: 2rem;
@@ -7,24 +7,35 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-.login-title {
+
+.register-title {
   text-align: center;
   margin-bottom: 1.5rem;
   font-size: 2rem;
   color: #333;
 }
-.login-form {
+
+.register-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
-.login-form input {
+
+.register-form input {
   padding: 0.75rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+  transition: border-color 0.3s ease;
 }
-.login-form button {
+
+.register-form input:focus {
+  outline: none;
+  border-color: #42b883;
+  box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.2);
+}
+
+.register-form button {
   padding: 0.75rem;
   background: #42b883;
   color: #fff;
@@ -34,61 +45,72 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.login-form button:hover {
+
+.register-form button:hover {
   background: #339966;
 }
-.login-error {
+
+.register-form button:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}
+
+.register-error {
   color: #e74c3c;
   text-align: center;
   margin-top: 1rem;
-}
-
-.redirect-message {
-  color: #f39c12;
-  text-align: center;
-  margin-bottom: 1rem;
   padding: 0.5rem;
-  background: #fef9e7;
-  border: 1px solid #f1c40f;
+  background: #fdf2f2;
+  border: 1px solid #fecaca;
   border-radius: 4px;
 }
 
-.login-link {
+.register-success {
+  color: #27ae60;
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: #f0f9ff;
+  border: 1px solid #a7f3d0;
+  border-radius: 4px;
+}
+
+.register-link {
   text-align: center;
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid #eee;
 }
 
-.login-link p {
+.register-link p {
   color: #666;
   margin: 0;
 }
 
-.login-link a {
+.register-link a {
   color: #42b883;
   text-decoration: none;
   font-weight: 500;
 }
 
-.login-link a:hover {
+.register-link a:hover {
   color: #339966;
   text-decoration: underline;
 }
 
 /* Responsive Design - Mobile First */
 @media (max-width: 480px) {
-  .login-container {
+  .register-container {
     margin: 40px 1rem;
     padding: 1.5rem;
   }
 
-  .login-title {
+  .register-title {
     font-size: 1.5rem;
   }
 
-  .login-form input,
-  .login-form button {
+  .register-form input,
+  .register-form button {
     padding: 1rem;
     font-size: 1rem;
   }

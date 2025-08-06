@@ -8,6 +8,9 @@
       <button type="submit" :disabled="loading">Entrar</button>
     </form>
     <div v-if="error" class="login-error">{{ error }}</div>
+    <div class="login-link">
+      <p>¿No tienes cuenta? <router-link to="/register">Regístrate aquí</router-link></p>
+    </div>
   </div>
 </template>
 
