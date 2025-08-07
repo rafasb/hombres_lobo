@@ -206,33 +206,6 @@
   font-size: 14px;
 }
 
-/* Lista de jugadores */
-.game-players {
-  margin-bottom: 20px;
-}
-
-.players-title {
-  color: #333;
-  font-size: 16px;
-  margin: 0 0 10px 0;
-  font-weight: 600;
-}
-
-.players-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.player-tag {
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 15px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
 /* Acciones de la partida */
 .game-actions {
   display: flex;

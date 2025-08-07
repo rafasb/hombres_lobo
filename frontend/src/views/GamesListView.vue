@@ -58,19 +58,6 @@
           </div>
         </div>
         
-        <div class="game-players" v-if="game.players.length > 0">
-          <h4 class="players-title">Jugadores:</h4>
-          <div class="players-list">
-            <span 
-              class="player-tag" 
-              v-for="player in game.players" 
-              :key="player.id"
-            >
-              {{ player.username }}
-            </span>
-          </div>
-        </div>
-        
         <div class="game-actions">
           <button 
             v-if="canJoinGame(game)" 
