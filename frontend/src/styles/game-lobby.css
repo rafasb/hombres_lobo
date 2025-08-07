@@ -363,6 +363,44 @@
   }
 }
 
+/* Connection Status Styles */
+.player-name-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connection-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  transition: background-color 0.3s ease;
+}
+
+.connection-indicator.online {
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.player-card.is-connected {
+  border-left: 3px solid #10b981;
+}
+
+.online-badge {
+  background-color: #10b981 !important;
+  color: white !important;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+}
+
+.player-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .game-lobby {

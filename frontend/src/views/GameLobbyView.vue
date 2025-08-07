@@ -15,6 +15,17 @@
 
     <!-- Contenido principal cuando no está cargando -->
     <div v-else-if="game" class="lobby-content">
+      <!-- Estado de conexión WebSocket -->
+      <ConnectionStatus
+        :gameConnectionState="gameConnectionState"
+        :connectionStatus="connectionStatus"
+        :connectionStatusText="connectionStatusText"
+        :connectionStatusClass="connectionStatusClass"
+        :isUserActiveInLobby="isUserActiveInLobby"
+        :connectionHealthText="connectionHealthText"
+        @reconnect="initializeConnection"
+      />
+
       <!-- Información de la partida -->
       <div class="game-info-section">
         <div class="game-info-card">
@@ -46,30 +57,40 @@
         </div>
       </div>
 
-      <!-- Lista de jugadores -->
-      <div class="players-section">
-        <h3 class="section-title">Jugadores ({{ game.players.length }})</h3>
-        <div class="players-list">
-          <div 
-            v-for="player in game.players" 
-            :key="player.id"
-            class="player-card"
-            :class="{ 'is-creator': player.id === game.creator_id, 'is-current-user': player.id === auth.user?.id }"
-          >
-            <div class="player-info">
-              <span class="player-name">{{ player.username }}</span>
-              <div class="player-badges">
-                <span v-if="player.id === game.creator_id" class="badge creator-badge">
-                  👑 Creador
-                </span>
-                <span v-if="player.id === auth.user?.id" class="badge current-user-badge">
-                  Tú
-                </span>
+        <!-- Lista de jugadores -->
+        <div class="players-section">
+          <h3 class="section-title">Jugadores ({{ game.players.length }})</h3>
+          <div class="players-list">
+            <div 
+              v-for="player in game.players" 
+              :key="player.id"
+              class="player-card"
+              :class="{ 
+                'is-creator': player.id === game.creator_id, 
+                'is-current-user': player.id === auth.user?.id,
+                'is-connected': getPlayerConnectionStatus(player.id)?.isConnected
+              }"
+            >
+              <div class="player-info">
+                <div class="player-name-container">
+                  <div class="connection-indicator" :class="{ 'online': getPlayerConnectionStatus(player.id)?.isConnected }"></div>
+                  <span class="player-name">{{ player.username }}</span>
+                </div>
+                <div class="player-badges">
+                  <span v-if="player.id === game.creator_id" class="badge creator-badge">
+                    👑 Creador
+                  </span>
+                  <span v-if="player.id === auth.user?.id" class="badge current-user-badge">
+                    Tú
+                  </span>
+                  <span v-if="getPlayerConnectionStatus(player.id)?.isConnected" class="badge online-badge">
+                    ● En línea
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
       <!-- Acciones del jugador -->
       <div class="actions-section">
@@ -139,7 +160,9 @@
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGameLobby } from '../composables/useGameLobby'
+import { useGameConnection } from '../composables/useGameConnection'
 import { useAuthStore } from '../stores/authStore'
+import ConnectionStatus from '../components/ConnectionStatus.vue'
 
 const route = useRoute()
 const gameId = route.params.id as string
@@ -168,8 +191,30 @@ const {
   formatDate
 } = useGameLobby(gameId)
 
+// WebSocket connection management
+const {
+  // Estado
+  gameConnectionState,
+  connectionStatus,
+  
+  // Computed
+  connectionStatusText,
+  connectionStatusClass,
+  isUserActiveInLobby,
+  connectionHealthText,
+  
+  // Métodos
+  getPlayerConnectionStatus,
+  initializeConnection,
+  notifyUserJoinedLobby
+} = useGameConnection(gameId)
+
 // Cargar la partida al montar el componente
 onMounted(() => {
   loadGame()
+  // Notificar que el usuario se unió al lobby después de un pequeño retraso
+  setTimeout(() => {
+    notifyUserJoinedLobby()
+  }, 1000)
 })
 </script>

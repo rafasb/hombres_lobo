@@ -52,6 +52,11 @@ class MessageType(str, Enum):
     HEARTBEAT = "heartbeat"
     ERROR = "error"
     SUCCESS = "success"
+    
+    # Nuevos tipos para compatibilidad con frontend
+    GAME_CONNECTION_STATE = "game_connection_state"
+    PLAYERS_STATUS_UPDATE = "players_status_update"
+    USER_CONNECTION_STATUS = "user_connection_status"
 
 class BaseWebSocketMessage(BaseModel):
     """Clase base para todos los mensajes WebSocket"""
@@ -176,6 +181,29 @@ class SuccessMessage(BaseWebSocketMessage):
     data: Dict[str, Any] = {}
     timestamp: datetime = Field(default_factory=datetime.now)
 
+class GameConnectionStateMessage(BaseWebSocketMessage):
+    """Mensaje de estado de conexión del juego"""
+    type: MessageType = MessageType.GAME_CONNECTION_STATE
+    isUserConnected: bool
+    isUserInGame: bool
+    connectedPlayersCount: int
+    totalPlayersCount: int
+    playersStatus: List[Dict[str, Any]]
+    lastUpdate: datetime = Field(default_factory=datetime.now)
+
+class PlayersStatusUpdateMessage(BaseWebSocketMessage):
+    """Mensaje de actualización de estado de jugadores"""
+    type: MessageType = MessageType.PLAYERS_STATUS_UPDATE
+    playersStatus: List[Dict[str, Any]]
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+class UserConnectionStatusMessage(BaseWebSocketMessage):
+    """Mensaje de estado de conexión de usuario"""
+    type: MessageType = MessageType.USER_CONNECTION_STATUS
+    isConnected: bool
+    isInGame: bool
+    timestamp: datetime = Field(default_factory=datetime.now)
+
 # Tipos de mensajes para validación
 MESSAGE_MODELS = {
     MessageType.PLAYER_CONNECTED: PlayerConnectionMessage,
@@ -193,4 +221,7 @@ MESSAGE_MODELS = {
     MessageType.GAME_ENDED: GameEndedMessage,
     MessageType.ERROR: ErrorMessage,
     MessageType.SUCCESS: SuccessMessage,
+    MessageType.GAME_CONNECTION_STATE: GameConnectionStateMessage,
+    MessageType.PLAYERS_STATUS_UPDATE: PlayersStatusUpdateMessage,
+    MessageType.USER_CONNECTION_STATUS: UserConnectionStatusMessage,
 }

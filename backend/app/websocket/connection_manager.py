@@ -122,6 +122,12 @@ class ConnectionManager:
         if connection_id in self.active_connections:
             websocket = self.active_connections[connection_id]
             try:
+                # Verificar el estado del WebSocket antes de enviar
+                if websocket.client_state.name != "CONNECTED":
+                    print(f"WebSocket {connection_id} no está conectado, removiendo de conexiones activas")
+                    await self.disconnect(connection_id)
+                    return
+                
                 # Si el mensaje es un modelo Pydantic, usar su serialización
                 # Si es un dict simple, serializarlo con json.dumps
                 if hasattr(message, 'json'):
@@ -157,7 +163,12 @@ class ConnectionManager:
             if connection_id != exclude_connection and connection_id in self.active_connections:
                 websocket = self.active_connections[connection_id]
                 try:
-                    await websocket.send_text(message_text)
+                    # Verificar el estado del WebSocket antes de enviar
+                    if websocket.client_state.name == "CONNECTED":
+                        await websocket.send_text(message_text)
+                    else:
+                        # WebSocket no está conectado, marcarlo para desconexión
+                        disconnected_connections.append(connection_id)
                 except Exception as e:
                     print(f"Error enviando mensaje a conexión {connection_id}: {e}")
                     disconnected_connections.append(connection_id)
@@ -177,7 +188,12 @@ class ConnectionManager:
         
         for connection_id, websocket in self.active_connections.items():
             try:
-                await websocket.send_text(message_text)
+                # Verificar el estado del WebSocket antes de enviar
+                if websocket.client_state.name == "CONNECTED":
+                    await websocket.send_text(message_text)
+                else:
+                    # WebSocket no está conectado, marcarlo para desconexión
+                    disconnected_connections.append(connection_id)
             except Exception as e:
                 print(f"Error broadcasting a todos {connection_id}: {e}")
                 disconnected_connections.append(connection_id)
@@ -221,15 +237,20 @@ class ConnectionManager:
                 
                 for connection_id, websocket in self.active_connections.items():
                     try:
-                        # Enviar ping
-                        await websocket.send_text(json.dumps({
-                            "type": "heartbeat",
-                            "timestamp": current_time.isoformat()
-                        }))
-                        
-                        # Actualizar último heartbeat
-                        if connection_id in self.connection_info:
-                            self.connection_info[connection_id]["last_heartbeat"] = current_time
+                        # Verificar el estado del WebSocket antes de enviar
+                        if websocket.client_state.name == "CONNECTED":
+                            # Enviar ping
+                            await websocket.send_text(json.dumps({
+                                "type": "heartbeat",
+                                "timestamp": current_time.isoformat()
+                            }))
+                            
+                            # Actualizar último heartbeat
+                            if connection_id in self.connection_info:
+                                self.connection_info[connection_id]["last_heartbeat"] = current_time
+                        else:
+                            # WebSocket no está conectado, marcarlo para desconexión
+                            disconnected_connections.append(connection_id)
                             
                     except Exception as e:
                         print(f"Heartbeat failed para {connection_id}: {e}")

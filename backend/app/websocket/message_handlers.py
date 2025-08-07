@@ -163,7 +163,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         
         if not payload:
             logger.error("Token inválido - cerrando conexión")
-            await websocket.close(code=4001, reason="Token inválido")
+            try:
+                await websocket.close(code=4001, reason="Token inválido")
+            except Exception:
+                pass  # Si ya está cerrado, ignorar el error
             return
         
         user_id = payload.get("user_id")
@@ -175,7 +178,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         
         if not user_id:
             logger.error("Usuario no encontrado en token - cerrando conexión")
-            await websocket.close(code=4001, reason="Usuario no encontrado en token")
+            try:
+                await websocket.close(code=4001, reason="Usuario no encontrado en token")
+            except Exception:
+                pass  # Si ya está cerrado, ignorar el error
             return
         
         # Conectar usuario
@@ -223,8 +229,11 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         pass
     except Exception as e:
         logger.error(f"Error en websocket endpoint: {e}")
-        if websocket.client_state.name != "DISCONNECTED":
-            await websocket.close(code=4000, reason="Error interno")
+        try:
+            if websocket.client_state.name != "DISCONNECTED":
+                await websocket.close(code=4000, reason="Error interno")
+        except Exception:
+            pass  # Si ya está cerrado, ignorar el error
     finally:
         # Limpiar conexión
         if connection_id:
