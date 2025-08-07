@@ -62,13 +62,8 @@ const emit = defineEmits<Emits>()
 
 const localGameData = ref({ ...props.gameData })
 
-// Sincronizar cambios locales con el padre
+// Solo sincronizar cambios locales con el padre
 watch(localGameData, (newValue) => {
   emit('update:gameData', newValue)
-}, { deep: true })
-
-// Sincronizar cambios del padre con el local
-watch(() => props.gameData, (newValue) => {
-  localGameData.value = { ...newValue }
 }, { deep: true })
 </script>

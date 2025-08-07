@@ -2,15 +2,15 @@
 
 ## Instrucciones para Copilot en el Proyecto Hombres Lobo
 - Se trata de una aplicación web SPA (Single Page Application), que debe estar orientada a móviles. Asegura la característica SPA y respetar el diseño responsivo.
-- El backend está desarrollado en Python con FastAPI.
-- El backend reside en el directorio `backend/` y el frontend en `frontend/`.
-- Manten los ficheros con el tamaño mínimo, separando las funcionalidades en componentes pequeños y reutilizables. 
+- El backend está desarrollado en Python con FastAPI. Si necesitas realizar cambios en el backend, sugiere los cambios necesarios de forma detallada.
+- El backend reside en el directorio `../backend/` y el frontend en `../frontend/`. Este último es el directorio de trabajo principal.
+- Manten los ficheros con el tamaño mínimo, separando las funcionalidades en componentes pequeños y reutilizables, siguiendo las buenas prácticas de desarrollo.
 - Sigue las buenas prácticas de desarrollo de software, incluyendo la separación de preocupaciones y la reutilización de componentes.
-- Siempre que introduzcaz cambios en un fichero, analiza las dependencias y consecuencias para determinar si es necesario actualizar otros ficheros relacionados.
-- En el directorio superior al directorio `frontend/`, encontrarás el el directorio `doc` que contiene información sobre el proyecto, su estructura y detalles de implementación.
-- Dispones de la documentación del backend en el fichero `frontend/openapi.json`. Consulta el fichero cuando necesites información sobre las rutas y los datos que maneja el backend.
-- Sugiere siempre el siguiente paso a seguir, pero que sea de un alcance razonable, no un paso completo del proyecto. No te embarques un pasos con demasiadas tareas sin preguntar antes.
-- Al crear nuevas vistas, asegurate de que es modular, separando la vista pura, con el template en el directorio `src/views`, la lógica de negocio reutilizable en un fichero separado en el directorio `src/composables`, el wrapper simplificado que une ambos en `src\components\` y los estilos en un fichero CSS dedicado en el directorio `src\styles`.
+- Siempre que introduzcas cambios en un fichero, analiza las dependencias y consecuencias para determinar si es necesario actualizar o refactorizar los otros ficheros relacionados.
+- En el directorio superior al directorio `../doc/`, encontrarás el directorio que contiene información sobre el proyecto, su estructura y detalles de implementación.
+- Dispones de la documentación del backend en el fichero `./openapi.json`. Consulta el fichero cuando necesites información sobre las rutas y los datos que maneja el backend.
+- Sugiere siempre el siguiente paso a seguir, pero que sea de un alcance razonable, no un paso completo del proyecto. No te embarques en pasos con demasiadas tareas sin preguntar antes.
+- Al crear nuevas vistas o funcionalidades, asegurate de que el código es modular, separando la vista pura, con el template en el directorio `src/views`, la lógica de negocio reutilizable en un fichero separado en el directorio `src/composables`, el wrapper simplificado que une ambos en `src\components\` y los estilos en un fichero CSS dedicado en el directorio `src\styles`.
 - Recuerda utilizar Pinia para la gestión del estado de la aplicación y Vue Router para la navegación entre vistas.
 
 ## 📊 Proyecto Hombres Lobo
