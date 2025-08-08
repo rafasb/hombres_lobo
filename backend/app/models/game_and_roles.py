@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Dict
-from .user import User
 from enum import Enum
 import datetime
 from typing import Optional
@@ -70,7 +69,7 @@ class GameCreate(GameBase):
 class Game(GameBase):
     id: str
     creator_id: str
-    players: List[User] = []
+    players: List[str] = []  # Solo almacenamos IDs de jugadores en lugar de objetos User completos
     roles: Dict[str, RoleInfo] = {}  # player_id -> RoleInfo
     status: GameStatus = GameStatus.WAITING
     created_at: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.UTC))
@@ -79,6 +78,21 @@ class Game(GameBase):
     night_actions: Dict[str, Dict[str, str]] = {}  # Acciones nocturnas por tipo y jugador
     day_votes: Dict[str, str] = {}  # Votos diurnos: voter_id -> target_id
     # Otros campos: historial, votos, etc.
+
+    model_config = ConfigDict(from_attributes=True)
+
+# Modelo de respuesta que incluye información completa de jugadores para la API
+class GameResponse(GameBase):
+    id: str
+    creator_id: str
+    players: List[Dict] = []  # Lista de jugadores con información básica para la API
+    roles: Dict[str, RoleInfo] = {}
+    status: GameStatus = GameStatus.WAITING
+    created_at: datetime.datetime
+    current_round: int = 0
+    is_first_night: bool = True
+    night_actions: Dict[str, Dict[str, str]] = {}
+    day_votes: Dict[str, str] = {}
 
     model_config = ConfigDict(from_attributes=True)
 

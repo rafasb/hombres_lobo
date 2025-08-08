@@ -38,20 +38,20 @@ class TestAssignRoles:
             creator_id = str(uuid.uuid4())
         
         # Crear jugadores incluyendo el creador
-        players = []
+        player_ids = []
         creator = self.create_mock_user(creator_id, "creator")
-        players.append(creator)
+        player_ids.append(creator.id)
         
         # Agregar jugadores adicionales
         for i in range(num_players - 1):
             player = self.create_mock_user(username=f"player_{i}")
-            players.append(player)
+            player_ids.append(player.id)
         
         return Game(
             id=str(uuid.uuid4()),
             name="Test Game",
             creator_id=creator_id,
-            players=players,
+            players=player_ids,  # Ahora solo almacenamos IDs
             roles={},
             status=GameStatus.WAITING,
             max_players=18,
@@ -267,7 +267,7 @@ class TestAssignRoles:
         assert len(result.roles) == len(result.players)
         
         # Verificar que todos los jugadores tienen un rol asignado
-        player_ids = {player.id for player in result.players}
+        player_ids = set(result.players)  # Ya son IDs, no objetos
         role_player_ids = set(result.roles.keys())
         assert player_ids == role_player_ids
         

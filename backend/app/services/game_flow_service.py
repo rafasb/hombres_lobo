@@ -88,7 +88,7 @@ def assign_roles(game_id: str, user_id: str, is_admin: bool = False) -> Optional
     
     # Asignar roles a jugadores
     game.roles = {}
-    for i, player in enumerate(game.players):
+    for i, player_id in enumerate(game.players):
         role_info = RoleInfo(
             role=available_roles[i],
             is_alive=True,
@@ -108,7 +108,7 @@ def assign_roles(game_id: str, user_id: str, is_admin: bool = False) -> Optional
             role_info.can_revenge_kill = True
             role_info.has_used_revenge = False
         
-        game.roles[player.id] = role_info
+        game.roles[player_id] = role_info
     
     # Cambiar estado de la partida a STARTED
     game.status = GameStatus.STARTED

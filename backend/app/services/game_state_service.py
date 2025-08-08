@@ -62,13 +62,13 @@ class GameState:
         """Obtener jugadores vivos"""
         if not self.game_data.players:
             return []
-        return [p.id for p in self.game_data.players if p.id not in self.eliminated_players]
+        return [p_id for p_id in self.game_data.players if p_id not in self.eliminated_players]
     
     def get_dead_players(self) -> List[str]:
         """Obtener jugadores muertos"""
         if not self.game_data.players:
             return []
-        return [p.id for p in self.game_data.players if p.id in self.eliminated_players]
+        return [p_id for p_id in self.game_data.players if p_id in self.eliminated_players]
     
     def eliminate_player(self, user_id: str):
         """Eliminar jugador del juego"""

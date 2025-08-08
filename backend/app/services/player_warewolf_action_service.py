@@ -123,7 +123,7 @@ def get_warewolf_attack_consensus(game_id: str) -> Optional[str]:
 
 def get_alive_players(game_id: str) -> List[Dict[str, str]]:
     """
-    Obtiene la lista de jugadores vivos en una partida.
+    Obtiene la lista de jugadores vivos de la partida.
     
     Args:
         game_id: ID de la partida
@@ -131,17 +131,20 @@ def get_alive_players(game_id: str) -> List[Dict[str, str]]:
     Returns:
         Lista de diccionarios con id y nombre de jugadores vivos
     """
+    from app.database import load_game, load_user
     game = load_game(game_id)
     if not game:
         return []
     
     alive_players = []
-    for player in game.players:
-        if player.id in game.roles and game.roles[player.id].is_alive:
-            alive_players.append({
-                "id": player.id,
-                "username": player.username
-            })
+    for player_id in game.players:
+        if player_id in game.roles and game.roles[player_id].is_alive:
+            user = load_user(player_id)
+            if user:
+                alive_players.append({
+                    "id": user.id,
+                    "username": user.username
+                })
     
     return alive_players
 
@@ -156,19 +159,22 @@ def get_non_warewolf_players(game_id: str) -> List[Dict[str, str]]:
     Returns:
         Lista de diccionarios con id y nombre de jugadores que no son hombres lobo
     """
+    from app.database import load_game, load_user
     game = load_game(game_id)
     if not game:
         return []
     
     valid_targets = []
-    for player in game.players:
-        if (player.id in game.roles and 
-            game.roles[player.id].is_alive and 
-            game.roles[player.id].role != GameRole.WAREWOLF):
-            valid_targets.append({
-                "id": player.id,
-                "username": player.username
-            })
+    for player_id in game.players:
+        if (player_id in game.roles and 
+            game.roles[player_id].is_alive and 
+            game.roles[player_id].role != GameRole.WAREWOLF):
+            user = load_user(player_id)
+            if user:
+                valid_targets.append({
+                    "id": user.id,
+                    "username": user.username
+                })
     
     return valid_targets
 

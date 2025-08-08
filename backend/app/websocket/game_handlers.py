@@ -38,7 +38,7 @@ class GameHandler:
             # Verificar si el usuario está en la base de datos del juego
             user_in_game = False
             if game_state.game_data and game_state.game_data.players:
-                user_in_game = any(player.id == user_id for player in game_state.game_data.players)
+                user_in_game = user_id in game_state.game_data.players
             
             # Si no está en la base de datos, añadirlo automáticamente
             if not user_in_game:
@@ -429,19 +429,21 @@ class GameHandler:
     
     async def _send_game_status(self, game_id: str, game_state):
         """Enviar estado del juego a todos los conectados"""
+        from app.database import load_user
+        
         # Obtener información completa de jugadores
         players_info = []
         if game_state.game_data and game_state.game_data.players:
-            players_info = [
-                {
-                    "id": player.id,
-                    "name": player.username,
-                    "is_alive": player.id not in game_state.eliminated_players,
-                    "is_connected": player.id in game_state.connected_players,
-                    "role": game_state.game_data.roles.get(player.id, {}).get("role") if game_state.game_data.roles else None
-                }
-                for player in game_state.game_data.players
-            ]
+            for player_id in game_state.game_data.players:
+                user = load_user(player_id)
+                if user:
+                    players_info.append({
+                        "id": user.id,
+                        "name": user.username,
+                        "is_alive": player_id not in game_state.eliminated_players,
+                        "is_connected": player_id in game_state.connected_players,
+                        "role": game_state.game_data.roles.get(player_id, {}).get("role") if game_state.game_data.roles else None
+                    })
         
         status_message = {
             "type": MessageType.SYSTEM_MESSAGE.value,

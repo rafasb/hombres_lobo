@@ -37,10 +37,10 @@ def leave_game(game_id: str, user_id: str) -> bool:
     # Solo puede abandonar si la partida está en estado WAITING
     if hasattr(game, 'status') and getattr(game, 'status', None) != 'waiting':
         return False
-    # Eliminar al usuario de la lista de jugadores
+    # Eliminar al usuario de la lista de jugadores (ahora son IDs)
     if hasattr(game, 'players'):
         original_count = len(game.players)
-        game.players = [p for p in game.players if getattr(p, 'id', None) != user_id]
+        game.players = [p_id for p_id in game.players if p_id != user_id]
         if len(game.players) == original_count:
             return False  # No estaba en la partida
         save_game(game)
@@ -92,11 +92,11 @@ def join_game(game_id: str, user) -> bool:
     if len(game.players) >= game.max_players:
         return False
     
-    # Verificar que el usuario no esté ya en la partida
-    if any(p.id == user.id for p in game.players):
+    # Verificar que el usuario no esté ya en la partida (ahora comparamos IDs)
+    if user.id in game.players:
         return False
     
-    # Agregar al usuario a la lista de jugadores
-    game.players.append(user)
+    # Agregar el ID del usuario a la lista de jugadores
+    game.players.append(user.id)
     save_game(game)
     return True

@@ -135,13 +135,7 @@ def save_game(game: Game) -> None:
     if isinstance(game_dict.get('created_at'), datetime):
         game_dict['created_at'] = game_dict['created_at'].isoformat()
     
-    # Serializar datetime en los objetos User de la lista de jugadores
-    if 'players' in game_dict and game_dict['players']:
-        for player in game_dict['players']:
-            if isinstance(player.get('created_at'), datetime):
-                player['created_at'] = player['created_at'].isoformat()
-            if isinstance(player.get('updated_at'), datetime):
-                player['updated_at'] = player['updated_at'].isoformat()
+    # Ya no necesitamos serializar datetime en los jugadores porque solo almacenamos IDs
     
     games[game.id] = game_dict
     save_json('games', games)
@@ -155,13 +149,7 @@ def load_game(game_id: str) -> Optional[Game]:
         if 'created_at' in data and isinstance(data['created_at'], str):
             data['created_at'] = datetime.fromisoformat(data['created_at'])
         
-        # Deserializar datetime en los objetos User de la lista de jugadores
-        if 'players' in data and data['players']:
-            for player in data['players']:
-                if 'created_at' in player and isinstance(player['created_at'], str):
-                    player['created_at'] = datetime.fromisoformat(player['created_at'])
-                if 'updated_at' in player and isinstance(player['updated_at'], str):
-                    player['updated_at'] = datetime.fromisoformat(player['updated_at'])
+        # Ya no necesitamos deserializar datetime en jugadores porque solo almacenamos IDs
         
         return Game(**data)
     return None
@@ -186,3 +174,50 @@ def delete_game(game_id: str) -> bool:
         save_json('games', games)
         return True
     return False
+
+# --- Funciones helper para gestión optimizada de jugadores en partidas ---
+
+def get_game_players(game: Game) -> List[User]:
+    """Obtiene la lista completa de usuarios de una partida a partir de sus IDs."""
+    players = []
+    for player_id in game.players:
+        user = load_user(player_id)
+        if user:
+            players.append(user)
+    return players
+
+def get_game_player_by_id(game: Game, player_id: str) -> Optional[User]:
+    """Obtiene un jugador específico de una partida por su ID."""
+    if player_id in game.players:
+        return load_user(player_id)
+    return None
+
+def get_game_with_players(game_id: str) -> Optional[tuple[Game, List[User]]]:
+    """Carga una partida junto con la información completa de sus jugadores."""
+    game = load_game(game_id)
+    if game:
+        players = get_game_players(game)
+        return game, players
+    return None
+
+def game_to_response(game: Game) -> dict:
+    """Convierte un objeto Game a un diccionario de respuesta con información completa de jugadores."""
+    
+    # Obtener información completa de los jugadores
+    players_info = []
+    for player_id in game.players:
+        user = load_user(player_id)
+        if user:
+            # Solo incluimos información no sensible para la API
+            players_info.append({
+                "id": user.id,
+                "username": user.username,
+                "role": user.role.value,
+                "status": user.status.value
+            })
+    
+    # Crear el diccionario de respuesta
+    response_data = game.model_dump()
+    response_data["players"] = players_info
+    
+    return response_data
