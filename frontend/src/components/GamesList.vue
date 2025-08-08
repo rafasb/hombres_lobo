@@ -33,7 +33,6 @@ import { onMounted } from 'vue'
 import GamesListView from '../views/GamesListView.vue'
 import { useGamesList } from '../composables/useGamesList'
 import { useNavigation } from '../composables/useNavigation'
-import '../styles/games.css'
 
 // Usar los composables
 const {

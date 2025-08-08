@@ -4,5 +4,5 @@
 
 <script setup lang="ts">
 import GameLobbyView from '../views/GameLobbyView.vue'
-import '../styles/game-lobby.css'
+// Ya no necesitamos importar el CSS específico, usamos Bootstrap
 </script>

@@ -6,57 +6,78 @@
       @navigate="handleNavigation"
     />
     
-    <div class="container-lg py-4">
-    
-    <div class="games-header">
-      <div class="profile-header-content">
-        <div class="profile-avatar">
-          <span class="avatar-text">{{ auth.user?.username?.charAt(0).toUpperCase() || 'U' }}</span>
-        </div>
-        <h1>Perfil de usuario</h1>
-      </div>
-    </div>
-    
-    <div v-if="auth.user" class="profile-content">
-      <div class="games-grid">
-        <div class="game-card">
-          <div class="game-header">
-            <h3 class="game-title">Información de Usuario</h3>
-          </div>
-          
-          <div class="game-info">
-            <div class="game-detail">
-              <span class="detail-label">Usuario:</span>
-              <span class="detail-value">{{ auth.user.username }}</span>
+    <div class="mobile-container">
+      <div class="container-fluid">
+        <div class="row justify-content-center">
+          <div class="col-12 col-sm-8 col-md-6">
+            <!-- Header -->
+            <div class="card mb-4" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: none; border-radius: 15px;">
+              <div class="card-body d-flex align-items-center gap-3">
+                <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                     style="width: 60px; height: 60px; font-size: 24px; font-weight: bold;">
+                  {{ auth.user?.username?.charAt(0).toUpperCase() || 'U' }}
+                </div>
+                <h1 class="mb-0 fw-bold text-dark">
+                  <i class="bi bi-person-circle me-2"></i>
+                  Perfil de usuario
+                </h1>
+              </div>
             </div>
             
-            <div class="game-detail">
-              <span class="detail-label">ID:</span>
-              <span class="detail-value user-id">{{ auth.user.id }}</span>
+            <div v-if="auth.user">
+              <div class="card" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: none; border-radius: 15px;">
+                <div class="card-header border-0 pb-2" style="background: transparent;">
+                  <h5 class="card-title mb-0 fw-bold text-dark">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Información de Usuario
+                  </h5>
+                </div>
+                
+                <div class="card-body pt-2">
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded">
+                      <span class="text-muted fw-semibold">Usuario:</span>
+                      <span class="fw-bold">{{ auth.user.username }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded">
+                      <span class="text-muted fw-semibold">ID:</span>
+                      <span class="fw-bold font-monospace text-primary">{{ auth.user.id }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded">
+                      <span class="text-muted fw-semibold">Rol:</span>
+                      <span class="badge fs-6" :class="roleClass">{{ roleText }}</span>
+                    </div>
+                  </div>
+                  
+                  <div class="d-grid">
+                    <button @click="handleLogout" class="btn btn-danger btn-lg d-flex align-items-center justify-content-center gap-2"
+                            style="border-radius: 10px;">
+                      <i class="bi bi-box-arrow-right"></i>
+                      Cerrar sesión
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
             
-            <div class="game-detail">
-              <span class="detail-label">Rol:</span>
-              <span class="detail-value" :class="roleClass">{{ roleText }}</span>
+            <div v-else class="text-center">
+              <div class="card" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: none; border-radius: 15px;">
+                <div class="card-body py-5">
+                  <i class="bi bi-question-circle display-1 text-muted mb-3"></i>
+                  <h4 class="text-muted mb-3">No hay datos de usuario disponibles</h4>
+                  <button @click="navigateToLogin" class="btn btn-primary btn-lg d-flex align-items-center gap-2 mx-auto"
+                          style="border-radius: 25px;">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    Iniciar sesión
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <div class="game-actions">
-            <button @click="handleLogout" class="btn btn-leave">
-              <span class="btn-icon">🚪</span>
-              Cerrar sesión
-            </button>
           </div>
         </div>
       </div>
-    </div>
-    
-    <div v-else class="empty-state">
-      <div class="empty-icon">❓</div>
-      <p>No hay datos de usuario disponibles</p>
-      <button @click="navigateToLogin" class="btn btn-join">Iniciar sesión</button>
-    </div>
-    
     </div>
   </div>
 </template>
@@ -77,4 +98,4 @@ const {
 const { handleNavigation } = useNavigation()
 </script>
 
-<style src="../styles/games.css"></style>
+

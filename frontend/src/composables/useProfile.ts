@@ -12,7 +12,7 @@ export function useProfile() {
   }
 
   const roleClass = computed(() => {
-    return auth.user?.role === 'admin' ? 'role-admin' : 'role-player'
+    return auth.user?.role === 'admin' ? 'bg-danger' : 'bg-primary'
   })
 
   const roleText = computed(() => {
