@@ -221,3 +221,36 @@ def game_to_response(game: Game) -> dict:
     response_data["players"] = players_info
     
     return response_data
+
+def game_to_game_response(game: Game):
+    """Convierte un objeto Game a un objeto GameResponse con información completa de jugadores."""
+    from app.models.game_and_roles import GameResponse
+    
+    # Obtener información completa de los jugadores
+    players_info = []
+    for player_id in game.players:
+        user = load_user(player_id)
+        if user:
+            # Solo incluimos información no sensible para la API
+            players_info.append({
+                "id": user.id,
+                "username": user.username,
+                "role": user.role.value,
+                "status": user.status.value
+            })
+    
+    # Crear el objeto GameResponse
+    return GameResponse(
+        id=game.id,
+        name=game.name,
+        creator_id=game.creator_id,
+        players=players_info,
+        roles=game.roles,
+        status=game.status,
+        created_at=game.created_at,
+        current_round=game.current_round,
+        is_first_night=game.is_first_night,
+        night_actions=game.night_actions,
+        day_votes=game.day_votes,
+        max_players=game.max_players
+    )

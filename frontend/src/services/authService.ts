@@ -11,15 +11,17 @@ export async function login(username: string, password: string): Promise<{ acces
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
-    const token = response.data.access_token
+    // La nueva API devuelve una estructura con success, message y los datos del token
+    const { access_token, token_type } = response.data
     const auth = useAuthStore()
-    auth.setToken(token)
+    auth.setToken(access_token)
+    
     // Obtener perfil tras login
     const profile = await getProfile()
     if (profile && profile.user) {
       auth.setUser(profile.user)
     }
-    return { access_token: token, token_type: response.data.token_type }
+    return { access_token, token_type }
   } catch (error: any) {
     return { error: error.response?.data?.detail || 'Error de autenticación.' }
   }
@@ -31,8 +33,11 @@ export async function getProfile(): Promise<{ user?: { id: string; username: str
     const response = await axios.get('/users/me', {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
+    
+    // La nueva API devuelve una estructura con success, message y user
+    const { user } = response.data
     // Excluye hashed_password y otros campos innecesarios
-    const { id, username, role } = response.data
+    const { id, username, role } = user
     return { user: { id, username, role } }
   } catch (error: any) {
     return { error: error.response?.data?.detail || 'Error al obtener perfil.' }

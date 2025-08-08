@@ -7,11 +7,12 @@ export async function register(username: string, email: string, password: string
     params.append('email', email);
     params.append('password', password);
 
-    await axios.post('/register', params, {
+    const response = await axios.post('/register', params, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
-    return { success: true }
+    // La nueva API devuelve una estructura con success, message y user
+    return { success: response.data.success || true }
   } catch (error: any) {
     let errorMessage = 'Error al registrar usuario.'
     if (error.response?.data?.detail) {
