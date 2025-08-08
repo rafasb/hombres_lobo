@@ -1,17 +1,10 @@
 <template>
   <div class="games-container">
-    <!-- Navegación simple -->
-    <nav class="games-nav">
-      <button class="nav-btn" @click="navigateToGames" :class="{ active: true }">
-        🎮 Partidas
-      </button>
-      <button class="nav-btn" @click="navigateToProfile">
-        👤 Perfil
-      </button>
-      <button v-if="auth.isAdmin" class="nav-btn" @click="navigateToAdmin">
-        ⚙️ Admin
-      </button>
-    </nav>
+    <!-- Navegación común -->
+    <NavigationBar 
+      :show-admin="auth.isAdmin"
+      @navigate="handleNavigation"
+    />
 
     <header class="games-header">
       <h1>Partidas Disponibles</h1>
@@ -128,6 +121,7 @@
 
 <script setup lang="ts">
 import CreateGameModal from '../components/CreateGameModal.vue'
+import NavigationBar from '../components/NavigationBar.vue'
 
 // Props para recibir los datos y métodos del composable
 interface Props {
@@ -157,9 +151,7 @@ interface Emits {
   (e: 'viewGame', gameId: string): void
   (e: 'closeCreateModal'): void
   (e: 'openCreateModal'): void
-  (e: 'navigateToProfile'): void
-  (e: 'navigateToAdmin'): void
-  (e: 'navigateToGames'): void
+  (e: 'navigate', view: string): void
   (e: 'updateNewGame', value: any): void
 }
 
@@ -174,8 +166,6 @@ const deleteGame = (gameId: string) => emit('deleteGame', gameId)
 const viewGame = (gameId: string) => emit('viewGame', gameId)
 const closeCreateModal = () => emit('closeCreateModal')
 const openCreateModal = () => emit('openCreateModal')
-const navigateToProfile = () => emit('navigateToProfile')
-const navigateToAdmin = () => emit('navigateToAdmin')
-const navigateToGames = () => emit('navigateToGames')
+const handleNavigation = (view: string) => emit('navigate', view)
 const updateNewGame = (value: any) => emit('updateNewGame', value)
 </script>

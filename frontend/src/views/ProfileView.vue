@@ -1,5 +1,11 @@
 <template>
   <div class="profile-container">
+    <!-- Navegación común -->
+    <NavigationBar 
+      :show-admin="auth.isAdmin"
+      @navigate="handleNavigation"
+    />
+    
     <div class="profile-header">
       <div class="profile-avatar">
         <span class="avatar-text">{{ auth.user?.username?.charAt(0).toUpperCase() || 'U' }}</span>
@@ -26,14 +32,6 @@
       </div>
       
       <div class="profile-actions">
-        <button @click="navigateToGames" class="games-btn">
-          <span class="btn-icon">🎮</span>
-          Ver Partidas
-        </button>
-        <button v-if="auth.isAdmin" @click="navigateToAdmin" class="admin-btn">
-          <span class="btn-icon">⚙️</span>
-          Administración de usuarios
-        </button>
         <button @click="handleLogout" class="logout-btn">
           <span class="btn-icon">🚪</span>
           Cerrar sesión
@@ -50,17 +48,19 @@
 </template>
 
 <script setup lang="ts">
+import NavigationBar from '../components/NavigationBar.vue'
 import { useProfile } from '../composables/useProfile'
+import { useNavigation } from '../composables/useNavigation'
 
 const {
   auth,
   handleLogout,
   roleClass,
   roleText,
-  navigateToGames,
-  navigateToAdmin,
   navigateToLogin
 } = useProfile()
+
+const { handleNavigation } = useNavigation()
 </script>
 
 <style src="../styles/profile.css"></style>

@@ -1,5 +1,11 @@
 <template>
   <div class="admin-container">
+    <!-- Navegación común -->
+    <NavigationBar 
+      :show-admin="true"
+      @navigate="handleNavigation"
+    />
+    
     <h2>Administración de usuarios</h2>
     <div class="admin-search">
       <input v-model="search" type="text" placeholder="Buscar usuario..." />
@@ -33,7 +39,9 @@
 </template>
 
 <script setup lang="ts">
+import NavigationBar from '../components/NavigationBar.vue'
 import { useAdminComposable } from '../composables/useAdmin.ts'
+import { useNavigation } from '../composables/useNavigation'
 
 const {
   users,
@@ -44,6 +52,8 @@ const {
   deleteUserHandler,
   toggleRole
 } = useAdminComposable()
+
+const { handleNavigation } = useNavigation()
 </script>
 
 <style src="../styles/admin.css"></style>

@@ -19,14 +19,6 @@ export function useProfile() {
     return auth.user?.role === 'admin' ? 'Administrador' : 'Jugador'
   })
 
-  const navigateToGames = () => {
-    router.push('/partidas')
-  }
-
-  const navigateToAdmin = () => {
-    router.push('/admin')
-  }
-
   const navigateToLogin = () => {
     router.push('/login')
   }
@@ -36,8 +28,6 @@ export function useProfile() {
     handleLogout,
     roleClass,
     roleText,
-    navigateToGames,
-    navigateToAdmin,
     navigateToLogin
   }
 }

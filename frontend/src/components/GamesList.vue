@@ -23,9 +23,7 @@
     @viewGame="viewGame"
     @closeCreateModal="closeCreateModal"
     @openCreateModal="openCreateModal"
-    @navigateToProfile="navigateToProfile"
-    @navigateToAdmin="navigateToAdmin"
-    @navigateToGames="navigateToGames"
+    @navigate="handleNavigation"
     @updateNewGame="updateNewGame"
   />
 </template>
@@ -34,9 +32,11 @@
 import { onMounted } from 'vue'
 import GamesListView from '../views/GamesListView.vue'
 import { useGamesList } from '../composables/useGamesList'
+import { useNavigation } from '../composables/useNavigation'
 import '../styles/games.css'
+import '../styles/navigation.css'
 
-// Usar el composable
+// Usar los composables
 const {
   games,
   loading,
@@ -62,11 +62,10 @@ const {
   formatDate,
   closeCreateModal,
   openCreateModal,
-  navigateToProfile,
-  navigateToAdmin,
-  navigateToGames,
   updateNewGame
 } = useGamesList()
+
+const { handleNavigation } = useNavigation()
 
 // Cargar partidas al montar el componente
 onMounted(() => {

@@ -193,19 +193,6 @@ export function useGamesList() {
     }, 5000)
   }
 
-  // Métodos de navegación
-  const navigateToProfile = () => {
-    router.push('/perfil')
-  }
-
-  const navigateToAdmin = () => {
-    router.push('/admin')
-  }
-
-  const navigateToGames = () => {
-    router.push('/partidas')
-  }
-
   const updateNewGame = (gameData: { name: string, maxPlayers: number }) => {
     newGame.value = gameData
   }
@@ -239,9 +226,6 @@ export function useGamesList() {
     closeCreateModal,
     openCreateModal,
     showNotification,
-    navigateToProfile,
-    navigateToAdmin,
-    navigateToGames,
     updateNewGame
   }
 }
