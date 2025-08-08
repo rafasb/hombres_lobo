@@ -9,11 +9,15 @@
     <button v-if="showAdmin" class="nav-btn" @click="$emit('navigate', 'admin')" :class="{ active: isActive('/admin') }">
       ⚙️ Admin
     </button>
+    <button class="nav-btn logout-nav-btn" @click="handleLogout" title="Cerrar sesión">
+      🚪 Salir
+    </button>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
 
 interface Props {
   showAdmin?: boolean
@@ -27,8 +31,15 @@ defineProps<Props>()
 defineEmits<Emits>()
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 const isActive = (path: string) => {
   return route.path === path
+}
+
+const handleLogout = () => {
+  auth.logout()
+  router.push('/login')
 }
 </script>

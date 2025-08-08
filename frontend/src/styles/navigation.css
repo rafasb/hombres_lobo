@@ -34,16 +34,41 @@
   box-shadow: 0 4px 15px rgba(238, 90, 36, 0.4);
 }
 
+/* Botón específico de cerrar sesión */
+.nav-btn.logout-nav-btn {
+  margin-left: auto; /* Empuja el botón hacia la derecha */
+  background: linear-gradient(45deg, #e74c3c, #c0392b);
+  border-color: rgba(231, 76, 60, 0.5);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+.nav-btn.logout-nav-btn:hover {
+  background: linear-gradient(45deg, #c0392b, #a93226);
+  border-color: rgba(192, 57, 43, 0.7);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.5);
+}
+
 /* Adaptación para móviles */
 @media (max-width: 768px) {
   .main-nav {
-    justify-content: center;
+    justify-content: flex-start;
     gap: 8px;
     padding: 8px;
+    flex-wrap: wrap;
   }
   
   .nav-btn {
     padding: 6px 12px;
     font-size: 13px;
+  }
+  
+  .nav-btn.logout-nav-btn {
+    order: 999; /* Asegura que aparezca al final */
+    margin-left: auto;
+    flex: 0 0 auto;
   }
 }
