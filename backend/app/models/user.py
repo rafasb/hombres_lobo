@@ -12,6 +12,8 @@ class UserStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     BANNED = "banned"
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=30)
@@ -35,3 +37,6 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     password: str | None = None
     # Puedes añadir más campos editables (avatar, etc.)
+
+class UserStatusUpdate(BaseModel):
+    status: UserStatus

@@ -7,13 +7,14 @@ Las rutas de administración se han movido a routes_admin.py.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Body
-from app.models.user import UserRole, UserUpdate
+from app.models.user import UserRole, UserUpdate, UserStatusUpdate
 from app.models.user_responses import (
     UserProfileResponse,
     UsersListResponse,
-    UserUpdateResponse
+    UserUpdateResponse,
+    UserStatusUpdateResponse
 )
-from app.services.user_service import get_user, get_all_users, update_user
+from app.services.user_service import get_user, get_all_users, update_user, update_user_status
 from app.core.dependencies import get_current_user, admin_required
 
 router = APIRouter(prefix="/users",tags=["users"])
@@ -29,6 +30,7 @@ def get_my_profile(current_user=Depends(get_current_user)):
 
 @router.get("/{user_id}", response_model=UserProfileResponse)
 def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
+    """Obtiene los datos de un usuario específico por su ID."""
     # Verificar que solo puede ver su propio perfil o ser admin
     if current_user.role != UserRole.ADMIN and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Solo puedes acceder a tu propio perfil")
@@ -45,6 +47,7 @@ def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
 
 @router.get("", response_model=UsersListResponse)
 def list_users(admin=Depends(admin_required)):
+    """Obtiene la lista completa de todos los usuarios registrados (solo administradores)."""
     """Solo los administradores pueden ver la lista completa de usuarios."""
     users = get_all_users()
     
@@ -57,6 +60,7 @@ def list_users(admin=Depends(admin_required)):
 
 @router.put("/me", response_model=UserUpdateResponse)
 def update_my_profile(update: UserUpdate = Body(...), user=Depends(get_current_user)):
+    """Actualiza los datos del perfil del usuario autenticado actual."""
     updated = update_user(user, update)
     
     # Determinar qué campos se actualizaron basándose en los datos del request
@@ -71,4 +75,57 @@ def update_my_profile(update: UserUpdate = Body(...), user=Depends(get_current_u
         message="Perfil actualizado exitosamente",
         user=updated,
         updated_fields=updated_fields
+    )
+
+@router.put("/{user_id}/status", response_model=UserStatusUpdateResponse)
+def update_user_status_endpoint(
+    user_id: str, 
+    status_update: UserStatusUpdate = Body(...),
+    current_user=Depends(get_current_user)
+):
+    """
+    Actualiza el estado de un usuario específico.
+    
+    Estados disponibles:
+    - active: Usuario activo y disponible
+    - inactive: Usuario inactivo temporalmente
+    - banned: Usuario bloqueado/baneado
+    - connected: Usuario conectado a la aplicación
+    - disconnected: Usuario desconectado de la aplicación
+    
+    Solo administradores pueden cambiar estados a 'banned'.
+    Los usuarios pueden cambiar su propio estado entre 'connected'/'disconnected'.
+    """
+    # Verificar permisos
+    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403, 
+            detail="Solo puedes cambiar tu propio estado de conexión o ser administrador"
+        )
+    
+    # Solo admins pueden banear usuarios
+    if status_update.status.value == "banned" and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403, 
+            detail="Solo los administradores pueden banear usuarios"
+        )
+    
+    # Verificar que el usuario existe
+    target_user = get_user(user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    # Actualizar el estado
+    updated_user, old_status = update_user_status(user_id, status_update)
+    
+    if not updated_user or old_status is None:
+        raise HTTPException(status_code=500, detail="Error al actualizar el estado del usuario")
+    
+    return UserStatusUpdateResponse(
+        success=True,
+        message=f"Estado del usuario actualizado de '{old_status.value}' a '{status_update.status.value}'",
+        user_id=user_id,
+        old_status=old_status.value,
+        new_status=status_update.status.value,
+        updated_at=updated_user.updated_at.isoformat()
     )

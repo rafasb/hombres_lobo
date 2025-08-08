@@ -40,3 +40,13 @@ class UserUpdateResponse(BaseModel):
     message: str
     user: User
     updated_fields: List[str]
+
+
+class UserStatusUpdateResponse(BaseModel):
+    """Respuesta para actualización del estado de usuario."""
+    success: bool = True
+    message: str
+    user_id: str
+    old_status: str
+    new_status: str
+    updated_at: str

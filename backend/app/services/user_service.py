@@ -4,7 +4,7 @@ Incluye funciones para crear, obtener, actualizar y listar usuarios usando la ba
 """
 
 from app.database import save_user, load_user, load_all_users, delete_user as db_delete_user
-from app.models.user import User, UserUpdate, UserRole
+from app.models.user import User, UserUpdate, UserRole, UserStatus, UserStatusUpdate
 from typing import Optional, List
 from datetime import datetime, UTC
 from app.core.security import hash_password
@@ -38,3 +38,15 @@ def get_all_users() -> List[User]:
 def delete_user(user_id: str) -> bool:
     """Elimina un usuario de la base de datos físicamente."""
     return db_delete_user(user_id)
+
+def update_user_status(user_id: str, status_update: UserStatusUpdate) -> tuple[User, UserStatus] | tuple[None, None]:
+    """Actualiza el estado de un usuario y devuelve el usuario actualizado y el estado anterior."""
+    user = load_user(user_id)
+    if not user:
+        return None, None
+    
+    old_status = user.status
+    user.status = status_update.status
+    user.updated_at = datetime.now(UTC)
+    save_user(user)
+    return user, old_status
