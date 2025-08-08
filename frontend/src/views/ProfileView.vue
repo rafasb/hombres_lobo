@@ -1,10 +1,12 @@
 <template>
-  <div class="games-container">
+  <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <!-- Navegación común -->
     <NavigationBar 
       :show-admin="auth.isAdmin"
       @navigate="handleNavigation"
     />
+    
+    <div class="container-lg py-4">
     
     <div class="games-header">
       <div class="profile-header-content">
@@ -53,6 +55,8 @@
       <div class="empty-icon">❓</div>
       <p>No hay datos de usuario disponibles</p>
       <button @click="navigateToLogin" class="btn btn-join">Iniciar sesión</button>
+    </div>
+    
     </div>
   </div>
 </template>

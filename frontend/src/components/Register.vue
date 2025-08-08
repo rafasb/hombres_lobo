@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import RegisterView from '../views/RegisterView.vue'
 import { useRegister } from '../composables/useRegister'
-import '../styles/register.css'
+// Ya no necesitamos importar el CSS específico, usamos Bootstrap
 
 const {
   username,

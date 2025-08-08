@@ -10,7 +10,10 @@
 - En el directorio superior al directorio `../doc/`, encontrarás el directorio que contiene información sobre el proyecto, su estructura y detalles de implementación.
 - Dispones de la documentación del backend en el fichero `./openapi.json`. Consulta el fichero cuando necesites información sobre las rutas y los datos que maneja el backend.
 - Sugiere siempre el siguiente paso a seguir, pero que sea de un alcance razonable, no un paso completo del proyecto. No te embarques en pasos con demasiadas tareas sin preguntar antes.
-- Al crear nuevas vistas o funcionalidades, asegurate de que el código es modular, separando la vista pura, con el template en el directorio `src/views`, la lógica de negocio reutilizable en un fichero separado en el directorio `src/composables`, el wrapper simplificado que une ambos en `src\components\` y los estilos en un fichero CSS dedicado en el directorio `src\styles`.
+- **IMPORTANTE:** El proyecto utiliza **Bootstrap 5** como framework de UI. Al crear nuevas vistas o funcionalidades, usa las clases de Bootstrap para styling y componentes. Evita crear CSS personalizado a menos que sea estrictamente necesario para funcionalidades específicas no cubiertas por Bootstrap.
+- Estructura de componentes actualizada: separa la vista pura con el template en el directorio `src/views` (usando clases Bootstrap), la lógica de negocio reutilizable en un fichero separado en el directorio `src/composables`, el wrapper simplificado que une ambos en `src/components/`. Los estilos CSS personalizados deben ser mínimos y solo cuando Bootstrap no cubra la funcionalidad.
+- **Convenciones de Bootstrap:** Utiliza el sistema de grid de Bootstrap, las clases de utilidad, componentes como cards, buttons, forms, modals, etc. Mantén la consistencia visual usando las variables CSS personalizadas definidas en `src/style.css`.
+- **Diseño móvil:** Asegúrate de usar las clases responsive de Bootstrap (col-*, d-*, etc.) y mantener el contenedor `.mobile-container` para simular el aspecto de aplicación móvil en desktop.
 - Recuerda utilizar Pinia para la gestión del estado de la aplicación y Vue Router para la navegación entre vistas.
 
 ## 📊 Proyecto Hombres Lobo
@@ -122,9 +125,59 @@ La app declarará el fin del juego cuando se cumpla una de las siguientes condic
 - **Vue Router 4** - Enrutamiento SPA
 
 ### ✅ UI Framework
-- **CSS Puro** - Estilos dedicados por vista.
+- **Bootstrap 5** - Framework CSS con sistema de grid responsive y componentes predefinidos
+- **Bootstrap Icons** - Biblioteca de iconos oficial de Bootstrap
+- **CSS Personalizado Mínimo** - Solo estilos específicos que extienden Bootstrap (variables personalizadas, mobile-container, etc.)
 
 ### ✅ Comunicación HTTP
 - **Axios** - Cliente HTTP para comunicación con backend API
+
+---
+
+## 🎨 Guía de Uso de Bootstrap en el Proyecto
+
+### **Principios de Diseño con Bootstrap**
+1. **Mobile First:** Utilizar las clases responsive de Bootstrap (xs, sm, md, lg, xl, xxl)
+2. **Sistema de Grid:** Usar container, row y col-* para layouts responsivos
+3. **Componentes Bootstrap:** Priorizar componentes nativos (cards, buttons, forms, modals, alerts, etc.)
+4. **Utilidades:** Usar clases de utilidad de Bootstrap para spacing (m-*, p-*), colors (text-*, bg-*), display (d-*), etc.
+
+### **Estructura de Clases Recomendadas**
+```html
+<!-- Contenedor principal móvil -->
+<div class="mobile-container">
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-11 col-sm-8 col-md-6">
+        <!-- Contenido -->
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### **Variables CSS Personalizadas Disponibles**
+- `--primary-color: #42b883` (Verde Vue)
+- `--secondary-color: #35495e` (Gris oscuro)
+- `--accent-color: #41b883`
+- `--dark-color: #2c3e50`
+- `--light-color: #ecf0f1`
+
+### **Clases de Utilidad Personalizadas**
+- `.mobile-container` - Contenedor que simula app móvil en desktop
+- `.content-with-nav` - Padding bottom para navegación inferior
+- `.text-primary-custom` - Color primario personalizado
+- `.bg-primary-custom` - Background primario personalizado
+
+### **Iconos Bootstrap Recomendados**
+- `bi-person` - Usuario
+- `bi-lock` - Contraseña/Seguridad
+- `bi-box-arrow-in-right` - Login
+- `bi-house` - Inicio
+- `bi-people` - Usuarios/Jugadores
+- `bi-gear` - Configuración
+- `bi-plus-circle` - Añadir
+- `bi-exclamation-triangle` - Advertencia
+- `bi-info-circle` - Información
 
 

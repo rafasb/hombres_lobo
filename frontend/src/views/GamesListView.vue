@@ -1,12 +1,13 @@
 <template>
-  <div class="games-container">
+  <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <!-- Navegación común -->
     <NavigationBar 
       :show-admin="auth.isAdmin"
       @navigate="handleNavigation"
     />
 
-    <header class="games-header">
+    <div class="container-lg py-4">
+      <header class="games-header">
       <h1>Partidas Disponibles</h1>
       <button class="btn-create-game" @click="openCreateModal">
         <span class="btn-icon">+</span>
@@ -115,6 +116,7 @@
     <!-- Mensajes de error/éxito -->
     <div class="notification" v-if="notification" :class="notification.type">
       {{ notification.message }}
+    </div>
     </div>
   </div>
 </template>

@@ -34,7 +34,6 @@ import GamesListView from '../views/GamesListView.vue'
 import { useGamesList } from '../composables/useGamesList'
 import { useNavigation } from '../composables/useNavigation'
 import '../styles/games.css'
-import '../styles/navigation.css'
 
 // Usar los composables
 const {

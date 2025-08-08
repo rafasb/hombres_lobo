@@ -1,79 +1,65 @@
+/* Estilos globales personalizados que extienden Bootstrap */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Variables CSS personalizadas */
+  --primary-color: #42b883;
+  --secondary-color: #35495e;
+  --accent-color: #41b883;
+  --dark-color: #2c3e50;
+  --light-color: #ecf0f1;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* Sobrescribir variables de Bootstrap */
+:root {
+  --bs-primary: var(--primary-color);
+  --bs-primary-rgb: 66, 184, 131;
+  --bs-secondary: var(--secondary-color);
+  --bs-dark: var(--dark-color);
 }
 
+/* Reset básico */
+* {
+  box-sizing: border-box;
+}
+
+/* Estilos del body */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: var(--light-color);
+}
+
+/* Contenedor principal de la app */
+#app {
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Utilidades personalizadas */
+.text-primary-custom {
+  color: var(--primary-color) !important;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.bg-primary-custom {
+  background-color: var(--primary-color) !important;
 }
 
-.card {
-  padding: 2em;
+/* Transiciones suaves para botones de navegación */
+.transition-all {
+  transition: all 0.3s ease;
 }
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.transition-all:hover {
+  transform: translateY(-1px);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Efecto glassmorphism mejorado para navegación */
+.navbar {
+  border-radius: 15px !important;
+  margin-bottom: 1rem;
+}
+
+/* Mejoras para botones outline light en navegación */
+.btn-outline-light:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
 }
