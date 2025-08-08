@@ -15,6 +15,13 @@ export interface ConnectionStatus {
   error: string | null
 }
 
+export interface PlayerStatus {
+  playerId: string
+  username: string
+  isConnected: boolean
+  lastSeen: Date
+}
+
 export class WebSocketPollingManager {
   private pollingTimer: number | null = null
   private heartbeatTimer: number | null = null
@@ -34,7 +41,7 @@ export class WebSocketPollingManager {
   public readonly pollingInterval = 3000 // 3 segundos
   public readonly heartbeatInterval = 30000
 
-  constructor(gameId: string, private token?: string) {
+  constructor(gameId: string) {
     this.gameId = gameId
   }
 
@@ -113,10 +120,10 @@ export class WebSocketPollingManager {
       
       try {
         // Obtener información actualizada del juego
-        const gameData = await gameService.getGame(this.gameId)
+        const gameData = await gameService.getGameById(this.gameId)
         
         // Simular estado de conexión de los jugadores
-        const playersStatus = gameData.players.map(player => ({
+        const playersStatus = gameData.players.map((player: any) => ({
           playerId: player.id,
           username: player.username,
           isConnected: Math.random() > 0.3, // Simular 70% de conexión
@@ -129,7 +136,7 @@ export class WebSocketPollingManager {
           data: {
             isUserConnected: true,
             isUserInGame: true,
-            connectedPlayersCount: playersStatus.filter(p => p.isConnected).length,
+            connectedPlayersCount: playersStatus.filter((p: any) => p.isConnected).length,
             totalPlayersCount: playersStatus.length,
             playersStatus: playersStatus,
             lastUpdate: new Date()
@@ -232,7 +239,7 @@ export class WebSocketPollingManager {
 let wsManager: WebSocketPollingManager | null = null
 
 export function useWebSocketPolling(gameId?: string) {
-  const createConnection = (token?: string) => {
+  const createConnection = () => {
     if (!gameId) {
       throw new Error('gameId is required for WebSocket connection')
     }
@@ -241,7 +248,7 @@ export function useWebSocketPolling(gameId?: string) {
       wsManager.disconnect()
     }
     
-    wsManager = new WebSocketPollingManager(gameId, token)
+    wsManager = new WebSocketPollingManager(gameId)
     return wsManager
   }
 
