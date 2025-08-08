@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import routes_games, routes_admin, routes_users, routes_players_voting, routes_warewolfs, routes_special_roles, routes_sheriff, routes_hunter, routes_witch, routes_wild_child, routes_cupid, routes_game_flow
+from app.api import routes_games, routes_admin, routes_users, routes_auth, routes_players_voting, routes_warewolfs, routes_special_roles, routes_sheriff, routes_hunter, routes_witch, routes_wild_child, routes_cupid, routes_game_flow
 from app.websocket.message_handlers import websocket_endpoint
 
 app = FastAPI(
@@ -32,6 +32,7 @@ async def websocket_game_endpoint(websocket: WebSocket, game_id: str, token: str
     await websocket_endpoint(websocket, game_id, token)
 
 # Incluir rutas
+app.include_router(routes_auth.router)
 app.include_router(routes_users.router)
 app.include_router(routes_games.router)
 app.include_router(routes_admin.router)

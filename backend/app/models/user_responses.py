@@ -19,13 +19,6 @@ class LoginResponse(BaseModel):
     role: str
 
 
-class RegisterResponse(BaseModel):
-    """Respuesta para el endpoint de registro."""
-    success: bool = True
-    message: str
-    user: User
-
-
 class UserProfileResponse(BaseModel):
     """Respuesta para obtener perfil de usuario."""
     success: bool = True
