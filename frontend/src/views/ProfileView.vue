@@ -1,48 +1,58 @@
 <template>
-  <div class="profile-container">
+  <div class="games-container">
     <!-- Navegación común -->
     <NavigationBar 
       :show-admin="auth.isAdmin"
       @navigate="handleNavigation"
     />
     
-    <div class="profile-header">
-      <div class="profile-avatar">
-        <span class="avatar-text">{{ auth.user?.username?.charAt(0).toUpperCase() || 'U' }}</span>
+    <div class="games-header">
+      <div class="profile-header-content">
+        <div class="profile-avatar">
+          <span class="avatar-text">{{ auth.user?.username?.charAt(0).toUpperCase() || 'U' }}</span>
+        </div>
+        <h1>Perfil de usuario</h1>
       </div>
-      <h2>Perfil de usuario</h2>
     </div>
     
     <div v-if="auth.user" class="profile-content">
-      <div class="profile-info">
-        <div class="info-card">
-          <div class="info-label">Usuario</div>
-          <div class="info-value">{{ auth.user.username }}</div>
+      <div class="games-grid">
+        <div class="game-card">
+          <div class="game-header">
+            <h3 class="game-title">Información de Usuario</h3>
+          </div>
+          
+          <div class="game-info">
+            <div class="game-detail">
+              <span class="detail-label">Usuario:</span>
+              <span class="detail-value">{{ auth.user.username }}</span>
+            </div>
+            
+            <div class="game-detail">
+              <span class="detail-label">ID:</span>
+              <span class="detail-value user-id">{{ auth.user.id }}</span>
+            </div>
+            
+            <div class="game-detail">
+              <span class="detail-label">Rol:</span>
+              <span class="detail-value" :class="roleClass">{{ roleText }}</span>
+            </div>
+          </div>
+          
+          <div class="game-actions">
+            <button @click="handleLogout" class="btn btn-leave">
+              <span class="btn-icon">🚪</span>
+              Cerrar sesión
+            </button>
+          </div>
         </div>
-        
-        <div class="info-card">
-          <div class="info-label">ID</div>
-          <div class="info-value user-id">{{ auth.user.id }}</div>
-        </div>
-        
-        <div class="info-card">
-          <div class="info-label">Rol</div>
-          <div class="info-value" :class="roleClass">{{ roleText }}</div>
-        </div>
-      </div>
-      
-      <div class="profile-actions">
-        <button @click="handleLogout" class="logout-btn">
-          <span class="btn-icon">🚪</span>
-          Cerrar sesión
-        </button>
       </div>
     </div>
     
-    <div v-else class="profile-empty">
+    <div v-else class="empty-state">
       <div class="empty-icon">❓</div>
       <p>No hay datos de usuario disponibles</p>
-      <button @click="navigateToLogin" class="login-btn">Iniciar sesión</button>
+      <button @click="navigateToLogin" class="btn btn-join">Iniciar sesión</button>
     </div>
   </div>
 </template>
@@ -63,4 +73,4 @@ const {
 const { handleNavigation } = useNavigation()
 </script>
 
-<style src="../styles/profile.css"></style>
+<style src="../styles/games.css"></style>
