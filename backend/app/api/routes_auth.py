@@ -11,7 +11,7 @@ from app.services.user_service import create_user, get_all_users
 from app.core.security import hash_password, verify_password, create_access_token
 import uuid
 
-router = APIRouter()
+router = APIRouter(tags=["auth"])
 
 @router.post("/register", response_model=UserProfileResponse)
 def register_user(username: str = Form(...), email: str = Form(...), password: str = Form(...)):

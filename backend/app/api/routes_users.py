@@ -16,9 +16,9 @@ from app.models.user_responses import (
 from app.services.user_service import get_user, get_all_users, update_user
 from app.core.dependencies import get_current_user, admin_required
 
-router = APIRouter()
+router = APIRouter(prefix="/users",tags=["users"])
 
-@router.get("/users/me", response_model=UserProfileResponse)
+@router.get("/me", response_model=UserProfileResponse)
 def get_my_profile(current_user=Depends(get_current_user)):
     """Obtiene los datos del usuario autenticado actual."""
     return UserProfileResponse(
@@ -27,7 +27,7 @@ def get_my_profile(current_user=Depends(get_current_user)):
         user=current_user
     )
 
-@router.get("/users/{user_id}", response_model=UserProfileResponse)
+@router.get("/{user_id}", response_model=UserProfileResponse)
 def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
     # Verificar que solo puede ver su propio perfil o ser admin
     if current_user.role != UserRole.ADMIN and current_user.id != user_id:
@@ -43,7 +43,7 @@ def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
         user=user_obj
     )
 
-@router.get("/users", response_model=UsersListResponse)
+@router.get("", response_model=UsersListResponse)
 def list_users(admin=Depends(admin_required)):
     """Solo los administradores pueden ver la lista completa de usuarios."""
     users = get_all_users()
@@ -55,7 +55,7 @@ def list_users(admin=Depends(admin_required)):
         total_users=len(users)
     )
 
-@router.put("/users/me", response_model=UserUpdateResponse)
+@router.put("/me", response_model=UserUpdateResponse)
 def update_my_profile(update: UserUpdate = Body(...), user=Depends(get_current_user)):
     updated = update_user(user, update)
     

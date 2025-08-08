@@ -34,10 +34,10 @@ from app.core.dependencies import get_current_user
 from app.database import game_to_game_response
 import uuid
 
-router = APIRouter()
+router = APIRouter(prefix="/games", tags=["games"])
 
 
-@router.post("/games", response_model=GameCreateResponse)
+@router.post("", response_model=GameCreateResponse)
 def create_new_game(game: GameCreate, user=Depends(get_current_user)):
     new_game = Game(
         id=str(uuid.uuid4()),
@@ -58,7 +58,7 @@ def create_new_game(game: GameCreate, user=Depends(get_current_user)):
     )
 
 
-@router.get("/games/{game_id}", response_model=GameGetResponse)
+@router.get("/{game_id}", response_model=GameGetResponse)
 def get_game_by_id(game_id: str, user=Depends(get_current_user)):
     game = get_game(game_id)
     if not game:
@@ -72,7 +72,7 @@ def get_game_by_id(game_id: str, user=Depends(get_current_user)):
     )
 
 
-@router.get("/games", response_model=GameListResponse)
+@router.get("", response_model=GameListResponse)
 def list_games(user=Depends(get_current_user)):
     games = get_all_games()
     games_response = [game_to_game_response(game) for game in games]
@@ -85,7 +85,7 @@ def list_games(user=Depends(get_current_user)):
     )
 
 
-@router.post("/games/{game_id}/join", response_model=GameJoinResponse)
+@router.post("/{game_id}/join", response_model=GameJoinResponse)
 def join_game_endpoint(game_id: str, user=Depends(get_current_user)):
     """Permite que un usuario autenticado se una a una partida que esté esperando jugadores."""
     if join_game(game_id, user):
@@ -106,7 +106,7 @@ def join_game_endpoint(game_id: str, user=Depends(get_current_user)):
     )
 
 
-@router.post("/games/{game_id}/assign-roles", response_model=GameRoleAssignmentResponse)
+@router.post("/{game_id}/assign-roles", response_model=GameRoleAssignmentResponse)
 def assign_roles_endpoint(game_id: str, user=Depends(get_current_user)):
     """Permite al creador o admin iniciar el reparto de roles y comenzar la partida."""
     is_admin = user.role == UserRole.ADMIN
@@ -132,7 +132,7 @@ def assign_roles_endpoint(game_id: str, user=Depends(get_current_user)):
     )
 
 
-@router.post("/games/{game_id}/leave", response_model=GameLeaveResponse)
+@router.post("/{game_id}/leave", response_model=GameLeaveResponse)
 def leave_game_endpoint(game_id: str, user=Depends(get_current_user)):
     """Permite que un usuario autenticado abandone una partida si aún no ha comenzado."""
     from app.services.game_service import leave_game
@@ -155,7 +155,7 @@ def leave_game_endpoint(game_id: str, user=Depends(get_current_user)):
     )
 
 
-@router.put("/games/{game_id}", response_model=GameUpdateResponse)
+@router.put("/{game_id}", response_model=GameUpdateResponse)
 def update_game(game_id: str, data: dict = Body(...), user=Depends(get_current_user)):
     """Permite al creador o admin modificar nombre, max_players y roles antes de que comience la partida."""
     name = data.get("name")
@@ -189,7 +189,7 @@ def update_game(game_id: str, data: dict = Body(...), user=Depends(get_current_u
     )
 
 
-@router.put("/games/{game_id}/status", response_model=GameStatusUpdateResponse)
+@router.put("/{game_id}/status", response_model=GameStatusUpdateResponse)
 def update_game_status(
     game_id: str, status: GameStatus = Body(...), user=Depends(get_current_user)
 ):
@@ -217,7 +217,7 @@ def update_game_status(
     )
 
 
-@router.delete("/games/{game_id}", response_model=GameDeleteResponse)
+@router.delete("/{game_id}", response_model=GameDeleteResponse)
 def delete_game_by_creator(game_id: str, user=Depends(get_current_user)):
     """Permite al creador o admin eliminar la partida si está en estado WAITING o PAUSED."""
     is_admin = user.role == UserRole.ADMIN
