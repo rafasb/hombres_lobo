@@ -1,190 +1,400 @@
 import os
 import json
 import uuid
-from typing import Any, List, Optional
-from app.models.user import User
-from app.models.game_and_roles import Game
+from typing import Any, List, Optional, Generator
 from datetime import datetime, UTC
+from contextlib import contextmanager
+from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
+from app.models.user import User, UserRole, UserStatus
+from app.models.game_and_roles import Game, GameStatus, GameResponse
 from app.core.security import hash_password
-from app.models.user import UserRole
 from dotenv import load_dotenv
 
 # Cargar variables de entorno
-# se cargarán de .env y si no existe de .env.example
-if not os.path.exists(os.path.join(os.path.dirname(__file__), '../.env')):
-    os.rename(os.path.join(os.path.dirname(__file__), '../.env.example'), os.path.join(os.path.dirname(__file__), '../.env'))
-else:
-    load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
+env_path = os.path.join(os.path.dirname(__file__), '../.env')
+if not os.path.exists(env_path):
+    env_example_path = os.path.join(os.path.dirname(__file__), '../.env.example')
+    if os.path.exists(env_example_path):
+        os.rename(env_example_path, env_path)
+load_dotenv(env_path)
 
-# Directorio donde se almacenarán los ficheros JSON
-DB_DIR = os.path.join(os.path.dirname(__file__), 'db_json')
+# Configuración de la base de datos
+DB_DIR = os.path.join(os.path.dirname(__file__), 'db_sqlite')
 os.makedirs(DB_DIR, exist_ok=True)
 
-# Inicializar ficheros si no existen
-def ensure_json_file(filename: str, empty_obj: Any = {}):
-    path = os.path.join(DB_DIR, filename)
-    if not os.path.exists(path):
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(empty_obj, f)
+DATABASE_URL = f"sqlite:///{os.path.join(DB_DIR, 'hombres_lobo.db')}"
 
-ensure_json_file('users.json', {})
-ensure_json_file('games.json', {})
+# Configuración SQLAlchemy
+engine = create_engine(DATABASE_URL, echo=False)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-# Crear usuario admin por defecto si no existe
+# Modelos SQLAlchemy optimizados usando los modelos Pydantic
+class UserDB(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default=UserRole.PLAYER.value)
+    status = Column(String, nullable=False, default=UserStatus.ACTIVE.value)
+    created_at = Column(DateTime, nullable=False, default=datetime.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.now(), onupdate=datetime.utcnow)
+    
+    def to_pydantic(self) -> User:
+        """Convierte el modelo SQLAlchemy a modelo Pydantic."""
+        return User(
+            id=self.id,
+            username=self.username,
+            email=self.email,
+            hashed_password=self.hashed_password,
+            role=UserRole(self.role),
+            status=UserStatus(self.status),
+            created_at=self.created_at.replace(tzinfo=UTC),
+            updated_at=self.updated_at.replace(tzinfo=UTC)
+        )
+    
+    @classmethod
+    def from_pydantic(cls, user: User) -> 'UserDB':
+        """Crea un modelo SQLAlchemy desde un modelo Pydantic."""
+        return cls(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            hashed_password=user.hashed_password,
+            role=user.role.value,
+            status=user.status.value,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+
+class GameDB(Base):
+    __tablename__ = "games"
+    
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    creator_id = Column(String, nullable=False, index=True)
+    players = Column(SQLiteJSON, nullable=False, default=list)
+    roles = Column(SQLiteJSON, nullable=False, default=dict)
+    status = Column(String, nullable=False, default=GameStatus.WAITING.value)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    current_round = Column(Integer, nullable=False, default=0)
+    is_first_night = Column(Boolean, nullable=False, default=True)
+    night_actions = Column(SQLiteJSON, nullable=False, default=dict)
+    day_votes = Column(SQLiteJSON, nullable=False, default=dict)
+    max_players = Column(Integer, nullable=False, default=12)
+    
+    def to_pydantic(self) -> Game:
+        """Convierte el modelo SQLAlchemy a modelo Pydantic."""
+        return Game(
+            id=self.id,
+            name=self.name,
+            creator_id=self.creator_id,
+            players=self.players,
+            roles=self.roles,
+            status=GameStatus(self.status),
+            created_at=self.created_at.replace(tzinfo=UTC),
+            current_round=self.current_round,
+            is_first_night=self.is_first_night,
+            night_actions=self.night_actions,
+            day_votes=self.day_votes,
+            max_players=self.max_players
+        )
+    
+    @classmethod
+    def from_pydantic(cls, game: Game) -> 'GameDB':
+        """Crea un modelo SQLAlchemy desde un modelo Pydantic."""
+        return cls(
+            id=game.id,
+            name=game.name,
+            creator_id=game.creator_id,
+            players=game.players,
+            roles=game.roles,
+            status=game.status.value,
+            created_at=game.created_at,
+            current_round=game.current_round,
+            is_first_night=game.is_first_night,
+            night_actions=game.night_actions,
+            day_votes=game.day_votes,
+            max_players=game.max_players
+        )
+
+# Crear todas las tablas
+Base.metadata.create_all(bind=engine)
+
+# Dependency para obtener la sesión de base de datos
+@contextmanager
+def get_db_session() -> Generator[Session, None, None]:
+    """Context manager para obtener una sesión de base de datos."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_db() -> Generator[Session, None, None]:
+    """Función para obtener una sesión de base de datos (para FastAPI dependency)."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Funciones de migración desde JSON
+def migrate_from_json():
+    """Migra los datos existentes desde JSON a SQLite."""
+    json_dir = os.path.join(os.path.dirname(__file__), 'db_json')
+    
+    if not os.path.exists(json_dir):
+        print("No se encontraron datos JSON para migrar.")
+        return
+    
+    with get_db_session() as db:
+        # Migrar usuarios
+        users_file = os.path.join(json_dir, 'users.json')
+        if os.path.exists(users_file):
+            with open(users_file, 'r', encoding='utf-8') as f:
+                users_data = json.load(f)
+            
+            migrated_users = 0
+            for user_data in users_data.values():
+                # Verificar si el usuario ya existe
+                existing_user = db.query(UserDB).filter(UserDB.id == user_data['id']).first()
+                if not existing_user:
+                    # Convertir fechas string a datetime
+                    created_at = datetime.fromisoformat(user_data['created_at']) if isinstance(user_data['created_at'], str) else user_data['created_at']
+                    updated_at = datetime.fromisoformat(user_data['updated_at']) if isinstance(user_data['updated_at'], str) else user_data['updated_at']
+                    
+                    db_user = UserDB(
+                        id=user_data['id'],
+                        username=user_data['username'],
+                        email=user_data['email'],
+                        hashed_password=user_data['hashed_password'],
+                        role=user_data['role'],
+                        status=user_data['status'],
+                        created_at=created_at,
+                        updated_at=updated_at
+                    )
+                    db.add(db_user)
+                    migrated_users += 1
+            
+            print(f"Migrados {migrated_users} usuarios desde JSON")
+        
+        # Migrar partidas
+        games_file = os.path.join(json_dir, 'games.json')
+        if os.path.exists(games_file):
+            with open(games_file, 'r', encoding='utf-8') as f:
+                games_data = json.load(f)
+            
+            migrated_games = 0
+            for game_data in games_data.values():
+                # Verificar si la partida ya existe
+                existing_game = db.query(GameDB).filter(GameDB.id == game_data['id']).first()
+                if not existing_game:
+                    # Convertir fecha string a datetime
+                    created_at = datetime.fromisoformat(game_data['created_at']) if isinstance(game_data['created_at'], str) else game_data['created_at']
+                    
+                    db_game = GameDB(
+                        id=game_data['id'],
+                        name=game_data['name'],
+                        creator_id=game_data['creator_id'],
+                        players=game_data['players'],
+                        roles=game_data['roles'],
+                        status=game_data['status'],
+                        created_at=created_at,
+                        current_round=game_data['current_round'],
+                        is_first_night=game_data['is_first_night'],
+                        night_actions=game_data['night_actions'],
+                        day_votes=game_data['day_votes'],
+                        max_players=game_data['max_players']
+                    )
+                    db.add(db_game)
+                    migrated_games += 1
+            
+            print(f"Migradas {migrated_games} partidas desde JSON")
+        
+        db.commit()
+
+# Ejecutar migración al inicializar si es necesario
+try:
+    with get_db_session() as db:
+        user_count = db.query(UserDB).count()
+        if user_count == 0:
+            print("Base de datos vacía, ejecutando migración desde JSON...")
+            migrate_from_json()
+except Exception as e:
+    print(f"Error durante la migración: {e}")
+
+# Crear usuario admin por defecto
 admin_username = os.getenv('ADMIN_USERNAME')
 admin_email = os.getenv('ADMIN_EMAIL')
 admin_password = os.getenv('ADMIN_PASSWORD')
 
-# Crear admin directamente usando funciones locales
-users = None
-try:
-    with open(os.path.join(DB_DIR, 'users.json'), 'r', encoding='utf-8') as f:
-        users = json.load(f)
-except Exception:
-    users = {}
-
 if admin_username and admin_email and admin_password:
-    if not any(u.get('username') == admin_username for u in users.values()):
-        admin = User(
-            id=str(uuid.uuid4()),
-            username=admin_username,
-            email=admin_email,
-            hashed_password=hash_password(admin_password),
-            role=UserRole.ADMIN,
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC)
-        )
-        users[admin.id] = admin.model_dump()
-        # Serializar datetime
-        for field in ["created_at", "updated_at"]:
-            if isinstance(users[admin.id][field], datetime):
-                users[admin.id][field] = users[admin.id][field].isoformat()
-        with open(os.path.join(DB_DIR, 'users.json'), 'w', encoding='utf-8') as f:
-            json.dump(users, f, ensure_ascii=False, indent=2)
+    try:
+        with get_db_session() as db:
+            existing_admin = db.query(UserDB).filter(UserDB.username == admin_username).first()
+            if not existing_admin:
+                admin_user = UserDB(
+                    id=str(uuid.uuid4()),
+                    username=admin_username,
+                    email=admin_email,
+                    hashed_password=hash_password(admin_password),
+                    role=UserRole.ADMIN.value,
+                    status=UserStatus.ACTIVE.value,
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC)
+                )
+                db.add(admin_user)
+                db.commit()
+                print(f"Usuario admin creado: {admin_username}")
+    except Exception as e:
+        print(f"Error creando usuario admin: {e}")
 
-def get_json_path(filename: str) -> str:
-    """Devuelve la ruta absoluta de un fichero JSON en la base de datos."""
-    return os.path.join(DB_DIR, f"{filename}.json")
-
-def save_json(filename: str, data: Any) -> None:
-    """Guarda datos en un fichero JSON."""
-    with open(get_json_path(filename), 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def load_json(filename: str) -> Any:
-    """Carga datos de un fichero JSON. Devuelve None si no existe."""
-    path = get_json_path(filename)
-    if not os.path.exists(path):
-        return None
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-# --- Funciones específicas para usuarios ---
+# --- Funciones específicas para usuarios optimizadas ---
 
 def save_user(user: User) -> None:
-    """Guarda un usuario en la base de datos (por id), serializando datetime."""
-    users = load_json('users') or {}
-    user_dict = user.model_dump()
-    # Serializar datetime a string ISO
-    for field in ["created_at", "updated_at"]:
-        if isinstance(user_dict.get(field), datetime):
-            user_dict[field] = user_dict[field].isoformat()
-    users[user.id] = user_dict
-    save_json('users', users)
+    """Guarda un usuario en la base de datos."""
+    with get_db_session() as db:
+        db_user = db.query(UserDB).filter(UserDB.id == user.id).first()
+        if db_user:
+            # Actualizar usando el modelo Pydantic
+            new_db_user = UserDB.from_pydantic(user)
+            for attr, value in new_db_user.__dict__.items():
+                if not attr.startswith('_'):
+                    setattr(db_user, attr, value)
+        else:
+            # Crear nuevo usuario usando el modelo Pydantic
+            db_user = UserDB.from_pydantic(user)
+            db.add(db_user)
+        
+        db.commit()
 
 def load_user(user_id: str) -> Optional[User]:
-    """Carga un usuario por id, deserializando datetime."""
-    users = load_json('users')
-    if users and user_id in users:
-        data = users[user_id]
-        for field in ["created_at", "updated_at"]:
-            if field in data and isinstance(data[field], str):
-                data[field] = datetime.fromisoformat(data[field])
-        return User(**data)
-    return None
+    """Carga un usuario por id."""
+    with get_db_session() as db:
+        db_user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        return db_user.to_pydantic() if db_user else None
 
 def load_all_users() -> List[User]:
-    """Carga todos los usuarios, deserializando datetime."""
-    users = load_json('users')
-    if not users:
-        return []
-    result = []
-    for u in users.values():
-        for field in ["created_at", "updated_at"]:
-            if field in u and isinstance(u[field], str):
-                u[field] = datetime.fromisoformat(u[field])
-        result.append(User(**u))
-    return result
+    """Carga todos los usuarios."""
+    with get_db_session() as db:
+        return [db_user.to_pydantic() for db_user in db.query(UserDB).all()]
 
 def delete_user(user_id: str) -> bool:
-    """Elimina un usuario de la base de datos por su id. Devuelve True si existía y fue eliminado."""
-    users = load_json('users') or {}
-    if user_id in users:
-        del users[user_id]
-        save_json('users', users)
-        return True
-    return False
+    """Elimina un usuario de la base de datos."""
+    with get_db_session() as db:
+        db_user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        if db_user:
+            db.delete(db_user)
+            db.commit()
+            return True
+        return False
 
-# --- Funciones específicas para partidas ---
+def find_user_by_username(username: str) -> Optional[User]:
+    """Busca un usuario por nombre de usuario."""
+    with get_db_session() as db:
+        db_user = db.query(UserDB).filter(UserDB.username == username).first()
+        return db_user.to_pydantic() if db_user else None
+
+def find_user_by_email(email: str) -> Optional[User]:
+    """Busca un usuario por email."""
+    with get_db_session() as db:
+        db_user = db.query(UserDB).filter(UserDB.email == email).first()
+        return db_user.to_pydantic() if db_user else None
+
+# --- Funciones específicas para partidas optimizadas ---
 
 def save_game(game: Game) -> None:
-    """Guarda una partida en la base de datos (por id), serializando datetime."""
-    games = load_json('games') or {}
-    game_dict = game.model_dump()
-    # Serializar datetime a string ISO
-    if isinstance(game_dict.get('created_at'), datetime):
-        game_dict['created_at'] = game_dict['created_at'].isoformat()
-    
-    # Ya no necesitamos serializar datetime en los jugadores porque solo almacenamos IDs
-    
-    games[game.id] = game_dict
-    save_json('games', games)
+    """Guarda una partida en la base de datos."""
+    with get_db_session() as db:
+        db_game = db.query(GameDB).filter(GameDB.id == game.id).first()
+        if db_game:
+            # Actualizar usando el modelo Pydantic
+            new_db_game = GameDB.from_pydantic(game)
+            for attr, value in new_db_game.__dict__.items():
+                if not attr.startswith('_'):
+                    setattr(db_game, attr, value)
+        else:
+            # Crear nueva partida usando el modelo Pydantic
+            db_game = GameDB.from_pydantic(game)
+            db.add(db_game)
+        
+        db.commit()
 
 def load_game(game_id: str) -> Optional[Game]:
-    """Carga una partida por id, deserializando datetime."""
-    games = load_json('games')
-    if games and game_id in games:
-        data = games[game_id]
-        # Deserializar string ISO a datetime
-        if 'created_at' in data and isinstance(data['created_at'], str):
-            data['created_at'] = datetime.fromisoformat(data['created_at'])
-        
-        # Ya no necesitamos deserializar datetime en jugadores porque solo almacenamos IDs
-        
-        return Game(**data)
-    return None
+    """Carga una partida por id."""
+    with get_db_session() as db:
+        db_game = db.query(GameDB).filter(GameDB.id == game_id).first()
+        return db_game.to_pydantic() if db_game else None
 
 def load_all_games() -> List[Game]:
-    """Carga todas las partidas, deserializando datetime."""
-    games = load_json('games')
-    if not games:
-        return []
-    result = []
-    for g in games.values():
-        if 'created_at' in g and isinstance(g['created_at'], str):
-            g['created_at'] = datetime.fromisoformat(g['created_at'])
-        result.append(Game(**g))
-    return result
+    """Carga todas las partidas."""
+    with get_db_session() as db:
+        return [db_game.to_pydantic() for db_game in db.query(GameDB).all()]
 
 def delete_game(game_id: str) -> bool:
-    """Elimina una partida de la base de datos por su id. Devuelve True si existía y fue eliminada."""
-    games = load_json('games') or {}
-    if game_id in games:
-        del games[game_id]
-        save_json('games', games)
-        return True
-    return False
+    """Elimina una partida de la base de datos."""
+    with get_db_session() as db:
+        db_game = db.query(GameDB).filter(GameDB.id == game_id).first()
+        if db_game:
+            db.delete(db_game)
+            db.commit()
+            return True
+        return False
 
-# --- Funciones helper para gestión optimizada de jugadores en partidas ---
+def find_games_by_creator(creator_id: str) -> List[Game]:
+    """Encuentra todas las partidas creadas por un usuario."""
+    with get_db_session() as db:
+        return [db_game.to_pydantic() for db_game in db.query(GameDB).filter(GameDB.creator_id == creator_id).all()]
+
+def find_games_by_status(status: str) -> List[Game]:
+    """Encuentra todas las partidas con un estado específico."""
+    with get_db_session() as db:
+        return [db_game.to_pydantic() for db_game in db.query(GameDB).filter(GameDB.status == status).all()]
+
+# --- Funciones helper optimizadas ---
 
 def get_game_players(game: Game) -> List[User]:
     """Obtiene la lista completa de usuarios de una partida a partir de sus IDs."""
-    players = []
-    for player_id in game.players:
-        user = load_user(player_id)
-        if user:
-            players.append(user)
-    return players
+    with get_db_session() as db:
+        db_users = db.query(UserDB).filter(UserDB.id.in_(game.players)).all()
+        return [db_user.to_pydantic() for db_user in db_users]
+
+def game_to_game_response(game: Game) -> GameResponse:
+    """Convierte un objeto Game a un objeto GameResponse con información completa de jugadores."""
+    # Obtener información completa de los jugadores de forma optimizada
+    players_info = []
+    with get_db_session() as db:
+        db_users = db.query(UserDB).filter(UserDB.id.in_(game.players)).all()
+        for db_user in db_users:
+            players_info.append({
+                "id": db_user.id,
+                "username": db_user.username,
+                "role": db_user.role,
+                "status": db_user.status
+            })
+    
+    return GameResponse(
+        id=game.id,
+        name=game.name,
+        creator_id=game.creator_id,
+        players=players_info,
+        roles=game.roles,
+        status=game.status,
+        created_at=game.created_at,
+        current_round=game.current_round,
+        is_first_night=game.is_first_night,
+        night_actions=game.night_actions,
+        day_votes=game.day_votes,
+        max_players=game.max_players
+    )
+
+# --- Funciones helper para gestión optimizada de jugadores en partidas ---
 
 def get_game_player_by_id(game: Game, player_id: str) -> Optional[User]:
     """Obtiene un jugador específico de una partida por su ID."""
@@ -221,36 +431,3 @@ def game_to_response(game: Game) -> dict:
     response_data["players"] = players_info
     
     return response_data
-
-def game_to_game_response(game: Game):
-    """Convierte un objeto Game a un objeto GameResponse con información completa de jugadores."""
-    from app.models.game_and_roles import GameResponse
-    
-    # Obtener información completa de los jugadores
-    players_info = []
-    for player_id in game.players:
-        user = load_user(player_id)
-        if user:
-            # Solo incluimos información no sensible para la API
-            players_info.append({
-                "id": user.id,
-                "username": user.username,
-                "role": user.role.value,
-                "status": user.status.value
-            })
-    
-    # Crear el objeto GameResponse
-    return GameResponse(
-        id=game.id,
-        name=game.name,
-        creator_id=game.creator_id,
-        players=players_info,
-        roles=game.roles,
-        status=game.status,
-        created_at=game.created_at,
-        current_round=game.current_round,
-        is_first_night=game.is_first_night,
-        night_actions=game.night_actions,
-        day_votes=game.day_votes,
-        max_players=game.max_players
-    )
