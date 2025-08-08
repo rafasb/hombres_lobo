@@ -13,6 +13,11 @@ class MessageType(str, Enum):
     PLAYER_DISCONNECTED = "player_disconnected" 
     PLAYER_LEFT_GAME = "player_left_game"
     
+    # Estados de usuario
+    USER_STATUS_CHANGED = "user_status_changed"
+    UPDATE_USER_STATUS = "update_user_status"
+    USER_STATUS_UPDATE = "user_status_update"
+    
     # Comandos de juego
     JOIN_GAME = "join_game"
     START_GAME = "start_game"
@@ -204,10 +209,27 @@ class UserConnectionStatusMessage(BaseWebSocketMessage):
     isInGame: bool
     timestamp: datetime = Field(default_factory=datetime.now)
 
+class UserStatusUpdateMessage(BaseModel):
+    """Mensaje para solicitar cambio de estado de usuario"""
+    type: MessageType = MessageType.UPDATE_USER_STATUS
+    status: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+class UserStatusChangedMessage(BaseModel):
+    """Mensaje para notificar cambio de estado de usuario"""
+    type: MessageType = MessageType.USER_STATUS_CHANGED
+    user_id: str
+    old_status: str
+    new_status: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+    message: str = ""
+
 # Tipos de mensajes para validación
 MESSAGE_MODELS = {
     MessageType.PLAYER_CONNECTED: PlayerConnectionMessage,
     MessageType.PLAYER_DISCONNECTED: PlayerConnectionMessage,
+    MessageType.UPDATE_USER_STATUS: UserStatusUpdateMessage,
+    MessageType.USER_STATUS_CHANGED: UserStatusChangedMessage,
     MessageType.PHASE_CHANGED: PhaseChangedMessage,
     MessageType.PHASE_TIMER: PhaseTimerMessage,
     MessageType.FORCE_NEXT_PHASE: ForceNextPhaseMessage,

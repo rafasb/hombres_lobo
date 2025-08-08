@@ -53,18 +53,21 @@ class ConnectionManager:
         if len(self.active_connections) == 1 and not self.heartbeat_task:
             self.heartbeat_task = asyncio.create_task(self._heartbeat_loop())
         
+        # Notificar cambio de estado a conectado (se llama desde websocket_endpoint)
         return connection_id
 
     async def disconnect(self, connection_id: str):
         """Desconectar un cliente"""
+        user_id = None
         if connection_id in self.active_connections:
+            # Obtener user_id antes de limpiar
+            user_id = self.connection_users.get(connection_id)
             # Remover de rooms de juego
             for game_id, connections in self.game_rooms.items():
                 if connection_id in connections:
                     connections.remove(connection_id)
                     
-                    # Notificar a otros en la room
-                    user_id = self.connection_users.get(connection_id)
+                    # Notificar a otros en la room (user_id ya fue obtenido arriba)
                     if user_id:
                         await self.broadcast_to_game(game_id, {
                             "type": "player_disconnected",
@@ -78,6 +81,11 @@ class ConnectionManager:
             if connection_id in self.connection_users:
                 del self.connection_users[connection_id]
         
+        # Retornar user_id para llamadas externas de actualización de estado
+        return user_id
+        
+    async def cleanup_after_disconnect(self):
+        """Limpiar recursos después de desconexión"""
         # Detener heartbeat si no hay conexiones
         if len(self.active_connections) == 0 and self.heartbeat_task:
             self.heartbeat_task.cancel()

@@ -9,6 +9,7 @@ from app.websocket.messages import (
 )
 from app.websocket.game_handlers import game_handler
 from app.websocket.voting_handlers import voting_handler
+from app.websocket.user_status_handlers import user_status_handler
 from app.core.security import verify_access_token
 from app.services.user_service import get_user
 import json
@@ -23,6 +24,8 @@ class MessageHandler:
         self.handlers = {
             MessageType.HEARTBEAT: self.handle_heartbeat,
             MessageType.CHAT_MESSAGE: self.handle_chat_message,
+            # User status handlers
+            MessageType.UPDATE_USER_STATUS: user_status_handler.handle_update_user_status,
             # Game handlers
             MessageType.JOIN_GAME: game_handler.handle_join_game,
             MessageType.START_GAME: game_handler.handle_start_game,
@@ -188,6 +191,12 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         connection_id = await connection_manager.connect(websocket, user_id, game_id)
         logger.info(f"Usuario {user_id} conectado al juego {game_id} con conexión {connection_id}")
         
+        # Actualizar estado del usuario a 'connected' automáticamente
+        try:
+            await user_status_handler.auto_update_status_on_connect(user_id)
+        except Exception as e:
+            logger.warning(f"Error actualizando estado a conectado para {user_id}: {e}")
+        
         # Enviar mensaje de bienvenida
         welcome_message = SystemMessage(
             message=f"Conectado al juego {game_id}",
@@ -235,7 +244,17 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         except Exception:
             pass  # Si ya está cerrado, ignorar el error
     finally:
-        # Limpiar conexión
+        # Limpiar conexión y actualizar estado
         if connection_id:
-            await connection_manager.disconnect(connection_id)
+            user_id = await connection_manager.disconnect(connection_id)
+            
+            # Actualizar estado del usuario a 'disconnected' automáticamente
+            if user_id:
+                try:
+                    await user_status_handler.auto_update_status_on_disconnect(user_id)
+                except Exception as e:
+                    logger.warning(f"Error actualizando estado a desconectado para {user_id}: {e}")
+            
+            # Limpiar recursos finales
+            await connection_manager.cleanup_after_disconnect()
             logger.info(f"Conexión {connection_id} desconectada")

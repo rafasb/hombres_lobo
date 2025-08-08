@@ -1,5 +1,22 @@
 # WebSocket - Documentación Técnica para Frontend
 
+## 🆕 **NUEVA FUNCIONALIDAD: Gestión de Estado de Usuarios**
+> **¡IMPORTANTE!** Se ha añadido gestión completa de estados de usuario via WebSocket.
+> 
+> Ver documentación detallada en:
+> - 📋 **Documentación completa**: `WEBSOCKET_USER_STATUS_DOCUMENTATION.md`
+> - ⚡ **Referencia rápida**: `WEBSOCKET_QUICK_REFERENCE.md`
+
+### Estados Automáticos
+- Al **conectar** WebSocket → Usuario se marca como `connected`
+- Al **desconectar** WebSocket → Usuario se marca como `disconnected`
+
+### Nuevos Mensajes WebSocket
+- `update_user_status` - Cambiar estado propio
+- `user_status_changed` - Notificación de cambio de estado de otros usuarios
+
+---
+
 ## Conexión WebSocket
 
 ### Endpoint
