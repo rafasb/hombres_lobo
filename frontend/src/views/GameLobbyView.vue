@@ -14,10 +14,6 @@
             <div class="card shadow-sm mb-4" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: none; border-radius: 15px;">
               <div class="card-body">
                 <div class="d-flex align-items-center gap-3">
-                  <button @click="goBackToGames" class="btn btn-outline-primary">
-                    <i class="bi bi-arrow-left me-1"></i>
-                    <span class="d-none d-sm-inline">Volver a Partidas</span>
-                  </button>
                   <div>
                     <h1 class="card-title mb-0 text-primary fw-bold">
                       <i class="bi bi-door-open me-2"></i>
@@ -262,10 +258,6 @@
             </div>
             <h2 class="text-danger mb-3">Partida no encontrada</h2>
             <p class="text-muted mb-4">La partida que buscas no existe o no tienes permisos para verla.</p>
-            <button @click="goBackToGames" class="btn btn-primary btn-lg">
-              <i class="bi bi-arrow-left me-2"></i>
-              Volver a las partidas
-            </button>
           </div>
         </div>
       </div>
@@ -330,7 +322,6 @@ const {
   joinGame,
   leaveGame,
   startGame,
-  goBackToGames,
   formatDate
 } = useGameLobby(gameId)
 
