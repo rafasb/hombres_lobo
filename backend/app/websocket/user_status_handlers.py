@@ -20,7 +20,6 @@ class UserStatusHandler:
             "connected": UserStatus.CONNECTED,
             "disconnected": UserStatus.DISCONNECTED,
             "active": UserStatus.ACTIVE,
-            "inactive": UserStatus.INACTIVE,
             "banned": UserStatus.BANNED
         }
     

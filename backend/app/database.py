@@ -1,7 +1,7 @@
 import os
 import json
 import uuid
-from typing import Any, List, Optional, Generator
+from typing import List, Optional, Generator
 from datetime import datetime, UTC
 from contextlib import contextmanager
 from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean
@@ -42,22 +42,26 @@ class UserDB(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(String, nullable=False, default=UserRole.PLAYER.value)
     status = Column(String, nullable=False, default=UserStatus.ACTIVE.value)
+    in_game = Column(Boolean, nullable=False, default=False)
+    game_id = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.now(), onupdate=datetime.utcnow)
     
     def to_pydantic(self) -> User:
         """Convierte el modelo SQLAlchemy a modelo Pydantic."""
         return User(
-            id=self.id,
-            username=self.username,
-            email=self.email,
-            hashed_password=self.hashed_password,
-            role=UserRole(self.role),
-            status=UserStatus(self.status),
-            created_at=self.created_at.replace(tzinfo=UTC),
-            updated_at=self.updated_at.replace(tzinfo=UTC)
+            id=getattr(self, 'id'),
+            username=getattr(self, 'username'),
+            email=getattr(self, 'email'),
+            hashed_password=getattr(self, 'hashed_password'),
+            role=UserRole(getattr(self, 'role')),
+            status=UserStatus(getattr(self, 'status')),
+            in_game=getattr(self, 'in_game'),
+            game_id=getattr(self, 'game_id'),
+            created_at=getattr(self, 'created_at').replace(tzinfo=UTC),
+            updated_at=getattr(self, 'updated_at').replace(tzinfo=UTC)
         )
-    
+
     @classmethod
     def from_pydantic(cls, user: User) -> 'UserDB':
         """Crea un modelo SQLAlchemy desde un modelo Pydantic."""
@@ -68,6 +72,8 @@ class UserDB(Base):
             hashed_password=user.hashed_password,
             role=user.role.value,
             status=user.status.value,
+            in_game=user.in_game,
+            game_id=user.game_id,
             created_at=user.created_at,
             updated_at=user.updated_at
         )
@@ -91,18 +97,18 @@ class GameDB(Base):
     def to_pydantic(self) -> Game:
         """Convierte el modelo SQLAlchemy a modelo Pydantic."""
         return Game(
-            id=self.id,
-            name=self.name,
-            creator_id=self.creator_id,
-            players=self.players,
-            roles=self.roles,
-            status=GameStatus(self.status),
-            created_at=self.created_at.replace(tzinfo=UTC),
-            current_round=self.current_round,
-            is_first_night=self.is_first_night,
-            night_actions=self.night_actions,
-            day_votes=self.day_votes,
-            max_players=self.max_players
+            id=getattr(self, 'id'),
+            name=getattr(self, 'name'),
+            creator_id=getattr(self, 'creator_id'),
+            players=getattr(self, 'players'),
+            roles=getattr(self, 'roles'),
+            status=GameStatus(getattr(self, 'status')),
+            created_at=getattr(self, 'created_at').replace(tzinfo=UTC),
+            current_round=getattr(self, 'current_round'),
+            is_first_night=getattr(self, 'is_first_night'),
+            night_actions=getattr(self, 'night_actions'),
+            day_votes=getattr(self, 'day_votes'),
+            max_players=getattr(self, 'max_players')
         )
     
     @classmethod
