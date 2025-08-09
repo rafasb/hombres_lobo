@@ -33,13 +33,47 @@ class User(UserBase):
     game_id: str | None = None  # ID de la partida activa, si aplica
     # Otros campos opcionales: fecha de registro, avatar, etc.
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "id": "user_123",
+                "username": "loboferoz",
+                "email": "loboferoz@email.com",
+                "role": "player",
+                "status": "active",
+                "hashed_password": "$2b$12$EjemploHashSeguro",
+                "created_at": "2024-06-01T12:00:00Z",
+                "updated_at": "2024-06-01T12:00:00Z",
+                "in_game": False,
+                "game_id": None
+            }
+        }
+    )
 
 class UserUpdate(BaseModel):
     email: EmailStr | None = None
     password: str | None = None
     # Puedes añadir más campos editables (avatar, etc.)
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "email": "nuevo@email.com",
+                "password": "nueva_contraseña_segura"
+            }
+        }
+    }
+
 class UserStatusUpdate(BaseModel):
     status: UserStatus
     game_id: str | None = None  # ID de la partida activa, si aplica
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "status": "in_game",
+                "game_id": "partida_123"
+            }
+        }
+    }

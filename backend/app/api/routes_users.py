@@ -4,6 +4,11 @@ Incluye endpoints para consulta y edición de usuarios.
 Todas las rutas requieren autenticación JWT.
 Los endpoints de autenticación (registro y login) se han movido a routes_auth.py.
 Las rutas de administración se han movido a routes_admin.py.
+
+Actualizado para reflejar los cambios en el modelo de datos:
+- UserStatus: eliminado 'inactive', añadido 'in_game'.
+- User: añade los campos 'in_game' (bool) y 'game_id' (str|None).
+- UserStatusUpdate: permite informar 'game_id' junto con el estado.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Body
@@ -59,7 +64,10 @@ def list_users(admin=Depends(admin_required)):
     )
 
 @router.put("/me", response_model=UserUpdateResponse)
-def update_my_profile(update: UserUpdate = Body(...), user=Depends(get_current_user)):
+def update_my_profile(
+    update: UserUpdate = Body(...),
+    user=Depends(get_current_user)
+):
     """Actualiza los datos del perfil del usuario autenticado actual."""
     updated = update_user(user, update)
     
@@ -85,16 +93,17 @@ def update_user_status_endpoint(
 ):
     """
     Actualiza el estado de un usuario específico.
-    
+
     Estados disponibles:
     - active: Usuario activo y disponible
-    - inactive: Usuario inactivo temporalmente
-    - banned: Usuario bloqueado/baneado
+    - banned: Usuario bloqueado/baneado (solo administradores)
     - connected: Usuario conectado a la aplicación
     - disconnected: Usuario desconectado de la aplicación
-    
+    - in_game: Usuario en una partida activa (requiere game_id)
+
+    El campo opcional 'game_id' permite asociar el usuario a una partida cuando el estado es 'in_game'.
     Solo administradores pueden cambiar estados a 'banned'.
-    Los usuarios pueden cambiar su propio estado entre 'connected'/'disconnected'.
+    Los usuarios pueden cambiar su propio estado entre 'connected', 'disconnected' e 'in_game'.
     """
     # Verificar permisos
     if current_user.id != user_id and current_user.role != UserRole.ADMIN:
@@ -115,12 +124,20 @@ def update_user_status_endpoint(
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
+    # Validar coherencia entre estado y game_id
+    if status_update.status == "in_game":
+        if not status_update.game_id:
+            raise HTTPException(status_code=422, detail="El campo 'game_id' es obligatorio cuando el estado es 'in_game'.")
+    else:
+        # Si el estado no es in_game, ignorar game_id
+        status_update.game_id = None
+
     # Actualizar el estado
     updated_user, old_status = update_user_status(user_id, status_update)
-    
+
     if not updated_user or old_status is None:
         raise HTTPException(status_code=500, detail="Error al actualizar el estado del usuario")
-    
+
     return UserStatusUpdateResponse(
         success=True,
         message=f"Estado del usuario actualizado de '{old_status.value}' a '{status_update.status.value}'",
