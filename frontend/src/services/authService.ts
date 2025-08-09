@@ -20,6 +20,17 @@ export async function login(username: string, password: string): Promise<{ acces
     const profile = await getProfile()
     if (profile && profile.user) {
       auth.setUser(profile.user)
+      // Informar a la API que el usuario está conectado
+      try {
+        await axios.put(
+          `/users/${profile.user.id}/status`,
+          { status: 'connected' },
+          { headers: { Authorization: `Bearer ${access_token}` } }
+        )
+      } catch (e) {
+        // No bloquear el login si falla, pero loguear el error
+        console.error('No se pudo actualizar el estado del usuario a connected', e)
+      }
     }
     return { access_token, token_type }
   } catch (error: any) {
