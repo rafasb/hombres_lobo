@@ -110,12 +110,12 @@
                     <small class="text-muted">Creada</small>
                     <span class="fw-medium">
                       <i class="bi bi-calendar me-1"></i>
-                      {{ formatDate(game.created_at) }}
+                      {{ formatDate(game.created_at ?? '') }}
                     </span>
                   </div>
                 </div>
                 
-                <div v-if="game.current_round > 0" class="col-6">
+                <div v-if="game && typeof game.current_round === 'number' && game.current_round > 0" class="col-6">
                   <div class="d-flex flex-column">
                     <small class="text-muted">Ronda</small>
                     <span class="fw-medium">
@@ -147,7 +147,7 @@
             <div class="card-body p-0">
               <div class="list-group list-group-flush">
                 <div 
-                  v-for="player in game.players" 
+                  v-for="player in playerUsers" 
                   :key="player.id"
                   class="list-group-item"
                   :class="{ 
@@ -319,6 +319,7 @@ const { handleNavigation } = useNavigation()
 const {
   // Estado
   game,
+  playerUsers,
   loading,
   notification,
   

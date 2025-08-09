@@ -3,23 +3,24 @@ import axios from 'axios'
 const API_BASE_URL = 'http://localhost:8000'
 
 export interface User {
+  id: string
   username: string
   email: string
-  id: string
   role: 'admin' | 'player'
-  status: 'active' | 'inactive' | 'banned'
+  status: 'active' | 'banned' | 'connected' | 'disconnected' | 'in_game'
+  in_game: boolean
+  game_id: string | null
 }
 
 export interface Game {
+  id: string
   name: string
   max_players: number
-  id: string
   creator_id: string
-  players: User[]
+  players: string[] // IDs de usuario
   status: 'waiting' | 'started' | 'night' | 'day' | 'paused' | 'finished'
-  created_at: string
-  current_round: number
-  is_first_night: boolean
+  created_at?: string
+  current_round?: number
 }
 
 export const gameService = {

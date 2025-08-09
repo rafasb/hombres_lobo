@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { gameService, type Game } from '../services/gameService'
+import { fetchUsers } from '../services/userService'
 
 export function useGameLobby(gameId: string) {
   const router = useRouter()
@@ -11,6 +12,8 @@ export function useGameLobby(gameId: string) {
   const game = ref<Game | null>(null)
   const loading = ref(false)
   const notification = ref<{ message: string, type: 'success' | 'error' } | null>(null)
+  const creatorUser = ref<any | null>(null)
+  const playerUsers = ref<any[]>([])
 
   // Computed properties
   const isCreator = computed(() => {
@@ -18,7 +21,7 @@ export function useGameLobby(gameId: string) {
   })
 
   const isPlayerInGame = computed(() => {
-    return auth.user && game.value && game.value.players.some(player => player.id === auth.user!.id)
+    return auth.user && game.value && game.value.players.includes(auth.user!.id)
   })
 
   const canStartGame = computed(() => {
@@ -54,8 +57,8 @@ export function useGameLobby(gameId: string) {
 
   const creatorName = computed(() => {
     if (!game.value) return ''
-    const creator = game.value.players.find(player => player.id === game.value!.creator_id)
-    return creator?.username || 'Desconocido'
+    if (creatorUser.value) return creatorUser.value.username
+    return 'Desconocido'
   })
 
   // Métodos
@@ -63,6 +66,22 @@ export function useGameLobby(gameId: string) {
     try {
       loading.value = true
       game.value = await gameService.getGameById(gameId)
+      // Obtener datos de usuarios (creador y jugadores)
+      if (game.value) {
+        const { users, error } = await fetchUsers()
+        if (error) {
+          creatorUser.value = null
+          playerUsers.value = []
+        } else {
+          creatorUser.value = users.find((u: any) => u.id === game.value!.creator_id) || null
+          playerUsers.value = game.value.players.map(
+            (id: string) => users.find((u: any) => u.id === id)
+          ).filter(Boolean)
+        }
+      } else {
+        creatorUser.value = null
+        playerUsers.value = []
+      }
     } catch (error) {
       showNotification('Error al cargar la partida', 'error')
       console.error('Error loading game:', error)
@@ -153,7 +172,8 @@ export function useGameLobby(gameId: string) {
     game,
     loading,
     notification,
-    
+    creatorUser,
+    playerUsers,
     // Computed
     isCreator,
     isPlayerInGame,
@@ -162,7 +182,6 @@ export function useGameLobby(gameId: string) {
     canLeaveGame,
     gameStatusText,
     creatorName,
-    
     // Métodos
     loadGame,
     joinGame,
