@@ -7,6 +7,21 @@ interface User {
   role: string
 }
 
+// Event bus simple para comunicar logout
+export const logoutEventBus = {
+  listeners: [] as (() => void)[],
+  emit() {
+    this.listeners.forEach(callback => callback())
+  },
+  on(callback: () => void) {
+    this.listeners.push(callback)
+    // Devolver función para remover el listener
+    return () => {
+      this.listeners = this.listeners.filter(cb => cb !== callback)
+    }
+  }
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('access_token') || '',
@@ -26,6 +41,9 @@ export const useAuthStore = defineStore('auth', {
       this.user = user
     },
     logout() {
+      // Emitir evento antes de limpiar los datos
+      logoutEventBus.emit()
+      
       this.token = ''
       this.user = null
       localStorage.removeItem('access_token')

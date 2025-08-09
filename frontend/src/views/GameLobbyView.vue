@@ -133,10 +133,16 @@
         <div class="col-12 col-lg-6">
           <div class="card shadow-sm h-100" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
             <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">
-                <i class="bi bi-people-fill me-2"></i>
-                Jugadores ({{ game.players.length }})
-              </h5>
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="bi bi-people-fill me-2"></i>
+                  Jugadores ({{ game.players.length }})
+                </h5>
+                <small>
+                  <i class="bi bi-wifi me-1"></i>
+                  {{ gameConnectionState.connectedPlayersCount }} conectados
+                </small>
+              </div>
             </div>
             <div class="card-body p-0">
               <div class="list-group list-group-flush">
@@ -157,10 +163,17 @@
                         class="badge rounded-pill"
                         :class="getPlayerConnectionStatus(player.id)?.isConnected ? 'bg-success' : 'bg-secondary'"
                         style="width: 10px; height: 10px;"
+                        :title="getPlayerConnectionStatus(player.id)?.isConnected ? 'Conectado' : 'Desconectado'"
                       ></span>
                       
                       <!-- Nombre del jugador -->
                       <span class="fw-medium">{{ player.username }}</span>
+                      
+                      <!-- Indicador de actividad adicional -->
+                      <small v-if="getPlayerConnectionStatus(player.id)?.lastSeen" 
+                            class="text-muted">
+                        ({{ getPlayerConnectionStatus(player.id)?.isConnected ? 'En línea' : 'Desconectado' }})
+                      </small>
                     </div>
                     
                     <!-- Badges del jugador -->
@@ -319,11 +332,24 @@ const {
   
   // Métodos
   loadGame,
-  joinGame,
-  leaveGame,
+  joinGame: originalJoinGame,
+  leaveGame: originalLeaveGame,
   startGame,
   formatDate
 } = useGameLobby(gameId)
+
+// Funciones wrapper para actualizar estado de jugadores
+const joinGame = async () => {
+  await originalJoinGame()
+  if (game.value) {
+    initializePlayersStatus(game.value.players)
+  }
+}
+
+const leaveGame = async () => {
+  await originalLeaveGame()
+  // No actualizamos el estado aquí porque leaveGame redirige
+}
 
 // WebSocket connection management
 const {
@@ -340,12 +366,20 @@ const {
   // Métodos
   getPlayerConnectionStatus,
   initializeConnection,
+  initializePlayersStatus,
   notifyUserJoinedLobby
 } = useGameConnection(gameId)
 
 // Cargar la partida al montar el componente
-onMounted(() => {
-  loadGame()
+onMounted(async () => {
+  // Cargar datos de la partida
+  await loadGame()
+  
+  // Si se cargó correctamente, inicializar estado de jugadores
+  if (game.value) {
+    initializePlayersStatus(game.value.players)
+  }
+  
   // Notificar que el usuario se unió al lobby después de un pequeño retraso
   setTimeout(() => {
     notifyUserJoinedLobby()

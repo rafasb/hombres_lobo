@@ -1,38 +1,38 @@
 <template>
   <div class="connection-status">
     <!-- Estado principal de conexión -->
-    <div class="connection-header" :class="`status-${connectionStatusClass}`">
+    <div class="connection-header" :class="`status-${props.connectionStatusClass}`">
       <div class="connection-icon">
-        <div v-if="connectionStatusClass === 'connected'" class="status-dot connected"></div>
-        <div v-else-if="connectionStatusClass === 'reconnecting'" class="status-dot reconnecting"></div>
+        <div v-if="props.connectionStatusClass === 'connected'" class="status-dot connected"></div>
+        <div v-else-if="props.connectionStatusClass === 'reconnecting'" class="status-dot reconnecting"></div>
         <div v-else class="status-dot disconnected"></div>
       </div>
       <div class="connection-info">
-        <div class="connection-text">{{ connectionStatusText }}</div>
-        <div v-if="gameConnectionState.lastUpdate" class="last-update">
-          Última actualización: {{ formatTime(gameConnectionState.lastUpdate) }}
+        <div class="connection-text">{{ props.connectionStatusText }}</div>
+        <div v-if="props.gameConnectionState.lastUpdate" class="last-update">
+          Última actualización: {{ formatTime(props.gameConnectionState.lastUpdate) }}
         </div>
       </div>
     </div>
 
     <!-- Estado del usuario en el juego -->
-    <div class="user-status" :class="{ 'active': isUserActiveInLobby }">
-      <div class="user-status-text">{{ connectionHealthText }}</div>
+    <div class="user-status" :class="{ 'active': props.isUserActiveInLobby }">
+      <div class="user-status-text">{{ props.connectionHealthText }}</div>
     </div>
 
     <!-- Estadísticas de jugadores conectados -->
-    <div v-if="gameConnectionState.totalPlayersCount > 0" class="players-stats">
+    <div v-if="props.gameConnectionState.totalPlayersCount > 0" class="players-stats">
       <div class="stats-header">
         <span class="stats-title">Estado de jugadores</span>
         <span class="stats-count">
-          {{ gameConnectionState.connectedPlayersCount }} / {{ gameConnectionState.totalPlayersCount }} conectados
+          {{ props.gameConnectionState.connectedPlayersCount }} / {{ props.gameConnectionState.totalPlayersCount }} conectados
         </span>
       </div>
       
       <!-- Lista detallada de jugadores (expandible) -->
       <div v-if="showPlayersDetail" class="players-detail">
         <div 
-          v-for="player in gameConnectionState.playersStatus" 
+          v-for="player in props.gameConnectionState.playersStatus" 
           :key="player.playerId"
           class="player-status-item"
           :class="{ 'connected': player.isConnected }"
@@ -55,9 +55,9 @@
     </div>
 
     <!-- Acciones de conexión -->
-    <div v-if="!connectionStatus.isConnected" class="connection-actions">
-      <button @click="reconnect" class="reconnect-btn" :disabled="connectionStatus.isReconnecting">
-        {{ connectionStatus.isReconnecting ? 'Reconectando...' : 'Reconectar' }}
+    <div v-if="!props.connectionStatus.isConnected" class="connection-actions">
+      <button @click="reconnect" class="reconnect-btn" :disabled="props.connectionStatus.isReconnecting">
+        {{ props.connectionStatus.isReconnecting ? 'Reconectando...' : 'Reconectar' }}
       </button>
     </div>
   </div>

@@ -1,6 +1,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useWebSocket, WebSocketManager } from '../websocket/WebSocketManager'
-import { useAuthStore } from '../stores/authStore'
+import { useAuthStore, logoutEventBus } from '../stores/authStore'
 
 export interface PlayerConnectionStatus {
   playerId: string
@@ -20,7 +20,7 @@ export interface GameConnectionState {
 
 export function useGameConnection(gameId: string) {
   const auth = useAuthStore()
-  const { createConnection, getConnection, connectionStatus } = useWebSocket(gameId)
+  const { createConnection, connectionStatus } = useWebSocket(gameId)
   
   let wsManager: WebSocketManager | null = null
   let unsubscribeFunctions: (() => void)[] = []
@@ -78,11 +78,14 @@ export function useGameConnection(gameId: string) {
         throw new Error('No hay token de autenticación')
       }
 
+      console.log('Initializing WebSocket connection for game:', gameId)
       wsManager = createConnection(auth.token)
       await wsManager.connect()
+      console.log('WebSocket connection established')
 
       // Suscribirse a mensajes de estado del juego - adaptador para el backend
       const unsubGameState = wsManager.subscribe('system_message', (message: any) => {
+        console.log('System message received:', message)
         // Adaptar mensajes system_message del backend para simular game_connection_state
         if (message.data && message.data.players) {
           const playersStatus: PlayerConnectionStatus[] = message.data.players.map((player: any) => ({
@@ -103,29 +106,40 @@ export function useGameConnection(gameId: string) {
         }
       })
 
-      // Suscribirse a conexión/desconexión de jugadores
-      const unsubPlayerConnected = wsManager.subscribe('player_connected', (data: any) => {
-        // Actualizar estado cuando un jugador se conecta
-        const currentPlayers = gameConnectionState.value.playersStatus
+      // Suscribirse a cambios de estado de usuario según la referencia WebSocket
+      const unsubUserStatusChanged = wsManager.subscribe('user_status_changed', (data: any) => {
+        console.log('User status changed:', data)
+        const currentPlayers = [...gameConnectionState.value.playersStatus]
         const existingPlayer = currentPlayers.find(p => p.playerId === data.user_id)
+        
         if (existingPlayer) {
-          existingPlayer.isConnected = true
+          // Actualizar estado basado en el nuevo status
+          existingPlayer.isConnected = data.new_status === 'connected' || data.new_status === 'active'
           existingPlayer.lastSeen = new Date()
+          
+          // Actualizar el estado global
+          gameConnectionState.value.playersStatus = currentPlayers
+          gameConnectionState.value.connectedPlayersCount = currentPlayers.filter(p => p.isConnected).length
+          gameConnectionState.value.lastUpdate = new Date()
+          
+          console.log('Updated connection state:', gameConnectionState.value)
         }
-        gameConnectionState.value.connectedPlayersCount = currentPlayers.filter(p => p.isConnected).length
-        gameConnectionState.value.lastUpdate = new Date()
       })
 
-      const unsubPlayerDisconnected = wsManager.subscribe('player_disconnected', (data: any) => {
-        // Actualizar estado cuando un jugador se desconecta
-        const currentPlayers = gameConnectionState.value.playersStatus
-        const existingPlayer = currentPlayers.find(p => p.playerId === data.user_id)
-        if (existingPlayer) {
-          existingPlayer.isConnected = false
-          existingPlayer.lastSeen = new Date()
+      // Suscribirse a respuestas exitosas de cambio de estado
+      const unsubSuccess = wsManager.subscribe('success', (data: any) => {
+        if (data.action === 'update_user_status') {
+          console.log('Status update success:', data)
+          // El estado ya se actualiza con user_status_changed, pero podemos loguear
         }
-        gameConnectionState.value.connectedPlayersCount = currentPlayers.filter(p => p.isConnected).length
-        gameConnectionState.value.lastUpdate = new Date()
+      })
+
+      // Suscribirse a errores de cambio de estado
+      const unsubError = wsManager.subscribe('error', (data: any) => {
+        console.error('WebSocket error:', data)
+        if (data.error_code === 'INSUFFICIENT_PERMISSIONS') {
+          console.error('Permission error:', data.message)
+        }
       })
 
       // Suscribirse a heartbeat del backend
@@ -140,7 +154,7 @@ export function useGameConnection(gameId: string) {
         }
       })
 
-      unsubscribeFunctions = [unsubGameState, unsubPlayerConnected, unsubPlayerDisconnected, unsubHeartbeat]
+      unsubscribeFunctions = [unsubGameState, unsubUserStatusChanged, unsubSuccess, unsubError, unsubHeartbeat]
 
       // Solicitar el estado inicial del juego
       requestGameState()
@@ -148,6 +162,26 @@ export function useGameConnection(gameId: string) {
     } catch (error) {
       console.error('Error initializing WebSocket connection:', error)
     }
+  }
+
+  // Inicializar el estado de jugadores con datos del REST API
+  const initializePlayersStatus = (players: any[]) => {
+    const playersStatus: PlayerConnectionStatus[] = players.map((player: any) => ({
+      playerId: player.id,
+      username: player.username,
+      isConnected: true, // Asumir conectado por defecto - el WebSocket actualizará el estado real
+      lastSeen: new Date()
+    }))
+
+    gameConnectionState.value = {
+      ...gameConnectionState.value,
+      totalPlayersCount: playersStatus.length,
+      connectedPlayersCount: playersStatus.filter(p => p.isConnected).length,
+      playersStatus,
+      lastUpdate: new Date()
+    }
+    
+    console.log('Initialized players status:', gameConnectionState.value)
   }
 
   // Solicitar el estado actual del juego
@@ -158,20 +192,28 @@ export function useGameConnection(gameId: string) {
     })
   }
 
+  // Enviar mensaje de actualización de estado
+  const updateUserStatus = (status: string) => {
+    if (wsManager && connectionStatus.value.isConnected) {
+      // Crear mensaje personalizado para cambio de estado
+      wsManager.send({
+        type: 'update_user_status',
+        data: { status },
+        status // También en nivel superior por compatibilidad
+      } as any) // Usamos any para agregar la propiedad status
+    }
+  }
+
   // Notificar que el usuario entró al lobby
   const notifyUserJoinedLobby = () => {
-    // Cambiar 'user_joined_lobby' por 'join_game' para coincidir con el backend
-    wsManager?.send({
-      type: 'join_game'
-    })
+    // Cambiar estado del usuario a 'active' cuando se une al lobby
+    updateUserStatus('active')
   }
 
   // Notificar que el usuario salió del lobby
   const notifyUserLeftLobby = () => {
-    wsManager?.send({
-      type: 'user_left_lobby',
-      data: { gameId, userId: auth.user?.id }
-    })
+    // Cambiar estado del usuario a 'inactive' cuando sale del lobby
+    updateUserStatus('inactive')
   }
 
   // Obtener el estado de un jugador específico
@@ -179,23 +221,57 @@ export function useGameConnection(gameId: string) {
     return gameConnectionState.value.playersStatus.find(p => p.playerId === playerId) || null
   }
 
+  // Notificar desconexión del usuario (al cerrar ventana, etc.)
+  const notifyUserDisconnected = () => {
+    // Cambiar estado del usuario a 'disconnected'
+    updateUserStatus('disconnected')
+  }
+
   // Limpiar conexión
   const cleanup = () => {
     // Notificar que el usuario sale del lobby
     notifyUserLeftLobby()
     
-    // Limpiar suscripciones
-    unsubscribeFunctions.forEach(unsub => unsub())
-    unsubscribeFunctions = []
-    
-    // Desconectar WebSocket
-    wsManager?.disconnect()
-    wsManager = null
+    // Esperar un poco para que se envíe el mensaje antes de desconectar
+    setTimeout(() => {
+      // Limpiar suscripciones
+      unsubscribeFunctions.forEach(unsub => unsub())
+      unsubscribeFunctions = []
+      
+      // Desconectar WebSocket
+      wsManager?.disconnect()
+      wsManager = null
+    }, 100)
   }
 
   // Lifecycle hooks
   onMounted(() => {
     initializeConnection()
+    
+    // Manejar cierre de ventana/pestaña
+    const handleBeforeUnload = () => {
+      // Enviar notificación de desconexión de forma síncrona
+      if (wsManager && connectionStatus.value.isConnected) {
+        updateUserStatus('disconnected')
+      }
+    }
+    
+    // Manejar logout del usuario
+    const handleLogout = () => {
+      console.log('User logging out, updating status to disconnected')
+      if (wsManager && connectionStatus.value.isConnected) {
+        notifyUserDisconnected()
+      }
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    const removeLogoutListener = logoutEventBus.on(handleLogout)
+    
+    // Limpiar listeners al desmontar
+    onUnmounted(() => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      removeLogoutListener()
+    })
   })
 
   onUnmounted(() => {
@@ -217,8 +293,10 @@ export function useGameConnection(gameId: string) {
     requestGameState,
     notifyUserJoinedLobby,
     notifyUserLeftLobby,
+    notifyUserDisconnected,
     getPlayerConnectionStatus,
     initializeConnection,
+    initializePlayersStatus,
     cleanup
   }
 }
