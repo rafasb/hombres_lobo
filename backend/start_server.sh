@@ -96,11 +96,41 @@ echo "📖 Documentación disponible en: http://localhost:8000/docs"
 echo "📋 ReDoc disponible en: http://localhost:8000/redoc"
 echo -e "${NC}"
 
-# Ejecutar el servidor
+# Ejecutar el frontend en paralelo
+FRONTEND_DIR="$SCRIPT_DIR/../frontend"
+if [ -d "$FRONTEND_DIR" ]; then
+    echo -e "${GREEN}🌐 Iniciando frontend en $FRONTEND_DIR...${NC}"
+    cd "$FRONTEND_DIR"
+    # Instalar dependencias si es necesario
+    if [ ! -d "node_modules" ]; then
+        echo -e "${YELLOW}📦 Instalando dependencias de frontend...${NC}"
+        npm install
+    fi
+    # Arrancar frontend en segundo plano
+    npm run dev -- --host &
+    FRONTEND_PID=$!
+    cd "$SCRIPT_DIR"
+    echo -e "${GREEN}✅ Frontend iniciado (PID $FRONTEND_PID)${NC}"
+else
+    echo -e "${YELLOW}⚠️  Directorio de frontend no encontrado, solo se arrancará el backend${NC}"
+fi
+
+# Función para detener ambos servidores
+cleanup() {
+    echo -e "\n${YELLOW}🛑 Deteniendo servidores...${NC}"
+    if [ ! -z "$FRONTEND_PID" ]; then
+        kill $FRONTEND_PID 2>/dev/null
+        wait $FRONTEND_PID 2>/dev/null
+        echo -e "${GREEN}✅ Frontend detenido${NC}"
+    fi
+    exit 0
+}
+
+# Capturar la señal de interrupción (Ctrl+C)
+trap cleanup INT
+
+# Ejecutar el backend (bloqueante)
 echo -e "${YELLOW}🎯 Ejecutando uvicorn...${NC}"
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# Capturar la señal de interrupción (Ctrl+C)
-trap 'echo -e "\n${YELLOW}🛑 Deteniendo servidor...${NC}"; exit 0' INT
-
-echo -e "${GREEN}👋 Servidor detenido${NC}"
+cleanup
