@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { gameService, type Game } from '../services/gameService'
-import { fetchUsers } from '../services/userService'
+import { fetchUsers, updateUserStatus } from '../services/userService'
 
 export function useGameLobby(gameId: string) {
   const router = useRouter()
@@ -65,6 +65,15 @@ export function useGameLobby(gameId: string) {
   const loadGame = async () => {
     try {
       loading.value = true
+      // Notificar a la API que el usuario está en la partida (estado in_game)
+      if (auth.user && gameId) {
+        try {
+          await updateUserStatus(auth.user.id, { status: 'in_game', game_id: gameId })
+        } catch (e) {
+          // No bloquear la carga si falla, pero mostrar advertencia
+          console.warn('No se pudo actualizar el estado del usuario a in_game', e)
+        }
+      }
       game.value = await gameService.getGameById(gameId)
       // Obtener datos de usuarios (creador y jugadores)
       if (game.value) {

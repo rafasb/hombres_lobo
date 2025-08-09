@@ -48,3 +48,19 @@ export async function toggleUserRole(userId: string, newRole: string) {
     return { error: (error as any).response?.data?.detail || 'Error al cambiar el rol.' }
   }
 }
+
+// Añadir función para actualizar el estado del usuario
+export async function updateUserStatus(userId: string, statusUpdate: { status: string, game_id?: string }) {
+  const auth = useAuthStore()
+  const token = auth.token
+  try {
+    const response = await axios.put(
+      `/users/${userId}/status`,
+      statusUpdate,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    return response.data
+  } catch (error: any) {
+    return { error: (error as any).response?.data?.detail || 'Error al actualizar el estado del usuario.' }
+  }
+}
