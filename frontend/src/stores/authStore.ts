@@ -40,10 +40,27 @@ export const useAuthStore = defineStore('auth', {
     setUser(user: User) {
       this.user = user
     },
-    logout() {
+    async logout() {
       // Emitir evento antes de limpiar los datos
       logoutEventBus.emit()
-      
+
+      // Informar a la API que el usuario está desconectado
+      if (this.user && this.token) {
+        try {
+          await fetch(`/users/${this.user.id}/status`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.token}`
+            },
+            body: JSON.stringify({ status: 'disconnected' })
+          })
+        } catch (e) {
+          // No bloquear el logout si falla
+          console.error('No se pudo actualizar el estado del usuario a disconnected', e)
+        }
+      }
+
       this.token = ''
       this.user = null
       localStorage.removeItem('access_token')
