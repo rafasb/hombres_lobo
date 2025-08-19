@@ -119,6 +119,14 @@ class GameHandler:
             # Iniciar sistema de fases integrado
             await game_state.start_game_phases()
             
+            # Actualizar estado de todos los jugadores a 'alive_in_game'
+            try:
+                from app.websocket.user_status_handlers import user_status_handler
+                connected_player_ids = list(game_state.connected_players)
+                await user_status_handler.auto_update_status_on_game_start(connected_player_ids)
+            except Exception as e:
+                logger.warning(f"Error actualizando estados de jugadores al iniciar juego: {e}")
+            
             # Configurar callbacks para eventos de fase
             game_state.phase_controller.add_phase_change_callback(
                 lambda old_phase, new_phase: self._on_phase_changed(game_id, old_phase, new_phase)
@@ -152,6 +160,14 @@ class GameHandler:
             
             # Iniciar sistema de fases integrado
             await game_state.start_game_phases()
+            
+            # Actualizar estado de todos los jugadores a 'alive_in_game'
+            try:
+                from app.websocket.user_status_handlers import user_status_handler
+                connected_player_ids = list(game_state.connected_players)
+                await user_status_handler.auto_update_status_on_game_start(connected_player_ids)
+            except Exception as e:
+                logger.warning(f"Error actualizando estados de jugadores al auto-iniciar juego: {e}")
             
             # Configurar callbacks para eventos de fase
             game_state.phase_controller.add_phase_change_callback(

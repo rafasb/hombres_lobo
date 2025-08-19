@@ -71,8 +71,19 @@ class GameState:
         return [p_id for p_id in self.game_data.players if p_id in self.eliminated_players]
     
     def eliminate_player(self, user_id: str):
-        """Eliminar jugador del juego"""
+        """Eliminar jugador del juego y actualizar su estado"""
         self.eliminated_players.add(user_id)
+        
+        # Actualizar estado del usuario automáticamente a través de WebSocket
+        try:
+            from app.websocket.user_status_handlers import user_status_handler
+            import asyncio
+            # Crear una tarea asíncrona para actualizar el estado
+            asyncio.create_task(user_status_handler.auto_update_status_on_player_death(user_id))
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error actualizando estado de jugador eliminado {user_id}: {e}")
         
     def cast_vote(self, voter_id: str, target_id: str) -> bool:
         """Registrar voto de jugador"""

@@ -135,6 +135,108 @@ class UserStatusHandler:
         except Exception as e:
             logger.error(f"Error actualizando estado automático de desconexión para {user_id}: {e}")
     
+    async def auto_update_status_on_join(self, connection_id: str, message_data: dict):
+        """Actualizar automáticamente el estado a 'in_game' cuando se une a una partida"""
+        try:
+            # Obtener información de conexión
+            conn_info = connection_manager.get_connection_info(connection_id)
+            if not conn_info:
+                logger.error(f"No se encontró información de conexión para {connection_id}")
+                return
+            
+            user_id = conn_info.get("user_id")
+            game_id = message_data.get("game_id") or conn_info.get("game_id")
+            
+            if not user_id:
+                logger.error(f"No se encontró user_id para la conexión {connection_id}")
+                return
+            
+            if not game_id:
+                logger.error("No se encontró game_id para unirse a la partida")
+                return
+            
+            # Actualizar estado a 'in_game'
+            status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
+            updated_user, old_status = update_user_status(user_id, status_update)
+            
+            if updated_user and old_status:
+                # Notificar cambio de estado a otros usuarios
+                await self.broadcast_status_change(
+                    user_id, 
+                    old_status.value, 
+                    "in_game"
+                )
+                logger.info(f"Usuario {user_id} automáticamente marcado como 'in_game' al unirse a partida {game_id}")
+            else:
+                logger.warning(f"No se pudo actualizar estado para usuario {user_id}")
+                
+        except Exception as e:
+            logger.error(f"Error actualizando estado automático al unirse a partida para {connection_id}: {e}")
+    
+    async def auto_update_status_on_leave_game(self, user_id: str):
+        """Actualizar automáticamente el estado a 'connected' cuando sale de una partida"""
+        try:
+            # Actualizar estado de 'in_game' de vuelta a 'connected'
+            status_update = UserStatusUpdate(status=UserStatus.CONNECTED)
+            updated_user, old_status = update_user_status(user_id, status_update)
+            
+            if updated_user and old_status:
+                # Notificar cambio de estado a otros usuarios
+                await self.broadcast_status_change(
+                    user_id, 
+                    old_status.value, 
+                    "connected"
+                )
+                logger.info(f"Usuario {user_id} automáticamente marcado como 'connected' al salir de la partida")
+            else:
+                logger.warning(f"No se pudo actualizar estado para usuario {user_id} al salir de partida")
+                
+        except Exception as e:
+            logger.error(f"Error actualizando estado automático al salir de partida para {user_id}: {e}")
+    
+    async def auto_update_status_on_game_start(self, user_ids: list[str]):
+        """Actualizar automáticamente el estado a 'alive_in_game' cuando inicia la partida"""
+        try:
+            for user_id in user_ids:
+                # Actualizar estado a 'alive_in_game'
+                status_update = UserStatusUpdate(status=UserStatus.ALIVE_IN_GAME)
+                updated_user, old_status = update_user_status(user_id, status_update)
+                
+                if updated_user and old_status:
+                    # Notificar cambio de estado a otros usuarios
+                    await self.broadcast_status_change(
+                        user_id, 
+                        old_status.value, 
+                        "alive_in_game"
+                    )
+                    logger.info(f"Usuario {user_id} automáticamente marcado como 'alive_in_game' al iniciar partida")
+                else:
+                    logger.warning(f"No se pudo actualizar estado para usuario {user_id} al iniciar partida")
+                    
+        except Exception as e:
+            logger.error(f"Error actualizando estados automáticos al iniciar partida: {e}")
+    
+    async def auto_update_status_on_player_death(self, user_id: str):
+        """Actualizar automáticamente el estado a 'in_game' cuando un jugador muere"""
+        try:
+            # Actualizar estado de 'alive_in_game' a 'in_game' (muerto pero observando)
+            status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
+            updated_user, old_status = update_user_status(user_id, status_update)
+            
+            if updated_user and old_status:
+                # Notificar cambio de estado a otros usuarios
+                await self.broadcast_status_change(
+                    user_id, 
+                    old_status.value, 
+                    "in_game"
+                )
+                logger.info(f"Usuario {user_id} automáticamente marcado como 'in_game' (muerto) en la partida")
+            else:
+                logger.warning(f"No se pudo actualizar estado para usuario {user_id} al morir")
+                
+        except Exception as e:
+            logger.error(f"Error actualizando estado automático al morir jugador {user_id}: {e}")
+    
     async def broadcast_status_change(self, user_id: str, old_status: str, new_status: str, exclude_connection: str | None = None):
         """Notificar cambio de estado a todos los usuarios conectados"""
         try:

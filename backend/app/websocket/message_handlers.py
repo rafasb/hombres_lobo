@@ -23,7 +23,6 @@ class MessageHandler:
     def __init__(self):
         self.handlers = {
             MessageType.HEARTBEAT: self.handle_heartbeat,
-            MessageType.CHAT_MESSAGE: self.handle_chat_message,
             # User status handlers
             MessageType.UPDATE_USER_STATUS: user_status_handler.handle_update_user_status,
             # Game handlers
@@ -116,6 +115,7 @@ class MessageHandler:
     async def handle_join_game(self, connection_id: str, message_data: dict):
         """Delegar a game handler"""
         await game_handler.handle_join_game(connection_id, message_data)
+        await user_status_handler.auto_update_status_on_join(connection_id, message_data)
     
     async def handle_start_game(self, connection_id: str, message_data: dict):
         """Delegar a game handler"""
