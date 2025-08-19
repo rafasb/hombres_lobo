@@ -4,7 +4,7 @@ Incluye funciones para cambiar estados de partida y asignar roles.
 """
 
 from app.database import save_game, load_game
-from app.models.game_and_roles import Game, GameStatus, GameRole, RoleInfo
+from app.models.game_and_roles import Game, GameStatus, GameRole, PlayerInfo
 from typing import Optional
 import random
 
@@ -89,7 +89,7 @@ def assign_roles(game_id: str, user_id: str, is_admin: bool = False) -> Optional
     # Asignar roles a jugadores
     game.roles = {}
     for i, player_id in enumerate(game.players):
-        role_info = RoleInfo(
+        player_info = PlayerInfo(
             role=available_roles[i],
             is_alive=True,
             is_revealed=False
@@ -97,18 +97,18 @@ def assign_roles(game_id: str, user_id: str, is_admin: bool = False) -> Optional
         
         # Configurar habilidades específicas según el rol
         if available_roles[i] == GameRole.WITCH:
-            role_info.has_healing_potion = True
-            role_info.has_poison_potion = True
+            player_info.has_healing_potion = True
+            player_info.has_poison_potion = True
         elif available_roles[i] == GameRole.CUPID:
-            role_info.is_cupid = True
+            player_info.is_cupid = True
         elif available_roles[i] == GameRole.SHERIFF:
-            role_info.has_double_vote = True
-            role_info.can_break_ties = True
+            player_info.has_double_vote = True
+            player_info.can_break_ties = True
         elif available_roles[i] == GameRole.HUNTER:
-            role_info.can_revenge_kill = True
-            role_info.has_used_revenge = False
+            player_info.can_revenge_kill = True
+            player_info.has_used_revenge = False
         
-        game.roles[player_id] = role_info
+        game.roles[player_id] = player_info
     
     # Cambiar estado de la partida a STARTED
     game.status = GameStatus.STARTED

@@ -5,15 +5,19 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.core.security import verify_access_token
 from app.services.user_service import get_user
-from app.models.user import UserRole
+from app.models.user import UserRole, User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user_id(token: str = Depends(oauth2_scheme)):
+    """Obtiene el ID del usuario actual a partir del token JWT."""
     payload = verify_access_token(token)
     if not payload or "sub" not in payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado")
-    user_id = payload["sub"]
+    return payload["sub"]
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    user_id = get_current_user_id(token)
     user = get_user(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
@@ -24,7 +28,7 @@ def admin_required(user=Depends(get_current_user)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso solo para administradores")
     return user
 
-def creator_or_admin_required(game_id: str, user=Depends(get_current_user)):
+def creator_or_admin_required(game_id: str, user : User = Depends(get_current_user)):
     """Verifica que el usuario sea el creador de la partida o admin."""
     from app.services.game_service import get_game
     
@@ -42,7 +46,7 @@ def creator_or_admin_required(game_id: str, user=Depends(get_current_user)):
     
     return user
 
-def self_or_admin_required(user_id: str, user=Depends(get_current_user)):
+def self_or_admin_required(user_id: str, user : User = Depends(get_current_user)):
     """Verifica que el usuario solo pueda acceder a su propio perfil o sea admin."""
     if user.role == UserRole.ADMIN:
         return user

@@ -47,7 +47,7 @@ class GameHandler:
                     user = get_user(user_id)
                     if user:
                         # Intentar añadir el usuario al juego en la base de datos
-                        result = join_game(game_id, user)
+                        result = join_game(game_id, user_id)
                         if result:
                             # Recargar el estado del juego para incluir el nuevo jugador
                             game_state = await game_state_manager.get_or_create_game_state(game_id)

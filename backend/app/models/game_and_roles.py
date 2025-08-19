@@ -16,7 +16,7 @@ class GameRole(str, Enum):
     LOVER = "lover"  # Estado especial, no rol principal
     # Puedes añadir más roles especiales aquí
 
-class RoleInfo(BaseModel):
+class PlayerInfo(BaseModel):
     role: GameRole
     is_alive: bool = True
     is_revealed: bool = False
@@ -52,6 +52,12 @@ class RoleInfo(BaseModel):
 
 
 class GameStatus(str, Enum):
+    '''waiting --> Esperando a completar los jugadores,
+    started --> Partida iniciada, 
+    night --> Fase nocturna, 
+    day --> Fase de día, 
+    paused --> En Pausa, 
+    finished --> Partida finalizada'''
     WAITING = "waiting"      # Esperando jugadores
     STARTED = "started"      # En curso
     NIGHT = "night"          # Fase de noche
@@ -70,7 +76,7 @@ class Game(GameBase):
     id: str
     creator_id: str
     players: List[str] = []  # Solo almacenamos IDs de jugadores en lugar de objetos User completos
-    roles: Dict[str, RoleInfo] = {}  # player_id -> RoleInfo
+    roles: Dict[str, PlayerInfo] = {}  # player_id -> RoleInfo
     status: GameStatus = GameStatus.WAITING
     created_at: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.UTC))
     current_round: int = 0
@@ -86,7 +92,7 @@ class GameResponse(GameBase):
     id: str
     creator_id: str
     players: List[Dict] = []  # Lista de jugadores con información básica para la API
-    roles: Dict[str, RoleInfo] = {}
+    roles: Dict[str, PlayerInfo] = {}
     status: GameStatus = GameStatus.WAITING
     created_at: datetime.datetime
     current_round: int = 0

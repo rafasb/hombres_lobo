@@ -1,3 +1,3 @@
-from .game_and_roles import GameRole, RoleInfo
+from .game_and_roles import GameRole, PlayerInfo
 
 # ...existing code...

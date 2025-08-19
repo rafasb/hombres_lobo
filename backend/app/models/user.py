@@ -5,22 +5,26 @@ from datetime import datetime, UTC
 # Modelo de usuario (Pydantic)
 
 class UserRole(str, Enum):
+    """Roles de usuario: admin, player"""
     ADMIN = "admin"
     PLAYER = "player"
 
 class UserStatus(str, Enum):
-    ''' Estados de usuario: active, banned, connected, disconnected, in_game '''
+    ''' Estados de usuario: active, banned, connected, disconnected, in_game, alive_in_game '''
     ACTIVE = "active"   # Estado por defecto del usuario
     BANNED = "banned"   # Usuario bloqueado/baneado
     CONNECTED = "connected" # Usuario conectado a la aplicación
     DISCONNECTED = "disconnected" # Usuario desconectado de la aplicación
     IN_GAME = "in_game" # Usuario en una partida activa
+    ALIVE_IN_GAME = "alive_in_game"  # Indica si el usuario está vivo en la partida (game)
 
 class UserBase(BaseModel):
+    ''' atributos básicos del usuario '''
     username: str = Field(..., min_length=3, max_length=30)
     email: EmailStr
 
 class UserCreate(UserBase):
+    ''' Datos necesarios para crear un nuevo usuario, incluyendo contraseña '''
     password: str = Field(..., min_length=6)
 
 class User(UserBase):
@@ -30,8 +34,8 @@ class User(UserBase):
     hashed_password: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    in_game: bool = False  # Indica si el usuario está en una partida activa
     game_id: str | None = None  # ID de la partida activa, si aplica
+    in_game: bool = False  # Indica si el usuario está en una partida activa
     # Otros campos opcionales: fecha de registro, avatar, etc.
 
     model_config = ConfigDict(
@@ -46,13 +50,13 @@ class User(UserBase):
                 "hashed_password": "$2b$12$EjemploHashSeguro",
                 "created_at": "2024-06-01T12:00:00Z",
                 "updated_at": "2024-06-01T12:00:00Z",
-                "in_game": False,
                 "game_id": None
             }
         }
     )
 
 class UserUpdate(BaseModel):
+    ''' Datos editables del usuario '''
     email: EmailStr | None = None
     password: str | None = None
     # Puedes añadir más campos editables (avatar, etc.)
@@ -67,6 +71,7 @@ class UserUpdate(BaseModel):
     }
 
 class UserStatusUpdate(BaseModel):
+    ''' Actualización del estado del usuario. Entrada o salida de partida o de juego '''
     status: UserStatus
     game_id: str | None = None  # ID de la partida activa, si aplica
 

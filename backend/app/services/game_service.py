@@ -67,7 +67,7 @@ def creator_delete_game(game_id: str, user_id: str, is_admin: bool = False) -> b
         return False
     return delete_game(game_id)
 
-def join_game(game_id: str, user) -> bool:
+def join_game(game_id: str, user_id: str) -> bool:
     """Permite que un usuario se una a una partida si está en estado WAITING y hay espacios disponibles."""
     game = load_game(game_id)
     if not game:
@@ -82,21 +82,10 @@ def join_game(game_id: str, user) -> bool:
         return False
     
     # Verificar que el usuario no esté ya en la partida (ahora comparamos IDs)
-    if user.id in game.players:
+    if user_id in game.players:
         return False
     
     # Agregar el ID del usuario a la lista de jugadores
-    game.players.append(user.id)
-    save_game(game)
-    return True
-    if len(game.players) >= game.max_players:
-        return False
-    
-    # Verificar que el usuario no esté ya en la partida (ahora comparamos IDs)
-    if user.id in game.players:
-        return False
-    
-    # Agregar el ID del usuario a la lista de jugadores
-    game.players.append(user.id)
+    game.players.append(user_id)
     save_game(game)
     return True

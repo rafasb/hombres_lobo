@@ -5,9 +5,10 @@ Este módulo orquesta el flujo completo del juego "Hombres Lobo".
 
 from typing import Dict, List, Any, Optional
 from app.database import load_game, save_game
-from app.models.game_and_roles import GameStatus, GameRole
+from app.models.game_and_roles import GameStatus, GameRole, Game
 from app.services import player_action_service
 from app.services.game_flow_service import reset_night_actions
+from app.services.user_service import UserService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -173,11 +174,15 @@ class GameFlowController:
         victim_username = None
         
         if victim_id:
-            game = load_game(game_id)
+            game: Optional[Game] = load_game(game_id)
             if game:
                 for player in game.players:
-                    if player.id == victim_id:
-                        victim_username = player.username
+                    if player == victim_id:
+                        victim_usernameObject = UserService.get_user(player)
+                        if victim_usernameObject:
+                            victim_username = victim_usernameObject.username
+                        else:
+                            victim_username = "Unknown Player"
                         break
         
         return {
@@ -394,8 +399,12 @@ class GameFlowController:
                 if role_info.is_alive and role_info.role == GameRole.WAREWOLF:
                     username = None
                     for player in game.players:
-                        if player.id == player_id:
-                            username = player.username
+                        if player == player_id:
+                            usernameObject = UserService.get_user(player)
+                            if usernameObject:
+                                username = usernameObject.username
+                            else:
+                                username = "Unknown Player"
                             break
                     werewolf_winners.append({"id": player_id, "username": username})
             
@@ -412,8 +421,12 @@ class GameFlowController:
                 if role_info.is_alive and role_info.role != GameRole.WAREWOLF:
                     username = None
                     for player in game.players:
-                        if player.id == player_id:
-                            username = player.username
+                        if player == player_id:
+                            usernameObject = UserService.get_user(player)
+                            if usernameObject:
+                                username = usernameObject.username
+                            else:
+                                username = "Unknown Player"
                             break
                     villager_winners.append({"id": player_id, "username": username})
             

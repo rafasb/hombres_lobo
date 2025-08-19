@@ -17,7 +17,7 @@ from app.models.game_responses import (
     GameStatusUpdateResponse,
     GameDeleteResponse
 )
-from app.models.user import UserRole
+from app.models.user import UserRole, User
 from app.services.game_service import (
     create_game,
     get_game,
@@ -30,7 +30,7 @@ from app.services.game_flow_service import (
     change_game_status,
     assign_roles,
 )
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_current_user_id
 from app.database import game_to_game_response
 import uuid
 
@@ -86,9 +86,10 @@ def list_games(user=Depends(get_current_user)):
 
 
 @router.post("/{game_id}/join", response_model=GameJoinResponse)
-def join_game_endpoint(game_id: str, user=Depends(get_current_user)):
+def join_game_endpoint(game_id: str, user: User = Depends(get_current_user)):
     """Permite que un usuario autenticado se una a una partida que esté esperando jugadores."""
-    if join_game(game_id, user):
+    user_id = user.id
+    if join_game(game_id, user_id):
         # Obtener la partida actualizada
         updated_game = get_game(game_id)
         if updated_game:
@@ -110,7 +111,7 @@ def join_game_endpoint(game_id: str, user=Depends(get_current_user)):
 def assign_roles_endpoint(game_id: str, user=Depends(get_current_user)):
     """Permite al creador o admin iniciar el reparto de roles y comenzar la partida."""
     is_admin = user.role == UserRole.ADMIN
-    game = assign_roles(game_id, user.id, is_admin)
+    game = assign_roles(game_id, get_current_user_id(), is_admin)
     if game:
         game_response = game_to_game_response(game)
         

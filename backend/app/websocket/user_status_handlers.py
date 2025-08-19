@@ -20,7 +20,9 @@ class UserStatusHandler:
             "connected": UserStatus.CONNECTED,
             "disconnected": UserStatus.DISCONNECTED,
             "active": UserStatus.ACTIVE,
-            "banned": UserStatus.BANNED
+            "banned": UserStatus.BANNED,
+            "in_game": UserStatus.IN_GAME,
+            "alive_in_game": UserStatus.ALIVE_IN_GAME,
         }
     
     async def handle_update_user_status(self, connection_id: str, message_data: dict):

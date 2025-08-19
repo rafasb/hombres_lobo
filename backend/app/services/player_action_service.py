@@ -5,6 +5,7 @@ Incluye funciones para que los jugadores realicen sus acciones nocturnas especí
 
 from app.database import save_game, load_game
 from app.models.game_and_roles import Game, GameStatus, GameRole
+from app.services.user_service import UserService
 from typing import Optional, List, Dict, Any
 
 
@@ -137,10 +138,10 @@ def get_alive_players(game_id: str) -> List[Dict[str, str]]:
     
     alive_players = []
     for player in game.players:
-        if player.id in game.roles and game.roles[player.id].is_alive:
+        if player in game.roles and game.roles[player].is_alive:
             alive_players.append({
-                "id": player.id,
-                "username": player.username
+                "id": player,
+                "username": UserService.get_username_by_id(player)
             })
     
     return alive_players
@@ -162,12 +163,12 @@ def get_non_warewolf_players(game_id: str) -> List[Dict[str, str]]:
     
     valid_targets = []
     for player in game.players:
-        if (player.id in game.roles and 
-            game.roles[player.id].is_alive and 
-            game.roles[player.id].role != GameRole.WAREWOLF):
+        if (player in game.roles and 
+            game.roles[player].is_alive and 
+            game.roles[player].role != GameRole.WAREWOLF):
             valid_targets.append({
-                "id": player.id,
-                "username": player.username
+                "id": player,
+                "username": UserService.get_username_by_id(player)
             })
     
     return valid_targets
@@ -280,11 +281,11 @@ def get_day_vote_counts(game_id: str) -> List[Dict[str, Any]]:
     # Crear lista con información de jugadores y sus votos
     vote_results = []
     for player in game.players:
-        if player.id in game.roles and game.roles[player.id].is_alive:
-            count = vote_counts.get(player.id, 0)
+        if player in game.roles and game.roles[player].is_alive:
+            count = vote_counts.get(player, 0)
             vote_results.append({
-                "player_id": player.id,
-                "username": player.username,
+                "player_id": player,
+                "username": UserService.get_username_by_id(player),
                 "vote_count": count
             })
     
@@ -340,10 +341,10 @@ def get_voting_eligible_players(game_id: str) -> List[Dict[str, str]]:
     
     eligible_players = []
     for player in game.players:
-        if player.id in game.roles and game.roles[player.id].is_alive:
+        if player in game.roles and game.roles[player].is_alive:
             eligible_players.append({
-                "id": player.id,
-                "username": player.username
+                "id": player,
+                "username": UserService.get_username_by_id(player) 
             })
     
     return eligible_players
@@ -403,7 +404,7 @@ def get_voting_summary(game_id: str) -> Dict[str, Any]:
         return {}
     
     # Contar jugadores vivos
-    alive_players = [p for p in game.players if p.id in game.roles and game.roles[p.id].is_alive]
+    alive_players = [p for p in game.players if p in game.roles and game.roles[p].is_alive]
     total_players = len(alive_players)
     total_votes = len(game.day_votes)
     
@@ -534,8 +535,8 @@ def get_seer_vision_result(game_id: str, seer_id: str, target_id: str) -> Option
     # Buscar el username del objetivo
     target_username = None
     for player in game.players:
-        if player.id == target_id:
-            target_username = player.username
+        if player == target_id:
+            target_username = UserService.get_username_by_id(player)
             break
     
     if not target_username:
@@ -566,16 +567,15 @@ def get_seer_eligible_targets(game_id: str, seer_id: str) -> List[Dict[str, str]
     
     for player in game.players:
         # Excluir a la propia vidente
-        if player.id == seer_id:
+        if player == seer_id:
             continue
-        
         # Solo incluir jugadores vivos
-        if player.id in game.roles:
-            role_info = game.roles[player.id]
+        if player in game.roles:
+            role_info = game.roles[player]
             if role_info.is_alive:
                 eligible_targets.append({
-                    "id": player.id,
-                    "username": player.username
+                    "id": player,
+                    "username": UserService.get_username_by_id(player)
                 })
     
     return eligible_targets
@@ -896,16 +896,16 @@ def get_sheriff_eligible_successors(game_id: str, sheriff_id: str) -> List[Dict[
     
     for player in game.players:
         # Excluir al propio alguacil
-        if player.id == sheriff_id:
+        if player == sheriff_id:
             continue
         
         # Solo incluir jugadores vivos
-        if player.id in game.roles:
-            role_info = game.roles[player.id]
+        if player in game.roles:
+            role_info = game.roles[player]
             if role_info.is_alive:
                 eligible_successors.append({
-                    "id": player.id,
-                    "username": player.username
+                    "id": player,
+                    "username": UserService.get_username_by_id(player)
                 })
     
     return eligible_successors
@@ -929,10 +929,10 @@ def get_tied_players_info(game_id: str) -> List[Dict[str, str]]:
     tied_players_info = []
     
     for player in game.players:
-        if player.id in tied_player_ids:
+        if player in tied_player_ids:
             tied_players_info.append({
-                "id": player.id,
-                "username": player.username
+                "id": player,
+                "username": UserService.get_username_by_id(player)
             })
     
     return tied_players_info
@@ -1093,16 +1093,16 @@ def get_hunter_revenge_targets(game_id: str, hunter_id: str) -> List[Dict[str, s
     
     for player in game.players:
         # Excluir al propio cazador
-        if player.id == hunter_id:
+        if player == hunter_id:
             continue
         
         # Solo incluir jugadores vivos
-        if player.id in game.roles:
-            role_info = game.roles[player.id]
+        if player in game.roles:
+            role_info = game.roles[player]
             if role_info.is_alive:
                 eligible_targets.append({
-                    "id": player.id,
-                    "username": player.username
+                    "id": player,
+                    "username": UserService.get_username_by_id(player)
                 })
     
     return eligible_targets
@@ -1161,10 +1161,10 @@ def auto_eliminate_hunter_target(game_id: str, hunter_id: str) -> Optional[Dict[
     # Buscar información del objetivo
     target_id = hunter_role.target_player_id
     for player in game.players:
-        if player.id == target_id:
+        if player == target_id:
             return {
                 "id": target_id,
-                "username": player.username
+                "username": UserService.get_username_by_id(player)
             }
     
     return None
@@ -1415,8 +1415,8 @@ def get_witch_night_info(game_id: str, witch_id: str) -> Dict[str, Any]:
     
     if attack_victim_id:
         for player in game.players:
-            if player.id == attack_victim_id:
-                attack_victim_username = player.username
+            if player == attack_victim_id:
+                attack_victim_username = UserService.get_username_by_id(player)
                 break
     
     return {
@@ -1448,12 +1448,12 @@ def get_witch_poison_targets(game_id: str, witch_id: str) -> List[Dict[str, str]
     
     for player in game.players:
         # Incluir todos los jugadores vivos (incluso la bruja puede envenenarse)
-        if player.id in game.roles:
-            role_info = game.roles[player.id]
+        if player in game.roles:
+            role_info = game.roles[player]
             if role_info.is_alive:
                 eligible_targets.append({
-                    "id": player.id,
-                    "username": player.username
+                    "id": player,
+                    "username": UserService.get_username_by_id(player)
                 })
     
     return eligible_targets
@@ -1623,12 +1623,12 @@ def get_available_models_for_wild_child(game_id: str, wild_child_id: str) -> Lis
     
     for player in game.players:
         # El modelo puede ser cualquier jugador vivo excepto él mismo
-        if player.id != wild_child_id and player.id in game.roles:
-            role_info = game.roles[player.id]
+        if player != wild_child_id and player in game.roles:
+            role_info = game.roles[player]
             if role_info.is_alive:
                 available_models.append({
-                    "id": player.id,
-                    "username": player.username
+                    "id": player,
+                    "username": UserService.get_username_by_id(player)
                 })
     
     return available_models
@@ -1707,8 +1707,8 @@ def get_wild_child_status(game_id: str, wild_child_id: str) -> Dict[str, Any]:
     model_username = None
     if wild_child_role.model_player_id:
         for player in game.players:
-            if player.id == wild_child_role.model_player_id:
-                model_username = player.username
+            if player == wild_child_role.model_player_id:
+                model_username = UserService.get_username_by_id(player)
                 break
     
     current_role = "warewolf" if wild_child_role.has_transformed else "wild_child"
@@ -1753,8 +1753,8 @@ def check_wild_child_transformation(game_id: str, dead_player_id: str) -> List[D
             # Obtener nombre del jugador
             player_username = None
             for player in game.players:
-                if player.id == player_id:
-                    player_username = player.username
+                if player == player_id:
+                    player_username = UserService.get_username_by_id(player)
                     break
             
             transformations.append({
@@ -1825,8 +1825,8 @@ def get_wild_child_transformation_info(game_id: str, wild_child_id: str) -> Dict
     
     if wild_child_role.model_player_id:
         for player in game.players:
-            if player.id == wild_child_role.model_player_id:
-                model_username = player.username
+            if player == wild_child_role.model_player_id:
+                model_username = UserService.get_username_by_id(player)
                 if wild_child_role.model_player_id in game.roles:
                     model_is_alive = game.roles[wild_child_role.model_player_id].is_alive
                 break
@@ -2025,11 +2025,11 @@ def get_cupid_available_targets(game_id: str, cupid_id: str) -> List[Dict[str, s
     
     # Todos los jugadores vivos pueden ser enamorados
     for player in game.players:
-        if (player.id in game.roles and 
-            game.roles[player.id].is_alive):
+        if (player in game.roles and 
+            game.roles[player].is_alive):
             available_targets.append({
-                "id": player.id,
-                "username": player.username
+                "id": player,
+                "username": UserService.get_username_by_id(player)
             })
     
     return available_targets
@@ -2127,10 +2127,10 @@ def get_cupid_status(game_id: str, cupid_id: str) -> Dict[str, Any]:
             
             # Obtener nombres de usuario
             for player in game.players:
-                if player.id == lover1_id:
-                    lover1_username = player.username
-                elif player.id == lover2_id:
-                    lover2_username = player.username
+                if player == lover1_id:
+                    lover1_username = UserService.get_username_by_id(player)
+                elif player == lover2_id:
+                    lover2_username = UserService.get_username_by_id(player)
     
     return {
         "has_chosen_lovers": has_chosen,
@@ -2186,8 +2186,8 @@ def get_lovers_status(game_id: str, player_id: str) -> Dict[str, Any]:
     if partner_id and partner_id in game.roles:
         # Obtener nombre del compañero
         for player in game.players:
-            if player.id == partner_id:
-                partner_username = player.username
+            if player == partner_id:
+                partner_username = UserService.get_username_by_id(player)
                 break
         
         # Verificar si ambos están vivos
@@ -2273,10 +2273,10 @@ def check_lovers_victory_condition(game_id: str) -> Optional[Dict[str, Any]]:
             player1_username = None
             player2_username = None
             for player in game.players:
-                if player.id == player1_id:
-                    player1_username = player.username
-                elif player.id == player2_id:
-                    player2_username = player.username
+                if player == player1_id:
+                    player1_username = UserService.get_username_by_id(player)
+                elif player == player2_id:
+                    player2_username = UserService.get_username_by_id(player)
             
             return {
                 "victory_type": "lovers",
