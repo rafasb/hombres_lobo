@@ -1,13 +1,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useWebSocket, WebSocketManager } from '../websocket/WebSocketManager'
 import { useAuthStore, logoutEventBus } from '../stores/authStore'
-
-export interface PlayerConnectionStatus {
-  playerId: string
-  username: string
-  isConnected: boolean
-  lastSeen: Date | null
-}
+import type { PlayerConnectionStatus } from '../types'
 
 export interface GameConnectionState {
   isUserConnected: boolean

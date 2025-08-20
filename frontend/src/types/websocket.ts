@@ -25,13 +25,20 @@ export interface ConnectionStatus {
 
 /**
  * Estado de un jugador en la conexión
+ * Interfaz unificada para diferentes contextos de conexión
  */
 export interface PlayerStatus {
   playerId: string
   username: string
   isConnected: boolean
-  lastSeen: Date
+  lastSeen: Date | null  // null cuando nunca se ha conectado
 }
+
+/**
+ * Alias para compatibilidad con componentes que usan nomenclatura específica
+ * @deprecated Use PlayerStatus directamente
+ */
+export type PlayerConnectionStatus = PlayerStatus
 
 /**
  * Tipos de mensajes WebSocket específicos del juego

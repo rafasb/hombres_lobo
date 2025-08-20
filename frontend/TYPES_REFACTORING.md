@@ -18,6 +18,11 @@ Existían **definiciones duplicadas** de interfaces en diferentes archivos:
   - `src/websocket/WebSocketManager.ts`
   - `src/websocket/WebSocketPollingManager.ts`
 
+### Interfaces de Estado de Jugador (RESUELTO ✅)
+- Interfaces prácticamente idénticas:
+  - `PlayerConnectionStatus` en `src/composables/useGameConnection.ts`
+  - `PlayerStatus` en `src/types/websocket.ts`
+
 Esto violaba varios principios de buenas prácticas:
 - **DRY (Don't Repeat Yourself)**: Código duplicado
 - **Mantenibilidad**: Cambios requerían múltiples actualizaciones
@@ -91,7 +96,8 @@ import type { User, UserRole } from '../types'
 - `WebSocketMessage`: Interfaz base para mensajes
 - `GameWebSocketMessage`: Mensajes específicos del juego con tipos
 - `ConnectionStatus`: Estado de conexión
-- `PlayerStatus`: Estado específico de jugadores
+- `PlayerStatus`: Estado específico de jugadores (unificado con PlayerConnectionStatus)
+- `PlayerConnectionStatus`: Alias para compatibilidad retroactiva
 
 ### 5. Principio de Responsabilidad Única aplicado a tipos
 
@@ -145,7 +151,18 @@ export interface GameWebSocketMessage extends WebSocketMessage {
 }
 ```
 
-### 3. **Type Unions**
+### 3. **Type Aliases para Retrocompatibilidad**
+```typescript
+// Mantener compatibilidad mientras migramos
+export type PlayerConnectionStatus = PlayerStatus
+
+// Con deprecation warning para migración gradual
+/**
+ * @deprecated Use PlayerStatus directamente
+ */
+export type PlayerConnectionStatus = PlayerStatus
+```
+### 4. **Type Unions**
 ```typescript
 // Enumeraciones tipadas para usuarios
 export type UserRole = 'admin' | 'player'
