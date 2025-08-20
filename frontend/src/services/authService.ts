@@ -19,7 +19,12 @@ export async function login(username: string, password: string): Promise<{ acces
     // Obtener perfil tras login
     const profile = await getProfile()
     if (profile && profile.user) {
-      auth.setUser(profile.user)
+      // Hacer casting del usuario para asegurar que el role sea del tipo correcto
+      auth.setUser({
+        id: profile.user.id,
+        username: profile.user.username,
+        role: profile.user.role as 'admin' | 'player'
+      })
       // Informar a la API que el usuario está conectado
       try {
         await axios.put(

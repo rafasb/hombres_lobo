@@ -8,6 +8,15 @@
 export type GameStatus = 'waiting' | 'started' | 'night' | 'day' | 'paused' | 'finished'
 
 /**
+ * Interfaz para un jugador en una partida
+ */
+export interface GamePlayer {
+  id: string
+  username: string
+  [key: string]: any // Para permitir propiedades adicionales
+}
+
+/**
  * Interfaz para una partida
  */
 export interface Game {
@@ -15,7 +24,7 @@ export interface Game {
   name: string
   max_players: number
   creator_id: string
-  players: string[] // IDs de usuario
+  players: GamePlayer[] // Array de objetos jugador
   status: GameStatus
   created_at?: string
   current_round?: number

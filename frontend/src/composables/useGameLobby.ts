@@ -1,7 +1,8 @@
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
-import { gameService, type Game } from '../services/gameService'
+import { gameService } from '../services/gameService'
+import type { Game } from '../types'
 import { fetchUsers, updateUserStatus } from '../services/userService'
 
 export function useGameLobby(gameId: string) {
@@ -21,7 +22,7 @@ export function useGameLobby(gameId: string) {
   })
 
   const isPlayerInGame = computed(() => {
-    return auth.user && game.value && game.value.players.includes(auth.user!.id)
+    return auth.user && game.value && game.value.players.includes(auth.user)
   })
 
   const canStartGame = computed(() => {
@@ -82,9 +83,9 @@ export function useGameLobby(gameId: string) {
           creatorUser.value = null
           playerUsers.value = []
         } else {
-          creatorUser.value = users.find((u: any) => u.id === game.value!.creator_id) || null
-          playerUsers.value = game.value.players.map(
-            (id: string) => users.find((u: any) => u.id === id)
+          creatorUser.value = users?.find((u: any) => u.id === game.value!.creator_id) || null
+          playerUsers.value = (game.value.players as any[]).map(
+            (player: any) => users?.find((u: any) => u.id === (typeof player === 'string' ? player : player.id))
           ).filter(Boolean)
         }
       } else {
@@ -126,6 +127,14 @@ export function useGameLobby(gameId: string) {
       loading.value = true
       await gameService.leaveGame(gameId)
       showNotification('Has abandonado la partida', 'success')
+      // Actualizar estado del usuario al salir de la partida
+      if (auth.user) {
+        try {
+          await updateUserStatus(auth.user.id, { status: 'online', game_id: undefined })
+        } catch (e) {
+          console.warn('No se pudo actualizar el estado del usuario al salir', e)
+        }
+      }
       router.push('/partidas')
     } catch (error) {
       showNotification('Error al abandonar la partida', 'error')
@@ -153,7 +162,15 @@ export function useGameLobby(gameId: string) {
     }
   }
 
-  const goBackToGames = () => {
+  const goBackToGames = async () => {
+    // Actualizar estado del usuario al salir de la vista de partida
+    if (auth.user) {
+      try {
+        await updateUserStatus(auth.user.id, { status: 'online', game_id: undefined })
+      } catch (e) {
+        console.warn('No se pudo actualizar el estado del usuario al salir', e)
+      }
+    }
     router.push('/partidas')
   }
 
@@ -175,6 +192,17 @@ export function useGameLobby(gameId: string) {
       notification.value = null
     }, 5000)
   }
+
+  // Limpiar estado al desmontar el componente
+  onUnmounted(async () => {
+    if (auth.user) {
+      try {
+        await updateUserStatus(auth.user.id, { status: 'online', game_id: undefined })
+      } catch (e) {
+        console.warn('No se pudo actualizar el estado del usuario al desmontar', e)
+      }
+    }
+  })
 
   return {
     // Estado

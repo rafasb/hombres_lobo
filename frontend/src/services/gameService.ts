@@ -64,7 +64,7 @@ export const gameService = {
    */
   async joinGame(gameId: string): Promise<JoinGameResponse> {
     const token = localStorage.getItem('access_token')
-    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/join`, {}, {
+    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/join`, null, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -79,7 +79,7 @@ export const gameService = {
    */
   async leaveGame(gameId: string): Promise<LeaveGameResponse> {
     const token = localStorage.getItem('access_token')
-    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/leave`, {}, {
+    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/leave`, null, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -108,7 +108,7 @@ export const gameService = {
    */
   async assignRoles(gameId: string): Promise<AssignRolesResponse> {
     const token = localStorage.getItem('access_token')
-    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/assign-roles`, {}, {
+    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/assign-roles`, null, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

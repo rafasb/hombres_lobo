@@ -1,7 +1,8 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
-import { gameService, type Game } from '../services/gameService'
+import { gameService } from '../services/gameService'
+import type { Game } from '../types'
 
 export function useGamesList() {
   const router = useRouter()
