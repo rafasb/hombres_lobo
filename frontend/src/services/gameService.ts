@@ -1,27 +1,15 @@
 import axios from 'axios'
+import type {
+  Game,
+  JoinGameResponse,
+  LeaveGameResponse,
+  DeleteGameResponse,
+  AssignRolesResponse,
+  UpdateGameStatusResponse,
+  UpdateGameResponse
+} from '../types'
 
 const API_BASE_URL = 'http://localhost:8000'
-
-export interface User {
-  id: string
-  username: string
-  email: string
-  role: 'admin' | 'player'
-  status: 'active' | 'banned' | 'connected' | 'disconnected' | 'in_game'
-  in_game: boolean
-  game_id: string | null
-}
-
-export interface Game {
-  id: string
-  name: string
-  max_players: number
-  creator_id: string
-  players: string[] // IDs de usuario
-  status: 'waiting' | 'started' | 'night' | 'day' | 'paused' | 'finished'
-  created_at?: string
-  current_round?: number
-}
 
 export const gameService = {
   /**
@@ -74,7 +62,7 @@ export const gameService = {
   /**
    * Unirse a una partida
    */
-  async joinGame(gameId: string): Promise<{ game_id: string; current_players: number; max_players: number }> {
+  async joinGame(gameId: string): Promise<JoinGameResponse> {
     const token = localStorage.getItem('access_token')
     const response = await axios.post(`${API_BASE_URL}/games/${gameId}/join`, {}, {
       headers: {
@@ -89,7 +77,7 @@ export const gameService = {
   /**
    * Abandonar una partida
    */
-  async leaveGame(gameId: string): Promise<{ game_id: string; remaining_players: number }> {
+  async leaveGame(gameId: string): Promise<LeaveGameResponse> {
     const token = localStorage.getItem('access_token')
     const response = await axios.post(`${API_BASE_URL}/games/${gameId}/leave`, {}, {
       headers: {
@@ -104,7 +92,7 @@ export const gameService = {
   /**
    * Eliminar una partida (solo administradores)
    */
-  async deleteGame(gameId: string): Promise<{ deleted_game_id: string }> {
+  async deleteGame(gameId: string): Promise<DeleteGameResponse> {
     const token = localStorage.getItem('access_token')
     const response = await axios.delete(`${API_BASE_URL}/games/${gameId}`, {
       headers: {
@@ -118,7 +106,7 @@ export const gameService = {
   /**
    * Asignar roles a los jugadores y comenzar la partida
    */
-  async assignRoles(gameId: string): Promise<{ game: Game; assigned_roles_count: number; players_with_roles: number }> {
+  async assignRoles(gameId: string): Promise<AssignRolesResponse> {
     const token = localStorage.getItem('access_token')
     const response = await axios.post(`${API_BASE_URL}/games/${gameId}/assign-roles`, {}, {
       headers: {
@@ -133,7 +121,7 @@ export const gameService = {
   /**
    * Actualizar el estado de una partida
    */
-  async updateGameStatus(gameId: string, status: string): Promise<{ game: Game; previous_status: string; new_status: string }> {
+  async updateGameStatus(gameId: string, status: string): Promise<UpdateGameStatusResponse> {
     const token = localStorage.getItem('access_token')
     const response = await axios.put(`${API_BASE_URL}/games/${gameId}/status`, { status }, {
       headers: {
@@ -149,7 +137,7 @@ export const gameService = {
   /**
    * Actualizar propiedades de una partida
    */
-  async updateGame(gameId: string, data: any): Promise<{ game: Game; updated_fields: string[] }> {
+  async updateGame(gameId: string, data: any): Promise<UpdateGameResponse> {
     const token = localStorage.getItem('access_token')
     const response = await axios.put(`${API_BASE_URL}/games/${gameId}`, data, {
       headers: {

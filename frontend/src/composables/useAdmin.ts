@@ -1,17 +1,12 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/authStore'
 import { fetchUsers, deleteUser, toggleUserRole } from '../services/userService'
-
-interface User {
-  id: string;
-  username: string;
-  role: string;
-}
+import type { AdminUser } from '../types'
 
 export const useAdminComposable = () => {
   const auth = useAuthStore()
 
-  const users = ref<User[]>([])
+  const users = ref<AdminUser[]>([])
   const search = ref('')
   const loading = ref(false)
   const error = ref('')
@@ -23,7 +18,12 @@ export const useAdminComposable = () => {
     try {
       const result = await fetchUsers(search.value)
       if (result && result.users) {
-        users.value = result.users
+        // Los usuarios ya vienen tipados del servicio
+        users.value = result.users.map(user => ({
+          id: user.id,
+          username: user.username,
+          role: user.role
+        }))
       } else if (result && result.error) {
         error.value = result.error
       }
@@ -34,7 +34,7 @@ export const useAdminComposable = () => {
     loading.value = false
   }
 
-  const deleteUserHandler = async (user: User) => {
+  const deleteUserHandler = async (user: AdminUser) => {
     if (!confirm(`¿Estás seguro de que deseas eliminar al usuario ${user.username}?`)) {
       return
     }
@@ -50,7 +50,7 @@ export const useAdminComposable = () => {
     loading.value = false
   }
 
-  const toggleRole = async (user: User) => {
+  const toggleRole = async (user: AdminUser) => {
     const newRole = user.role === 'admin' ? 'player' : 'admin'
     if (!confirm(`¿Estás seguro de que deseas cambiar el rol de ${user.username} a ${newRole}?`)) {
       return

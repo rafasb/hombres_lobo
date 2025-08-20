@@ -1,11 +1,6 @@
 import { defineStore } from 'pinia'
 import { getProfile } from '../services/authService'
-
-interface User {
-  id: string
-  username: string
-  role: string
-}
+import type { AuthUser } from '../types'
 
 // Event bus simple para comunicar logout
 export const logoutEventBus = {
@@ -25,7 +20,7 @@ export const logoutEventBus = {
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('access_token') || '',
-    user: null as User | null,
+    user: null as AuthUser | null,
     loadingUser: false,
   }),
   getters: {
@@ -37,7 +32,7 @@ export const useAuthStore = defineStore('auth', {
       this.token = token
       localStorage.setItem('access_token', token)
     },
-    setUser(user: User) {
+    setUser(user: AuthUser) {
       this.user = user
     },
     async logout() {
@@ -70,7 +65,12 @@ export const useAuthStore = defineStore('auth', {
         this.loadingUser = true
         const profile = await getProfile()
         if (profile && profile.user) {
-          this.setUser(profile.user)
+          // Hacer casting del usuario para asegurar que el role sea del tipo correcto
+          this.setUser({
+            id: profile.user.id,
+            username: profile.user.username,
+            role: profile.user.role as 'admin' | 'player'
+          })
         } else {
           this.logout()
         }

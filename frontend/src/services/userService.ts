@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/authStore'
+import type { User, UserRole } from '../types'
 
 const API_URL = '/admin/users'
 
-export async function fetchUsers(search = '') {
+export async function fetchUsers(search = ''): Promise<{ users?: User[]; error?: string }> {
   const auth = useAuthStore()
   const token = auth.token
   try {
@@ -12,9 +13,9 @@ export async function fetchUsers(search = '') {
       headers: { Authorization: `Bearer ${token}` }
     })
     // La respuesta es directamente un array de usuarios
-    let users = response.data
+    let users: User[] = response.data
     if (search) {
-      users = users.filter((u: any) => u.username.toLowerCase().includes(search.toLowerCase()))
+      users = users.filter((u: User) => u.username.toLowerCase().includes(search.toLowerCase()))
     }
     return { users }
   } catch (error: any) {
@@ -23,7 +24,7 @@ export async function fetchUsers(search = '') {
   }
 }
 
-export async function deleteUser(userId: string) {
+export async function deleteUser(userId: string): Promise<{ error?: string }> {
   const auth = useAuthStore()
   const token = auth.token
   try {
@@ -36,7 +37,7 @@ export async function deleteUser(userId: string) {
   }
 }
 
-export async function toggleUserRole(userId: string, newRole: string) {
+export async function toggleUserRole(userId: string, newRole: UserRole): Promise<{ error?: string }> {
   const auth = useAuthStore()
   const token = auth.token
   try {
