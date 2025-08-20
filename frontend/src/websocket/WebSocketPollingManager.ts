@@ -1,31 +1,16 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { gameService } from '../services/gameService'
-
-export interface WebSocketMessage {
-  type: string
-  data?: any
-  timestamp?: string
-}
-
-export interface ConnectionStatus {
-  isConnected: boolean
-  isReconnecting: boolean
-  lastConnected: Date | null
-  reconnectAttempts: number
-  error: string | null
-}
-
-export interface PlayerStatus {
-  playerId: string
-  username: string
-  isConnected: boolean
-  lastSeen: Date
-}
+import type {
+  WebSocketMessage,
+  ConnectionStatus,
+  MessageHandler,
+  MessageHandlersMap
+} from '../types'
 
 export class WebSocketPollingManager {
   private pollingTimer: number | null = null
   private heartbeatTimer: number | null = null
-  private messageHandlers: Map<string, ((data: any) => void)[]> = new Map()
+  private messageHandlers: MessageHandlersMap = new Map()
   private gameId: string
   private isActive = false
   
@@ -96,7 +81,7 @@ export class WebSocketPollingManager {
     return true
   }
 
-  subscribe(messageType: string, handler: (data: any) => void): () => void {
+  subscribe(messageType: string, handler: MessageHandler): () => void {
     if (!this.messageHandlers.has(messageType)) {
       this.messageHandlers.set(messageType, [])
     }

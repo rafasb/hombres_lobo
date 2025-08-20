@@ -2,10 +2,21 @@
 
 ## Problema Original
 
-Existían **tres definiciones duplicadas** de la interfaz `User` en diferentes archivos:
-- `src/services/gameService.ts`
-- `src/composables/useAdmin.ts`
-- `src/stores/authStore.ts`
+Existían **definiciones duplicadas** de interfaces en diferentes archivos:
+
+### Interfaces de Usuario (RESUELTO ✅)
+- `interface User` en 3 archivos:
+  - `src/services/gameService.ts`
+  - `src/composables/useAdmin.ts`
+  - `src/stores/authStore.ts`
+
+### Interfaces de WebSocket (RESUELTO ✅)
+- `interface WebSocketMessage` en 2 archivos:
+  - `src/websocket/WebSocketManager.ts`
+  - `src/websocket/WebSocketPollingManager.ts`
+- `interface ConnectionStatus` en 2 archivos:
+  - `src/websocket/WebSocketManager.ts`
+  - `src/websocket/WebSocketPollingManager.ts`
 
 Esto violaba varios principios de buenas prácticas:
 - **DRY (Don't Repeat Yourself)**: Código duplicado
@@ -21,9 +32,10 @@ Esto violaba varios principios de buenas prácticas:
 
 ```
 src/types/
-├── index.ts      # Punto de entrada para importaciones
-├── user.ts       # Tipos relacionados con usuarios
-└── game.ts       # Tipos relacionados con juegos
+├── index.ts        # Punto de entrada para importaciones
+├── user.ts         # Tipos relacionados con usuarios
+├── game.ts         # Tipos relacionados con juegos
+└── websocket.ts    # Tipos relacionados con WebSocket
 ```
 
 ### 2. Principio Abierto/Cerrado (OCP)
@@ -69,15 +81,24 @@ import type { User, UserRole } from '../types'
 ### 4. Principio de Segregación de Interfaces (ISP)
 
 **✅ Interfaces específicas por contexto**:
+
+#### Dominio de Usuario
 - `AdminUser`: Para funciones administrativas (campos mínimos)
 - `AuthUser`: Para el store de autenticación (campos de sesión)
 - `User`: Interfaz completa para servicios backend
+
+#### Dominio de WebSocket
+- `WebSocketMessage`: Interfaz base para mensajes
+- `GameWebSocketMessage`: Mensajes específicos del juego con tipos
+- `ConnectionStatus`: Estado de conexión
+- `PlayerStatus`: Estado específico de jugadores
 
 ### 5. Principio de Responsabilidad Única aplicado a tipos
 
 **✅ Separación por dominio**:
 - `user.ts`: Tipos relacionados con usuarios y roles
 - `game.ts`: Tipos relacionados con juegos y partidas
+- `websocket.ts`: Tipos relacionados con comunicación en tiempo real
 - `index.ts`: Punto de entrada centralizado
 
 ## Beneficios Obtenidos
@@ -109,6 +130,7 @@ import type { User, UserRole } from '../types'
 // src/types/index.ts - Punto de entrada único
 export type { User, AdminUser, AuthUser } from './user'
 export type { Game, GameStatus } from './game'
+export type { WebSocketMessage, ConnectionStatus } from './websocket'
 ```
 
 ### 2. **Interface Inheritance**
@@ -117,13 +139,20 @@ export type { Game, GameStatus } from './game'
 export interface User extends BaseUser {
   // Campos adicionales específicos
 }
+
+export interface GameWebSocketMessage extends WebSocketMessage {
+  type: WebSocketMessageType
+}
 ```
 
 ### 3. **Type Unions**
 ```typescript
-// Enumeraciones tipadas
+// Enumeraciones tipadas para usuarios
 export type UserRole = 'admin' | 'player'
 export type UserStatus = 'active' | 'banned' | 'connected' | 'disconnected' | 'in_game'
+
+// Enumeraciones tipadas para WebSocket
+export type WebSocketMessageType = 'game_update' | 'player_joined' | 'player_left' | 'heartbeat'
 ```
 
 ## Archivos Refactorizados
@@ -132,12 +161,15 @@ export type UserStatus = 'active' | 'banned' | 'connected' | 'disconnected' | 'i
 - ✨ `src/types/index.ts` - Exportaciones centralizadas
 - ✨ `src/types/user.ts` - Tipos de usuario
 - ✨ `src/types/game.ts` - Tipos de juego
+- ✨ `src/types/websocket.ts` - Tipos de WebSocket
 
 ### Modificados
 - 🔄 `src/services/gameService.ts` - Usa tipos centralizados
 - 🔄 `src/stores/authStore.ts` - Usa `AuthUser`
 - 🔄 `src/composables/useAdmin.ts` - Usa `AdminUser`
 - 🔄 `src/services/userService.ts` - Tipado mejorado
+- 🔄 `src/websocket/WebSocketManager.ts` - Usa tipos WebSocket centralizados
+- 🔄 `src/websocket/WebSocketPollingManager.ts` - Usa tipos WebSocket centralizados
 
 ## Comandos para Validar
 
@@ -154,10 +186,11 @@ npm run test
 
 ## Próximos Pasos Recomendados
 
-1. **Extender el patrón** a otros dominios (WebSocket, Auth, etc.)
+1. **Extender el patrón** a otros dominios si los hay (Auth tokens, Roles específicos, etc.)
 2. **Documentar APIs** con JSDoc en las interfaces
 3. **Validación runtime** con bibliotecas como Zod
 4. **Tests de tipos** con herramientas como `tsd`
+5. **Crear tipos específicos** para respuestas de API si es necesario
 
 ---
 

@@ -24,3 +24,15 @@ export type {
   UpdateGameStatusResponse,
   UpdateGameResponse
 } from './game'
+
+// Exportar tipos de WebSocket
+export type {
+  WebSocketMessage,
+  ConnectionStatus,
+  PlayerStatus,
+  WebSocketMessageType,
+  GameWebSocketMessage,
+  WebSocketConfig,
+  MessageHandler,
+  MessageHandlersMap
+} from './websocket'

@@ -1,24 +1,16 @@
 import { ref, computed, onUnmounted } from 'vue'
-
-export interface WebSocketMessage {
-  type: string
-  data?: any
-  timestamp?: string
-}
-
-export interface ConnectionStatus {
-  isConnected: boolean
-  isReconnecting: boolean
-  lastConnected: Date | null
-  reconnectAttempts: number
-  error: string | null
-}
+import type {
+  WebSocketMessage,
+  ConnectionStatus,
+  MessageHandler,
+  MessageHandlersMap
+} from '../types'
 
 export class WebSocketManager {
   private ws: WebSocket | null = null
   private reconnectTimer: number | null = null
   private heartbeatTimer: number | null = null
-  private messageHandlers: Map<string, ((data: any) => void)[]> = new Map()
+  private messageHandlers: MessageHandlersMap = new Map()
   
   // Add explicit property declarations
   private url: string
@@ -132,7 +124,7 @@ export class WebSocketManager {
     }
   }
 
-  subscribe(messageType: string, handler: (data: any) => void): () => void {
+  subscribe(messageType: string, handler: MessageHandler): () => void {
     if (!this.messageHandlers.has(messageType)) {
       this.messageHandlers.set(messageType, [])
     }
