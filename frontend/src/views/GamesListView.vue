@@ -156,15 +156,26 @@
     </div>
 
     <!-- Modal para crear partida -->
-    <CreateGameModal
+    <div 
       v-if="showCreateModal"
-      :gameData="newGame"
-      :playerOptions="playerOptions"
-      :loading="loading"
-      @close="closeCreateModal"
-      @create="createGame"
-      @update:gameData="updateNewGame"
-    />
+      class="modal fade show d-block"
+      tabindex="-1" 
+      style="background-color: rgba(0, 0, 0, 0.5);"
+      @click.self="closeCreateModal"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+          <CreateGameModal
+            :gameData="newGame"
+            :playerOptions="playerOptions"
+            :loading="loading"
+            @close="closeCreateModal"
+            @create="createGame"
+            @update:gameData="updateNewGame"
+          />
+        </div>
+      </div>
+    </div>
 
     <!-- Notificación -->
     <div v-if="notification" 

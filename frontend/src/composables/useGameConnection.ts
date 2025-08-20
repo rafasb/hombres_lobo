@@ -1,14 +1,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useWebSocket, WebSocketManager } from '../websocket/WebSocketManager'
 import { useAuthStore, logoutEventBus } from '../stores/authStore'
-import type { PlayerConnectionStatus } from '../types'
+import type { PlayerStatus } from '../types'
 
 export interface GameConnectionState {
   isUserConnected: boolean
   isUserInGame: boolean
   connectedPlayersCount: number
   totalPlayersCount: number
-  playersStatus: PlayerConnectionStatus[]
+  playersStatus: PlayerStatus[]
   lastUpdate: Date | null
 }
 
@@ -82,7 +82,7 @@ export function useGameConnection(gameId: string) {
         console.log('System message received:', message)
         // Adaptar mensajes system_message del backend para simular game_connection_state
         if (message.data && message.data.players) {
-          const playersStatus: PlayerConnectionStatus[] = message.data.players.map((player: any) => ({
+          const playersStatus: PlayerStatus[] = message.data.players.map((player: any) => ({
             playerId: player.id,
             username: player.name,
             isConnected: message.data.connected_players?.includes(player.id) || false,
@@ -160,7 +160,7 @@ export function useGameConnection(gameId: string) {
 
   // Inicializar el estado de jugadores con datos del REST API
   const initializePlayersStatus = (players: any[]) => {
-    const playersStatus: PlayerConnectionStatus[] = players.map((player: any) => ({
+    const playersStatus: PlayerStatus[] = players.map((player: any) => ({
       playerId: player.id,
       username: player.username,
       isConnected: true, // Asumir conectado por defecto - el WebSocket actualizará el estado real
@@ -211,7 +211,7 @@ export function useGameConnection(gameId: string) {
   }
 
   // Obtener el estado de un jugador específico
-  const getPlayerConnectionStatus = (playerId: string): PlayerConnectionStatus | null => {
+  const getPlayerConnectionStatus = (playerId: string): PlayerStatus | null => {
     return gameConnectionState.value.playersStatus.find(p => p.playerId === playerId) || null
   }
 
