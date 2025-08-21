@@ -148,7 +148,7 @@ export class WebSocketManager {
     if (handlers) {
       handlers.forEach(handler => {
         try {
-          handler(message.data)
+          handler(message)
         } catch (error) {
           console.error(`Error in message handler for ${message.type}:`, error)
         }
