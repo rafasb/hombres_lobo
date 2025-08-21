@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { useAuthError } from './useAuthError'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { login as authLogin } from '../services/authService'
@@ -6,7 +7,7 @@ import { login as authLogin } from '../services/authService'
 export function useLogin() {
   const username = ref('')
   const password = ref('')
-  const error = ref('')
+  const { error, setError, clearError } = useAuthError()
   const loading = ref(false)
   const redirected = ref(false)
   const router = useRouter()
@@ -18,22 +19,18 @@ export function useLogin() {
   }
 
   const onLogin = async () => {
-    error.value = ''
+    clearError()
     loading.value = true
-    
     try {
       const result = await authLogin(username.value, password.value)
       if (result && result.access_token) {
         router.push('/partidas')
       } else if (result && result.error) {
-        error.value = result.error
-        auth.logout()
+        setError(result.error, true)
       }
     } catch (err) {
-      error.value = 'Error de conexión. Inténtalo de nuevo.'
-      auth.logout()
+      setError('Error de conexión. Inténtalo de nuevo.', true)
     }
-    
     loading.value = false
   }
 
