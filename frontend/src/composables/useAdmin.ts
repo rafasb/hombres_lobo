@@ -1,11 +1,8 @@
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '../stores/authStore'
+import { ref } from 'vue'
 import { fetchUsers, deleteUser, toggleUserRole } from '../services/userService'
 import type { AdminUser } from '../types'
 
 export const useAdminComposable = () => {
-  const auth = useAuthStore()
-
   const users = ref<AdminUser[]>([])
   const search = ref('')
   const loading = ref(false)
@@ -18,7 +15,6 @@ export const useAdminComposable = () => {
     try {
       const result = await fetchUsers(search.value)
       if (result && result.users) {
-        // Los usuarios ya vienen tipados del servicio
         users.value = result.users.map(user => ({
           id: user.id,
           username: user.username,
@@ -35,10 +31,6 @@ export const useAdminComposable = () => {
   }
 
   const deleteUserHandler = async (user: AdminUser) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al usuario ${user.username}?`)) {
-      return
-    }
-    
     loading.value = true
     error.value = ''
     const result = await deleteUser(user.id)
@@ -50,12 +42,7 @@ export const useAdminComposable = () => {
     loading.value = false
   }
 
-  const toggleRole = async (user: AdminUser) => {
-    const newRole = user.role === 'admin' ? 'player' : 'admin'
-    if (!confirm(`¿Estás seguro de que deseas cambiar el rol de ${user.username} a ${newRole}?`)) {
-      return
-    }
-    
+  const toggleRole = async (user: AdminUser, newRole: 'admin' | 'player') => {
     loading.value = true
     error.value = ''
     const result = await toggleUserRole(user.id, newRole)
@@ -67,17 +54,7 @@ export const useAdminComposable = () => {
     loading.value = false
   }
 
-  // Inicialización
-  onMounted(async () => {
-    // Asegurar que el usuario esté cargado antes de verificar permisos
-    await auth.loadUserFromToken()
-    
-    if (auth.isAdmin) {
-      fetchUsersList()
-    } else {
-      error.value = 'No tienes permisos de administrador para ver esta página'
-    }
-  })
+  // La inicialización y control de acceso se gestionan fuera del composable
 
   return {
     users,
