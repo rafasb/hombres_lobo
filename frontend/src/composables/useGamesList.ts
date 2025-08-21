@@ -1,10 +1,13 @@
 import { ref, computed } from 'vue'
+import { useUserStatusOnView } from './useUserStatus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { gameService } from '../services/gameService'
 import type { Game } from '../types'
 
 export function useGamesList() {
+  // Actualizar estado del usuario a 'active' al entrar en la vista, salvo si está 'banned'
+  useUserStatusOnView('active')
   const router = useRouter()
   const auth = useAuthStore()
   
