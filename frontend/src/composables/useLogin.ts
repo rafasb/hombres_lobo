@@ -17,16 +17,22 @@ export function useLogin() {
     redirected.value = true
   }
 
+  const handleLoginResult = (result: any) => {
+    if (result?.access_token) {
+      router.push('/partidas')
+    } else if (result?.error) {
+      setError(result.error, true)
+    } else {
+      setError('Error desconocido. Inténtalo de nuevo.', true)
+    }
+  }
+
   const onLogin = async () => {
     clearError()
     loading.value = true
     try {
       const result = await authLogin(username.value, password.value)
-      if (result && result.access_token) {
-        router.push('/partidas')
-      } else if (result && result.error) {
-        setError(result.error, true)
-      }
+      handleLoginResult(result)
     } catch (err) {
       setError('Error de conexión. Inténtalo de nuevo.', true)
     }
