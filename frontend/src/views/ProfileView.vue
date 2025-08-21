@@ -2,7 +2,7 @@
   <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <!-- Navegación común -->
     <NavigationBar 
-      :show-admin="auth.isAdmin"
+      :show-admin="isAdmin"
       @navigate="handleNavigation"
     />
     
@@ -15,7 +15,7 @@
               <div class="card-body d-flex align-items-center gap-3">
                 <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
                      style="width: 60px; height: 60px; font-size: 24px; font-weight: bold;">
-                  {{ auth.user?.username?.charAt(0).toUpperCase() || 'U' }}
+                  {{ username?.charAt(0).toUpperCase() || 'U' }}
                 </div>
                 <h1 class="mb-0 fw-bold text-dark">
                   <i class="bi bi-person-circle me-2"></i>
@@ -24,7 +24,7 @@
               </div>
             </div>
             
-            <div v-if="auth.user">
+            <div v-if="user">
               <div class="card" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: none; border-radius: 15px;">
                 <div class="card-header border-0 pb-2" style="background: transparent;">
                   <h5 class="card-title mb-0 fw-bold text-dark">
@@ -37,17 +37,17 @@
                   <div class="mb-3">
                     <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded">
                       <span class="text-muted fw-semibold">Usuario:</span>
-                      <span class="fw-bold">{{ auth.user.username }}</span>
+                      <span class="fw-bold">{{ username }}</span>
                     </div>
                     
                     <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded">
                       <span class="text-muted fw-semibold">ID:</span>
-                      <span class="fw-bold font-monospace text-primary">{{ auth.user.id }}</span>
+                      <span class="fw-bold font-monospace text-primary">{{ user.id }}</span>
                     </div>
                     
                     <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded">
                       <span class="text-muted fw-semibold">Rol:</span>
-                      <span class="badge fs-6" :class="roleClass">{{ roleText }}</span>
+                      <span class="badge fs-6" :class="roleInfo.class">{{ roleInfo.text }}</span>
                     </div>
                   </div>
                   
@@ -88,9 +88,10 @@ import { useProfile } from '../composables/useProfile'
 import { useNavigation } from '../composables/useNavigation'
 
 const {
-  auth,
-  roleClass,
-  roleText,
+  user,
+  username,
+  isAdmin,
+  roleInfo,
   goToLogin
 } = useProfile()
 
