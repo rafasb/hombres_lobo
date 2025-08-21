@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import { useAuthError } from './useAuthError'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/authStore'
 import { login as authLogin } from '../services/authService'
 
 export function useLogin() {
@@ -11,7 +10,7 @@ export function useLogin() {
   const loading = ref(false)
   const redirected = ref(false)
   const router = useRouter()
-  const auth = useAuthStore()
+
 
   // Verificar si el usuario fue redirigido
   if (window.history.state && window.history.state.redirected) {
