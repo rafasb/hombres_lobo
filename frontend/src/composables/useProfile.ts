@@ -11,12 +11,18 @@ export function useProfile() {
     router.push('/login')
   }
 
+
+  const roleMap = {
+    admin: { class: 'bg-danger', text: 'Administrador' },
+    player: { class: 'bg-primary', text: 'Jugador' }
+  }
+
   const roleClass = computed(() => {
-    return auth.user?.role === 'admin' ? 'bg-danger' : 'bg-primary'
+    return roleMap[auth.user?.role as 'admin' | 'player']?.class || 'bg-secondary'
   })
 
   const roleText = computed(() => {
-    return auth.user?.role === 'admin' ? 'Administrador' : 'Jugador'
+    return roleMap[auth.user?.role as 'admin' | 'player']?.text || 'Desconocido'
   })
 
 
