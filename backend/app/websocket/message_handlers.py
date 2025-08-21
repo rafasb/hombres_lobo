@@ -11,7 +11,7 @@ from app.websocket.game_handlers import game_handler
 from app.websocket.voting_handlers import voting_handler
 from app.websocket.user_status_handlers import user_status_handler
 from app.core.security import verify_access_token
-from app.services.user_service import get_user
+# from app.services.user_service import get_user
 import json
 import logging
 
@@ -66,52 +66,7 @@ class MessageHandler:
             "response": "pong",
             "timestamp": message_data.get("timestamp")
         })
-    
-    async def handle_chat_message(self, connection_id: str, message_data: dict):
-        """Manejar mensaje de chat"""
-        try:
-            # Validar campos requeridos
-            required_fields = ["message", "channel"]
-            for field in required_fields:
-                if field not in message_data:
-                    await self.send_error(connection_id, "MISSING_FIELD", f"Campo requerido: {field}")
-                    return
-            
-            # Obtener información de conexión
-            conn_info = connection_manager.get_connection_info(connection_id)
-            if not conn_info:
-                await self.send_error(connection_id, "CONNECTION_NOT_FOUND", "Conexión no encontrada")
-                return
-            
-            user_id = conn_info["user_id"]
-            game_id = conn_info["game_id"]
-            
-            # Obtener información del usuario
-            user = get_user(user_id)
-            if not user:
-                await self.send_error(connection_id, "USER_NOT_FOUND", "Usuario no encontrado")
-                return
-            
-            # Crear mensaje de chat
-            chat_message = {
-                "type": MessageType.CHAT_MESSAGE,
-                "sender_id": user_id,
-                "sender_name": user.username,
-                "message": message_data["message"],
-                "channel": message_data["channel"],
-                "timestamp": message_data.get("timestamp")
-            }
-            
-            # Broadcast a la room del juego
-            if game_id:
-                await connection_manager.broadcast_to_game(game_id, chat_message)
-            else:
-                await self.send_error(connection_id, "NO_GAME", "No estás en un juego")
-                
-        except Exception as e:
-            logger.error(f"Error en chat message: {e}")
-            await self.send_error(connection_id, "CHAT_ERROR", "Error enviando mensaje de chat")
-    
+        
     async def handle_join_game(self, connection_id: str, message_data: dict):
         """Delegar a game handler"""
         await game_handler.handle_join_game(connection_id, message_data)

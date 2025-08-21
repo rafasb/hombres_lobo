@@ -41,10 +41,6 @@ class MessageType(str, Enum):
     VOTING_ENDED = "voting_ended"
     VOTING_RESULTS = "voting_results"
     
-    # Chat
-    CHAT_MESSAGE = "chat_message"
-    SYSTEM_MESSAGE = "system_message"
-    
     # Acciones de roles
     ROLE_ACTION = "role_action"
     NIGHT_ACTION = "night_action"
@@ -57,6 +53,7 @@ class MessageType(str, Enum):
     HEARTBEAT = "heartbeat"
     ERROR = "error"
     SUCCESS = "success"
+    SYSTEM_MESSAGE = "system_message"
     
     # Nuevos tipos para compatibilidad con frontend
     GAME_CONNECTION_STATE = "game_connection_state"
@@ -119,15 +116,6 @@ class VotingResultsMessage(BaseWebSocketMessage):
     results: Dict[str, int]  # target_id -> vote_count
     eliminated_player: str | None = None
     is_tie: bool = False
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-class ChatMessage(BaseWebSocketMessage):
-    """Mensaje de chat"""
-    type: MessageType = MessageType.CHAT_MESSAGE
-    sender_id: str
-    sender_name: str
-    message: str
-    channel: str  # all, living, dead, wolves
     timestamp: datetime = Field(default_factory=datetime.now)
 
 class SystemMessage(BaseWebSocketMessage):
@@ -235,7 +223,6 @@ MESSAGE_MODELS = {
     MessageType.FORCE_NEXT_PHASE: ForceNextPhaseMessage,
     MessageType.VOTE_CAST: VoteMessage,
     MessageType.VOTING_RESULTS: VotingResultsMessage,
-    MessageType.CHAT_MESSAGE: ChatMessage,
     MessageType.SYSTEM_MESSAGE: SystemMessage,
     MessageType.ROLE_ACTION: RoleActionMessage,
     MessageType.PLAYER_ELIMINATED: PlayerEliminatedMessage,
