@@ -144,7 +144,7 @@ export class WebSocketPollingManager {
   private simulateMessage(message: WebSocketMessage): void {
     // Simular respuestas del servidor basadas en el tipo de mensaje
     switch (message.type) {
-      case 'get_game_state':
+      case 'get_game_status':
         // Simular respuesta de estado del juego
         setTimeout(() => {
           this.handleMessage({
@@ -160,23 +160,23 @@ export class WebSocketPollingManager {
           })
         }, 200)
         break
-        
-      case 'user_joined_lobby':
-        console.log('User joined lobby:', message.data)
+
+      case 'join_game':
+        console.log('User joined game:', message.data)
         this.handleMessage({
           type: 'user_connection_status',
           data: { isConnected: true, isInGame: true }
         })
         break
-        
-      case 'user_left_lobby':
-        console.log('User left lobby:', message.data)
+
+      case 'player_left_game':
+        console.log('Player left game:', message.data)
         break
-        
-      case 'ping':
-        // Responder pong
+
+      case 'heartbeat':
+        // Simular respuesta de heartbeat si es necesario
         setTimeout(() => {
-          this.handleMessage({ type: 'pong' })
+          this.handleMessage({ type: 'heartbeat' })
         }, 50)
         break
     }
@@ -207,7 +207,7 @@ export class WebSocketPollingManager {
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
       if (this.isActive) {
-        this.send({ type: 'ping' })
+        this.send({ type: 'heartbeat' })
       }
     }, this.heartbeatInterval)
   }

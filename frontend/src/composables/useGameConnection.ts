@@ -81,13 +81,23 @@ export function useGameConnection(gameId: string) {
       const unsubGameState = wsManager.subscribe('system_message', (message: any) => {
         console.log('System message received:', message)
         // Adaptar mensajes system_message del backend para simular game_connection_state
-        if (message.data && message.data.players) {
-          const playersStatus: PlayerStatus[] = message.data.players.map((player: any) => ({
-            playerId: player.id,
-            username: player.name,
-            isConnected: message.data.connected_players?.includes(player.id) || false,
-            lastSeen: new Date()
-          }))
+        if (message && message.players) {
+          const playersStatus: PlayerStatus[] = message.players.map((player: any) => {
+            // Determinar el status real del jugador
+            let status: PlayerStatus['status'] = 'disconnected';
+            if (player.status && ['active','banned','connected','disconnected','in_game'].includes(player.status)) {
+              status = player.status;
+            } else if (message.connected_players?.includes(player.id)) {
+              status = 'connected';
+            }
+            return {
+              playerId: player.id,
+              username: player.name,
+              status,
+              isConnected: status === 'connected' || status === 'active' || status === 'in_game',
+              lastSeen: new Date()
+            }
+          })
 
           gameConnectionState.value = {
             isUserConnected: true,
@@ -105,17 +115,19 @@ export function useGameConnection(gameId: string) {
         console.log('User status changed:', data)
         const currentPlayers = [...gameConnectionState.value.playersStatus]
         const existingPlayer = currentPlayers.find(p => p.playerId === data.user_id)
-        
         if (existingPlayer) {
-          // Actualizar estado basado en el nuevo status
-          existingPlayer.isConnected = data.new_status === 'connected' || data.new_status === 'active'
+          // Actualizar status y isConnected
+          if (['active','banned','connected','disconnected','in_game'].includes(data.new_status)) {
+            existingPlayer.status = data.new_status
+          } else {
+            existingPlayer.status = 'disconnected'
+          }
+          existingPlayer.isConnected = existingPlayer.status === 'connected' || existingPlayer.status === 'active' || existingPlayer.status === 'in_game'
           existingPlayer.lastSeen = new Date()
-          
           // Actualizar el estado global
           gameConnectionState.value.playersStatus = currentPlayers
           gameConnectionState.value.connectedPlayersCount = currentPlayers.filter(p => p.isConnected).length
           gameConnectionState.value.lastUpdate = new Date()
-          
           console.log('Updated connection state:', gameConnectionState.value)
         }
       })
@@ -131,7 +143,7 @@ export function useGameConnection(gameId: string) {
       // Suscribirse a errores de cambio de estado
       const unsubError = wsManager.subscribe('error', (data: any) => {
         console.error('WebSocket error:', data)
-        if (data.error_code === 'INSUFFICIENT_PERMISSIONS') {
+        if (data && data.error_code === 'INSUFFICIENT_PERMISSIONS') {
           console.error('Permission error:', data.message)
         }
       })
@@ -163,6 +175,7 @@ export function useGameConnection(gameId: string) {
     const playersStatus: PlayerStatus[] = players.map((player: any) => ({
       playerId: player.id,
       username: player.username,
+      status: 'connected', // Valor por defecto razonable
       isConnected: true, // Asumir conectado por defecto - el WebSocket actualizará el estado real
       lastSeen: new Date()
     }))

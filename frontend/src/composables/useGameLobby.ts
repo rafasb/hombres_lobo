@@ -130,7 +130,7 @@ export function useGameLobby(gameId: string) {
       // Actualizar estado del usuario al salir de la partida
       if (auth.user) {
         try {
-          await updateUserStatus(auth.user.id, { status: 'online', game_id: undefined })
+          await updateUserStatus(auth.user.id, { status: 'active', game_id: undefined })
         } catch (e) {
           console.warn('No se pudo actualizar el estado del usuario al salir', e)
         }
@@ -166,7 +166,7 @@ export function useGameLobby(gameId: string) {
     // Actualizar estado del usuario al salir de la vista de partida
     if (auth.user) {
       try {
-        await updateUserStatus(auth.user.id, { status: 'online', game_id: undefined })
+        await updateUserStatus(auth.user.id, { status: 'active', game_id: undefined })
       } catch (e) {
         console.warn('No se pudo actualizar el estado del usuario al salir', e)
       }
@@ -197,7 +197,7 @@ export function useGameLobby(gameId: string) {
   onUnmounted(async () => {
     if (auth.user) {
       try {
-        await updateUserStatus(auth.user.id, { status: 'online', game_id: undefined })
+        await updateUserStatus(auth.user.id, { status: 'active', game_id: undefined })
       } catch (e) {
         console.warn('No se pudo actualizar el estado del usuario al desmontar', e)
       }
