@@ -144,6 +144,10 @@ export class WebSocketManager {
   }
 
   private handleMessage(message: WebSocketMessage): void {
+    if (message.type === 'error') {
+      // Log completo para depuración de errores del backend
+      console.warn('[WebSocketManager] Mensaje de error recibido:', message)
+    }
     const handlers = this.messageHandlers.get(message.type)
     if (handlers) {
       handlers.forEach(handler => {

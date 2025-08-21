@@ -74,20 +74,25 @@ export function useGameConnection(gameId: string) {
 
       console.log('Initializing WebSocket connection for game:', gameId)
       wsManager = createConnection(auth.token)
-      await wsManager.connect()
-      console.log('WebSocket connection established')
+
+  await wsManager.connect()
+  console.log('WebSocket connection established')
+  // Enviar mensaje join_game tras conectar, según la recomendación del backend
+  wsManager.send({ type: 'join_game' })
 
       // Suscribirse a mensajes de estado del juego - adaptador para el backend
       const unsubGameState = wsManager.subscribe('system_message', (message: any) => {
         console.log('System message received:', message)
-        // Adaptar mensajes system_message del backend para simular game_connection_state
-        if (message && message.players) {
-          const playersStatus: PlayerStatus[] = message.players.map((player: any) => {
+        // Usar message.data.players según la documentación del backend
+        const playersList = message?.data?.players || message?.players
+        if (playersList) {
+          const connectedPlayers = message?.data?.connected_players || message?.connected_players
+          const playersStatus: PlayerStatus[] = playersList.map((player: any) => {
             // Determinar el status real del jugador
             let status: PlayerStatus['status'] = 'disconnected';
             if (player.status && ['active','banned','connected','disconnected','in_game'].includes(player.status)) {
               status = player.status;
-            } else if (message.connected_players?.includes(player.id)) {
+            } else if (connectedPlayers?.includes(player.id)) {
               status = 'connected';
             }
             return {
@@ -214,13 +219,13 @@ export function useGameConnection(gameId: string) {
   // Notificar que el usuario entró al lobby
   const notifyUserJoinedLobby = () => {
     // Cambiar estado del usuario a 'active' cuando se une al lobby
-    updateUserStatus('active')
+    updateUserStatus('in_game')
   }
 
   // Notificar que el usuario salió del lobby
   const notifyUserLeftLobby = () => {
-    // Cambiar estado del usuario a 'inactive' cuando sale del lobby
-    updateUserStatus('inactive')
+    // Cambiar estado del usuario a 'active' cuando sale del lobby
+    updateUserStatus('active')
   }
 
   // Obtener el estado de un jugador específico
