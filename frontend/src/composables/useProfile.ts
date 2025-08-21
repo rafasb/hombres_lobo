@@ -6,8 +6,8 @@ export function useProfile() {
   const router = useRouter()
   const auth = useAuthStore()
 
-  const handleLogout = () => {
-    auth.logout()
+  const goToLogin = (logout = true) => {
+    if (logout) auth.logout()
     router.push('/login')
   }
 
@@ -19,15 +19,12 @@ export function useProfile() {
     return auth.user?.role === 'admin' ? 'Administrador' : 'Jugador'
   })
 
-  const navigateToLogin = () => {
-    router.push('/login')
-  }
+
 
   return {
     auth,
-    handleLogout,
+    goToLogin,
     roleClass,
-    roleText,
-    navigateToLogin
+    roleText
   }
 }

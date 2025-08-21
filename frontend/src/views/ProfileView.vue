@@ -52,7 +52,7 @@
                   </div>
                   
                   <div class="d-grid">
-                    <button @click="handleLogout" class="btn btn-danger btn-lg d-flex align-items-center justify-content-center gap-2"
+                    <button @click="goToLogin(true)" class="btn btn-danger btn-lg d-flex align-items-center justify-content-center gap-2"
                             style="border-radius: 10px;">
                       <i class="bi bi-box-arrow-right"></i>
                       Cerrar sesión
@@ -67,7 +67,7 @@
                 <div class="card-body py-5">
                   <i class="bi bi-question-circle display-1 text-muted mb-3"></i>
                   <h4 class="text-muted mb-3">No hay datos de usuario disponibles</h4>
-                  <button @click="navigateToLogin" class="btn btn-primary btn-lg d-flex align-items-center gap-2 mx-auto"
+                  <button @click="goToLogin(true)" class="btn btn-primary btn-lg d-flex align-items-center gap-2 mx-auto"
                           style="border-radius: 25px;">
                     <i class="bi bi-box-arrow-in-right"></i>
                     Iniciar sesión
@@ -89,10 +89,9 @@ import { useNavigation } from '../composables/useNavigation'
 
 const {
   auth,
-  handleLogout,
   roleClass,
   roleText,
-  navigateToLogin
+  goToLogin
 } = useProfile()
 
 const { handleNavigation } = useNavigation()
