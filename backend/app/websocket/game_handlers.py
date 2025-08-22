@@ -474,8 +474,44 @@ class GameHandler:
                 "time_remaining": game_state.get_phase_time_remaining()
             }
         }
-        
+
         await connection_manager.broadcast_to_game(game_id, status_message)
+
+    def build_game_status_message(self, game_id: str, game_state) -> dict:
+        """Construir y devolver el dict con el estado del juego (sin enviarlo).
+
+        Útil para enviar el estado sólo al cliente recién conectado.
+        """
+        from app.database import load_user
+
+        players_info = []
+        if game_state.game_data and game_state.game_data.players:
+            for player_id in game_state.game_data.players:
+                user = load_user(player_id)
+                if user:
+                    players_info.append({
+                        "id": user.id,
+                        "name": user.username,
+                        "is_alive": player_id not in game_state.eliminated_players,
+                        "is_connected": player_id in game_state.connected_players,
+                        "role": game_state.game_data.roles.get(player_id, {}).get("role") if game_state.game_data.roles else None
+                    })
+
+        status_message = {
+            "type": MessageType.SYSTEM_MESSAGE.value,
+            "message": f"Estado del juego: {game_state.phase.value}",
+            "data": {
+                "game_id": game_id,
+                "phase": game_state.phase.value,
+                "players": players_info,
+                "connected_players": list(game_state.connected_players),
+                "living_players": game_state.get_living_players(),
+                "dead_players": game_state.get_dead_players(),
+                "time_remaining": game_state.get_phase_time_remaining()
+            }
+        }
+
+        return status_message
     
     async def _send_phase_change(self, game_id: str, game_state):
         """Enviar cambio de fase"""

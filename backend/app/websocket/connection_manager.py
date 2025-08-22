@@ -8,6 +8,7 @@ import json
 import asyncio
 import uuid
 from datetime import datetime
+import logging
 
 class ConnectionManager:
     def __init__(self):
@@ -25,6 +26,7 @@ class ConnectionManager:
         
         # Heartbeat para mantener conexiones vivas
         self.heartbeat_task = None
+        self.logger = logging.getLogger("websocket.connection_manager")
 
     async def connect(self, websocket: WebSocket, user_id: str, game_id: str | None = None):
         """Conectar un cliente WebSocket"""
@@ -183,6 +185,11 @@ class ConnectionManager:
 
                 # Serializar y enviar
                 message_text = json.dumps(message_dict, default=str)
+                # Log outgoing personal message
+                try:
+                    self.logger.info(f"SEND -> connection_id={connection_id} message={message_text}")
+                except Exception:
+                    print(f"SEND -> connection_id={connection_id} message={message_text}")
                 await websocket.send_text(message_text)
             except Exception as e:
                 print(f"Error enviando mensaje personal a {connection_id}: {e}")
@@ -232,6 +239,11 @@ class ConnectionManager:
                     message_dict["type"] = "system_message"
 
         message_text = json.dumps(message_dict, default=str)
+        # Log broadcast to game
+        try:
+            self.logger.info(f"BROADCAST game={game_id} exclude={exclude_connection} message={message_text}")
+        except Exception:
+            print(f"BROADCAST game={game_id} exclude={exclude_connection} message={message_text}")
         
         disconnected_connections = []
         
@@ -291,6 +303,11 @@ class ConnectionManager:
                     message_dict["type"] = "system_message"
 
         message_text = json.dumps(message_dict, default=str)
+        # Log broadcast to all
+        try:
+            self.logger.info(f"BROADCAST_ALL message={message_text}")
+        except Exception:
+            print(f"BROADCAST_ALL message={message_text}")
             
         disconnected_connections = []
         

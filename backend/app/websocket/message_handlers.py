@@ -8,6 +8,7 @@ from app.websocket.messages import (
     MessageType, ErrorMessage, SuccessMessage, SystemMessage
 )
 from app.websocket.game_handlers import game_handler
+from app.services.game_state_service import game_state_manager
 from app.websocket.voting_handlers import voting_handler
 from app.websocket.user_status_handlers import user_status_handler
 from app.core.security import verify_access_token
@@ -39,6 +40,8 @@ class MessageHandler:
     async def handle_message(self, connection_id: str, message_data: dict):
         """Manejar mensaje entrante"""
         try:
+            # Log incoming parsed message
+            logger.info(f"RECV <- connection_id={connection_id} message={message_data}")
             # Validar estructura básica del mensaje
             if "type" not in message_data:
                 await self.send_error(connection_id, "INVALID_MESSAGE", "Tipo de mensaje requerido")
@@ -162,12 +165,23 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
             connection_id,
             welcome_message
         )
+
+        # Enviar estado actual de la partida solo al cliente recién conectado
+        try:
+            game_state = await game_state_manager.get_or_create_game_state(game_id)
+            if game_state:
+                status_msg = game_handler.build_game_status_message(game_id, game_state)
+                await connection_manager.send_personal_message(connection_id, status_msg)
+        except Exception as e:
+            logger.warning(f"No se pudo enviar el estado del juego al conectar: {e}")
         
         # Loop principal de mensajes
         while True:
             try:
                 # Recibir mensaje
                 data = await websocket.receive_text()
+                # Log raw incoming message
+                logger.info(f"RAW RECV <- connection_id={connection_id} raw={data}")
                 message_data = json.loads(data)
                 
                 # Procesar mensaje
