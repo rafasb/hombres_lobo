@@ -66,10 +66,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { GameConnectionState } from '../composables/useGameConnection'
+import type { ConnectionStatus } from '../types'
 
 interface Props {
   gameConnectionState: GameConnectionState
-  connectionStatus: any
+  connectionStatus: ConnectionStatus
   connectionStatusText: string
   connectionStatusClass: string
   isUserActiveInLobby: boolean
