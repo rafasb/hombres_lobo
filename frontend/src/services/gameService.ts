@@ -103,7 +103,7 @@ export const gameService = {
   /**
    * Actualizar propiedades de una partida
    */
-  async updateGame(gameId: string, data: any): Promise<UpdateGameResponse> {
+  async updateGame(gameId: string, data: Record<string, unknown>): Promise<UpdateGameResponse> {
     const response = await api.put(`/games/${gameId}`, data, {
       headers: {
         'Content-Type': 'application/json'
@@ -119,31 +119,31 @@ export const gameService = {
   /**
    * Obtiene los jugadores vivos en la partida
    */
-  async getAlivePlayers(gameId: string): Promise<any[]> {
-  const response = await api.get(`/games/${gameId}/alive-players`)
-  return response.data
+  async getAlivePlayers(gameId: string): Promise<Game['players']> {
+    const response = await api.get(`/games/${gameId}/alive-players`)
+    return response.data.players || response.data
   },
 
   /**
    * Obtiene los objetivos disponibles para votación
    */
-  async getVotingTargets(gameId: string): Promise<any[]> {
-  const response = await api.get(`/games/${gameId}/voting-targets`)
-  return response.data
+  async getVotingTargets(gameId: string): Promise<{ id: string; username: string }[]> {
+    const response = await api.get(`/games/${gameId}/voting-targets`)
+    return response.data.targets || response.data
   },
 
   /**
    * Obtiene el recuento actual de votos
    */
-  async getVoteCounts(gameId: string): Promise<any[]> {
-  const response = await api.get(`/games/${gameId}/vote-counts`)
-  return response.data
+  async getVoteCounts(gameId: string): Promise<import('../types').VoteCount[]> {
+    const response = await api.get(`/games/${gameId}/vote-counts`)
+    return response.data.vote_counts || response.data
   },
 
   /**
    * Emitir un voto durante la fase diurna
    */
-  async castDayVote(gameId: string, targetId: string): Promise<any> {
+  async castDayVote(gameId: string, targetId: string): Promise<import('../types').CastVoteResponse> {
     const response = await api.post(`/games/${gameId}/day-vote`, {
       target_id: targetId
     }, {

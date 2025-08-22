@@ -1,4 +1,5 @@
-import axios from 'axios'
+import api from './api'
+import { extractErrorMessage } from './errorHelper'
 
 export async function register(username: string, email: string, password: string): Promise<{ success?: boolean; error?: string }> {
   try {
@@ -7,21 +8,14 @@ export async function register(username: string, email: string, password: string
     params.append('email', email);
     params.append('password', password);
 
-    const response = await axios.post('/register', params, {
+    const response = await api.post('/register', params, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
     // La nueva API devuelve una estructura con success, message y user
     return { success: response.data.success || true }
-  } catch (error: any) {
-    let errorMessage = 'Error al registrar usuario.'
-    if (error.response?.data?.detail) {
-      if (typeof error.response.data.detail === 'string') {
-        errorMessage = error.response.data.detail
-      } else if (Array.isArray(error.response.data.detail)) {
-        errorMessage = error.response.data.detail[0]?.msg || errorMessage
-      }
-    }
-    return { error: errorMessage }
+  } catch (error: unknown) {
+    const msg = extractErrorMessage(error, 'Error al registrar usuario.')
+    return { error: msg }
   }
 }

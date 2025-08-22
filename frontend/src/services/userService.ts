@@ -1,67 +1,46 @@
-import axios from 'axios'
-import { useAuthStore } from '../stores/authStore'
+import api from './api'
+import { extractErrorMessage } from './errorHelper'
 import type { User, UserRole } from '../types'
 
 const API_URL = '/admin/users'
 
 export async function fetchUsers(search = ''): Promise<{ users?: User[]; error?: string }> {
-  const auth = useAuthStore()
-  const token = auth.token
   try {
-    // El endpoint devuelve un array de usuarios directamente
-    const response = await axios.get(`${API_URL}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    // La respuesta es directamente un array de usuarios
+    const response = await api.get(`${API_URL}`)
     let users: User[] = response.data
     if (search) {
       users = users.filter((u: User) => u.username.toLowerCase().includes(search.toLowerCase()))
     }
     return { users }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching users:', error)
-    return { error: error.response?.data?.detail || 'Error al obtener usuarios.' }
+    return { error: extractErrorMessage(error, 'Error al obtener usuarios.') }
   }
 }
 
 export async function deleteUser(userId: string): Promise<{ error?: string }> {
-  const auth = useAuthStore()
-  const token = auth.token
   try {
-    await axios.delete(`${API_URL}/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    await api.delete(`${API_URL}/${userId}`)
     return {}
-  } catch (error: any) {
-    return { error: (error as any).response?.data?.detail || 'Error al eliminar usuario.' }
+  } catch (error: unknown) {
+    return { error: extractErrorMessage(error, 'Error al eliminar usuario.') }
   }
 }
 
 export async function toggleUserRole(userId: string, newRole: UserRole): Promise<{ error?: string }> {
-  const auth = useAuthStore()
-  const token = auth.token
   try {
-    await axios.put(`${API_URL}/${userId}/role?role=${encodeURIComponent(newRole)}`, null, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    await api.put(`${API_URL}/${userId}/role?role=${encodeURIComponent(newRole)}`, null)
     return {}
-  } catch (error: any) {
-    return { error: (error as any).response?.data?.detail || 'Error al cambiar el rol.' }
+  } catch (error: unknown) {
+    return { error: extractErrorMessage(error, 'Error al cambiar el rol.') }
   }
 }
 
-// Añadir función para actualizar el estado del usuario
 export async function updateUserStatus(userId: string, statusUpdate: { status: string, game_id?: string }) {
-  const auth = useAuthStore()
-  const token = auth.token
   try {
-    const response = await axios.put(
-      `/users/${userId}/status`,
-      statusUpdate,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
+    const response = await api.put(`/users/${userId}/status`, statusUpdate)
     return response.data
-  } catch (error: any) {
-    return { error: (error as any).response?.data?.detail || 'Error al actualizar el estado del usuario.' }
+  } catch (error: unknown) {
+    return { error: extractErrorMessage(error, 'Error al actualizar el estado del usuario.') }
   }
 }

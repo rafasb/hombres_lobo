@@ -26,6 +26,9 @@ export type {
   UpdateGameResponse
 } from './game'
 
+// Export the additional game-related helper types
+export type { VoteCount, CastVoteResponse } from './game'
+
 // Exportar tipos de WebSocket
 export type {
   WebSocketMessage,

@@ -79,3 +79,19 @@ export interface UpdateGameResponse {
   game: Game
   updated_fields: string[]
 }
+
+/**
+ * Recuento de votos para un objetivo
+ */
+export interface VoteCount {
+  target_id: string
+  votes: number
+}
+
+/**
+ * Respuesta genérica para el voto
+ */
+export interface CastVoteResponse {
+  success?: boolean
+  error?: string
+}

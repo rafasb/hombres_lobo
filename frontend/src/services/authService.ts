@@ -1,4 +1,5 @@
 import api from './api'
+import { extractErrorMessage } from './errorHelper'
 import { useAuthStore } from '../stores/authStore'
 
 export async function login(username: string, password: string): Promise<{ access_token?: string; token_type?: string; error?: string }> {
@@ -37,8 +38,8 @@ export async function login(username: string, password: string): Promise<{ acces
       }
     }
     return { access_token, token_type }
-  } catch (error: any) {
-    return { error: error.response?.data?.detail || 'Error de autenticación.' }
+  } catch (error: unknown) {
+    return { error: extractErrorMessage(error, 'Error de autenticación.') }
   }
 }
 
@@ -51,7 +52,7 @@ export async function getProfile(): Promise<{ user?: { id: string; username: str
     // Excluye hashed_password y otros campos innecesarios
     const { id, username, role } = user
     return { user: { id, username, role } }
-  } catch (error: any) {
-    return { error: error.response?.data?.detail || 'Error al obtener perfil.' }
+  } catch (error: unknown) {
+    return { error: extractErrorMessage(error, 'Error al obtener perfil.') }
   }
 }
