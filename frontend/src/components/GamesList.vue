@@ -7,7 +7,7 @@
     :newGame="newGame"
     :playerOptions="playerOptions"
     :hasGames="hasGames"
-    :auth="auth"
+    :auth="auth.user"
     :canJoinGame="canJoinGame"
     :canLeaveGame="canLeaveGame"
     :canViewGame="canViewGame"

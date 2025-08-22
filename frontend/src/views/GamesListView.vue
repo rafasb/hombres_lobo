@@ -131,8 +131,8 @@ interface Props {
   newGame: any
   playerOptions: number[]
   hasGames: boolean
-  // Puede ser AuthUser o el store de auth (Pinia); permitimos también cualquier forma para compatibilidad
-  auth: AuthUser | any
+  // Ahora recibe directamente el objeto AuthUser (o null si no hay sesión)
+  auth: AuthUser | null
   canJoinGame: (game: Game) => boolean
   canLeaveGame: (game: Game) => boolean
   canViewGame: (game: Game) => boolean
@@ -176,7 +176,7 @@ const {
 
 const showAdmin = computed(() => {
   const a: any = auth?.value ?? auth
-  return a?.role === 'admin' || a?.isAdmin === true || a?.user?.role === 'admin'
+  return a?.role === 'admin'
 })
 
 // Métodos que emiten eventos al padre
