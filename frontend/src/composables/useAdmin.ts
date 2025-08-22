@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { fetchUsers, deleteUser, toggleUserRole } from '../services/userService'
+import { adminFetchUsers, deleteUser, toggleUserRole } from '../services/userService'
 import type { AdminUser } from '../types'
 
 export const useAdminComposable = () => {
@@ -13,7 +13,7 @@ export const useAdminComposable = () => {
     error.value = ''
     users.value = []
     try {
-      const result = await fetchUsers(search.value)
+      const result = await adminFetchUsers(search.value)
       if (result && result.users) {
         users.value = result.users.map(user => ({
           id: user.id,

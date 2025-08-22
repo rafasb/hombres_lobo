@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { gameService } from '../services/gameService'
 import type { Game } from '../types'
-import { fetchUsers, updateUserStatus } from '../services/userService'
+import { adminFetchUsers, updateUserStatus } from '../services/userService'
 
 export function useGameLobby(gameId: string) {
   const router = useRouter()
@@ -78,7 +78,7 @@ export function useGameLobby(gameId: string) {
       game.value = await gameService.getGameById(gameId)
       // Obtener datos de usuarios (creador y jugadores)
       if (game.value) {
-        const { users, error } = await fetchUsers()
+        const { users, error } = await adminFetchUsers()
         if (error) {
           creatorUser.value = null
           playerUsers.value = []

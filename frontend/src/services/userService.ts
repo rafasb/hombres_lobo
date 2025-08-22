@@ -4,7 +4,7 @@ import type { User, UserRole } from '../types'
 
 const API_URL = '/admin/users'
 
-export async function fetchUsers(search = ''): Promise<{ users?: User[]; error?: string }> {
+export async function adminFetchUsers(search = ''): Promise<{ users?: User[]; error?: string }> {
   try {
     const response = await api.get(`${API_URL}`)
     let users: User[] = response.data
