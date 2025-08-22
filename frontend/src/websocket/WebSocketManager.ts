@@ -1,6 +1,8 @@
 import { ref, computed, onUnmounted } from 'vue'
 import type {
   WebSocketMessage,
+  GameWebSocketMessage,
+  WebSocketMessageType,
   ConnectionStatus,
   MessageHandler,
   MessageHandlersMap
@@ -75,8 +77,16 @@ export class WebSocketManager {
 
         this.ws.onmessage = (event) => {
           try {
-            const message: WebSocketMessage = JSON.parse(event.data)
-            this.handleMessage(message)
+            // Intentar parsear y validar el mensaje como GameWebSocketMessage.
+            const parsed = JSON.parse(event.data)
+            // Runtime check mínimo: debe tener type
+            if (parsed && typeof parsed.type === 'string') {
+              // Mantener compatibilidad con tipos antiguos usando any cast
+              const message = parsed as GameWebSocketMessage | WebSocketMessage
+              this.handleMessage(message as any)
+            } else {
+              console.warn('Received WebSocket message without type:', parsed)
+            }
           } catch (error) {
             console.error('Error parsing WebSocket message:', error)
           }
@@ -125,15 +135,17 @@ export class WebSocketManager {
   }
 
   subscribe(messageType: string, handler: MessageHandler): () => void {
-    if (!this.messageHandlers.has(messageType)) {
-      this.messageHandlers.set(messageType, [])
+    // Intentamos usar WebSocketMessageType si es posible
+    const key = messageType as WebSocketMessageType
+    if (!this.messageHandlers.has(key)) {
+      this.messageHandlers.set(key, [])
     }
 
-    this.messageHandlers.get(messageType)!.push(handler)
+    this.messageHandlers.get(key)!.push(handler)
 
-    // Devolver función para unsubscribe
+    // Devolver función para unsubscribe (usar la misma clave tipada)
     return () => {
-      const handlers = this.messageHandlers.get(messageType)
+      const handlers = this.messageHandlers.get(key)
       if (handlers) {
         const index = handlers.indexOf(handler)
         if (index > -1) {
@@ -148,7 +160,7 @@ export class WebSocketManager {
       // Log completo para depuración de errores del backend
       console.warn('[WebSocketManager] Mensaje de error recibido:', message)
     }
-    const handlers = this.messageHandlers.get(message.type)
+  const handlers = this.messageHandlers.get((message as any).type as WebSocketMessageType)
     if (handlers) {
       handlers.forEach(handler => {
         try {

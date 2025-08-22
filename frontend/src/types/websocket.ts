@@ -6,9 +6,13 @@
 /**
  * Interfaz base para mensajes de WebSocket
  */
-export interface WebSocketMessage {
+/**
+ * Interfaz base para mensajes de WebSocket (genérica)
+ * Se sugiere usar `GameWebSocketMessage` (discriminated union) en lugar de esta interfaz directa.
+ */
+export interface WebSocketMessage<T = any> {
   type: string
-  data?: any
+  data?: T
   timestamp?: string
 }
 
@@ -90,9 +94,77 @@ export type WebSocketMessageType =
 /**
  * Interfaz extendida para mensajes tipados del juego
  */
-export interface GameWebSocketMessage extends WebSocketMessage {
-  type: WebSocketMessageType
+/**
+ * Map de payloads por tipo de mensaje. Añadir o ajustar interfaces aquí según
+ * lo que envía el backend (sincronizar con openapi.json / backend).
+ */
+export interface WebSocketMessageMap {
+  // Conexión y estado de usuario
+  player_connected: { playerId: string; username: string }
+  player_disconnected: { playerId: string }
+  player_left_game: { playerId: string }
+  user_status_changed: { user_id: string; new_status: string }
+  update_user_status: { status: string }
+  user_status_update: { user_id: string; status: string }
+  user_connection_status: { isConnected: boolean; isInGame?: boolean }
+
+  // Comandos de juego (generalmente sin payload)
+  join_game: undefined
+  start_game: undefined
+  restart_game: undefined
+  get_game_status: undefined
+  force_next_phase: undefined
+
+  // Fases del juego
+  phase_changed: { previous: string; current: string }
+  phase_timer: { remainingSeconds: number }
+
+  // Votaciones
+  cast_vote: { voterId: string; targetId: string }
+  get_voting_status: undefined
+  vote_cast: { voterId: string; targetId: string }
+  voting_started: { options?: any }
+  voting_ended: { results?: any }
+  voting_results: { results: any }
+
+  // Acciones de roles
+  role_action: { actorId: string; targetId?: string; payload?: any }
+  night_action: { actorId: string; action: string }
+
+  // Eventos del juego
+  player_eliminated: { playerId: string; reason?: string }
+  player_role_revealed: { playerId: string; role: string }
+  game_started: { startedAt?: string }
+  game_ended: { winner?: string }
+
+  // Sistema
+  heartbeat: { response?: string } | undefined
+  error: { error_code?: string; message?: string }
+  success: { action?: string; message?: string }
+  system_message: { message: string; players?: any[] }
+
+  // Estado de conexión y jugadores
+  game_connection_state: {
+    isUserConnected: boolean
+    isUserInGame: boolean
+    connectedPlayersCount: number
+    totalPlayersCount: number
+    playersStatus: any[]
+    lastUpdate: string | Date
+  }
+  players_status_update: any[]
 }
+
+/**
+ * Discriminated union para mensajes del juego: garantiza `type` y el tipo de `data`.
+ */
+export type GameWebSocketMessage = {
+  [K in keyof WebSocketMessageMap]: {
+    type: K
+    data: WebSocketMessageMap[K]
+    timestamp?: string
+  }
+}[keyof WebSocketMessageMap]
 
 /**
  * Configuración para managers de WebSocket
@@ -111,6 +183,8 @@ export interface WebSocketConfig {
 export type MessageHandler<T = any> = (data: T) => void
 
 /**
- * Mapa de handlers por tipo de mensaje
+ * Mapa de handlers por tipo de mensaje tipado.
+ * Usamos Map<WebSocketMessageType, MessageHandler<any>[]> por compatibilidad con
+ * implementaciones existentes; los métodos de subscribe pueden refinar el tipo.
  */
-export type MessageHandlersMap = Map<string, MessageHandler[]>
+export type MessageHandlersMap = Map<WebSocketMessageType, MessageHandler<any>[]>

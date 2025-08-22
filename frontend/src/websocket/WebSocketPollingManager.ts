@@ -2,6 +2,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { gameService } from '../services/gameService'
 import type {
   WebSocketMessage,
+  WebSocketMessageType,
   ConnectionStatus,
   MessageHandler,
   MessageHandlersMap
@@ -82,14 +83,15 @@ export class WebSocketPollingManager {
   }
 
   subscribe(messageType: string, handler: MessageHandler): () => void {
-    if (!this.messageHandlers.has(messageType)) {
-      this.messageHandlers.set(messageType, [])
+    const key = messageType as WebSocketMessageType
+    if (!this.messageHandlers.has(key)) {
+      this.messageHandlers.set(key, [])
     }
 
-    this.messageHandlers.get(messageType)!.push(handler)
+    this.messageHandlers.get(key)!.push(handler)
 
     return () => {
-      const handlers = this.messageHandlers.get(messageType)
+      const handlers = this.messageHandlers.get(key)
       if (handlers) {
         const index = handlers.indexOf(handler)
         if (index > -1) {
@@ -183,7 +185,7 @@ export class WebSocketPollingManager {
   }
 
   private handleMessage(message: WebSocketMessage): void {
-    const handlers = this.messageHandlers.get(message.type)
+  const handlers = this.messageHandlers.get((message as any).type as WebSocketMessageType)
     if (handlers) {
       handlers.forEach(handler => {
         try {
