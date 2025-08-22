@@ -134,8 +134,8 @@ export class WebSocketManager {
     }
   }
 
-  subscribe(messageType: string, handler: MessageHandler): () => void {
-    // Intentamos usar WebSocketMessageType si es posible
+  // Subscribe genérico para recibir payload tipado según WebSocketMessageMap
+  subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler): () => void {
     const key = messageType as WebSocketMessageType
     if (!this.messageHandlers.has(key)) {
       this.messageHandlers.set(key, [])

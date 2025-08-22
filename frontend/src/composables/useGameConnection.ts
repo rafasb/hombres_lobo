@@ -81,12 +81,12 @@ export function useGameConnection(gameId: string) {
   wsManager.send({ type: 'join_game' })
 
       // Suscribirse a mensajes de estado del juego - adaptador para el backend
-      const unsubGameState = wsManager.subscribe('system_message', (message: any) => {
+      const unsubGameState = wsManager.subscribe('system_message', (message: { message: string; players?: any[]; params?: Record<string, any>; message_key?: string | null } | undefined) => {
         console.log('System message received:', message)
         // Usar message.data.players según la documentación del backend
-        const playersList = message?.data?.players || message?.players
+        const playersList = (message as any)?.data?.players || (message as any)?.players
         if (playersList) {
-          const connectedPlayers = message?.data?.connected_players || message?.connected_players
+          const connectedPlayers = (message as any)?.data?.connected_players || (message as any)?.connected_players
           const playersStatus: PlayerStatus[] = playersList.map((player: any) => {
             // Determinar el status real del jugador
             let status: PlayerStatus['status'] = 'disconnected';
@@ -116,14 +116,14 @@ export function useGameConnection(gameId: string) {
       })
 
       // Suscribirse a cambios de estado de usuario según la referencia WebSocket
-      const unsubUserStatusChanged = wsManager.subscribe('user_status_changed', (data: any) => {
+      const unsubUserStatusChanged = wsManager.subscribe('user_status_changed', (data: { user_id: string; old_status?: string; new_status: string; message?: string }) => {
         console.log('User status changed:', data)
         const currentPlayers = [...gameConnectionState.value.playersStatus]
         const existingPlayer = currentPlayers.find(p => p.playerId === data.user_id)
         if (existingPlayer) {
           // Actualizar status y isConnected
           if (['active','banned','connected','disconnected','in_game'].includes(data.new_status)) {
-            existingPlayer.status = data.new_status
+            existingPlayer.status = data.new_status as PlayerStatus['status']
           } else {
             existingPlayer.status = 'disconnected'
           }
@@ -138,26 +138,26 @@ export function useGameConnection(gameId: string) {
       })
 
       // Suscribirse a respuestas exitosas de cambio de estado
-      const unsubSuccess = wsManager.subscribe('success', (data: any) => {
-        if (data.action === 'update_user_status') {
+      const unsubSuccess = wsManager.subscribe('success', (data: { action: string; message: string; data?: Record<string, any> } | undefined) => {
+        if (data?.action === 'update_user_status') {
           console.log('Status update success:', data)
           // El estado ya se actualiza con user_status_changed, pero podemos loguear
         }
       })
 
       // Suscribirse a errores de cambio de estado
-      const unsubError = wsManager.subscribe('error', (data: any) => {
+      const unsubError = wsManager.subscribe('error', (data: { error_code?: string; message?: string; details?: Record<string, any> } | undefined) => {
         console.error('WebSocket error:', data)
-        if (data && data.error_code === 'INSUFFICIENT_PERMISSIONS') {
+        if (data?.error_code === 'INSUFFICIENT_PERMISSIONS') {
           console.error('Permission error:', data.message)
         }
       })
 
       // Suscribirse a heartbeat del backend
-      const unsubHeartbeat = wsManager.subscribe('heartbeat', (data: any) => {
+      const unsubHeartbeat = wsManager.subscribe('heartbeat', (data: { response?: string } | undefined) => {
         // El backend envía heartbeat, no necesitamos responder pong específicamente
         // ya que el backend espera heartbeat de vuelta
-        if (data.response === 'pong') {
+        if (data?.response === 'pong') {
           // Este es un pong del servidor, no necesitamos hacer nada
         } else {
           // Este es un ping del servidor, responder con heartbeat
