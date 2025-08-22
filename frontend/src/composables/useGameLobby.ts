@@ -2,8 +2,8 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { gameService } from '../services/gameService'
-import type { Game } from '../types'
-import { adminFetchUsers, updateUserStatus } from '../services/userService'
+import type { Game, User } from '../types'
+import { fetchUsers, updateUserStatus } from '../services/userService'
 
 export function useGameLobby(gameId: string) {
   const router = useRouter()
@@ -13,8 +13,8 @@ export function useGameLobby(gameId: string) {
   const game = ref<Game | null>(null)
   const loading = ref(false)
   const notification = ref<{ message: string, type: 'success' | 'error' } | null>(null)
-  const creatorUser = ref<any | null>(null)
-  const playerUsers = ref<any[]>([])
+  const creatorUser = ref<User | null>(null)
+  const playerUsers = ref<User[]>([])
 
   // Computed properties
   const isCreator = computed(() => {
@@ -78,15 +78,15 @@ export function useGameLobby(gameId: string) {
       game.value = await gameService.getGameById(gameId)
       // Obtener datos de usuarios (creador y jugadores)
       if (game.value) {
-        const { users, error } = await adminFetchUsers()
+        const { users, error } = await fetchUsers(game.value.id || gameId)
         if (error) {
           creatorUser.value = null
           playerUsers.value = []
         } else {
-          creatorUser.value = users?.find((u: any) => u.id === game.value!.creator_id) || null
-          playerUsers.value = (game.value.players as any[]).map(
-            (player: any) => users?.find((u: any) => u.id === (typeof player === 'string' ? player : player.id))
-          ).filter(Boolean)
+          creatorUser.value = users?.find((u) => u.id === game.value!.creator_id) || null
+          playerUsers.value = (game.value.players as any[]).map((player: any) => {
+            return users?.find((u) => u.id === (typeof player === 'string' ? player : player.id))
+          }).filter(Boolean) as User[]
         }
       } else {
         creatorUser.value = null
