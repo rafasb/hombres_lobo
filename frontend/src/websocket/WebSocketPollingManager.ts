@@ -2,6 +2,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { gameService } from '../services/gameService'
 import type {
   WebSocketMessage,
+  WebSocketMessageMap,
   WebSocketMessageType,
   ConnectionStatus,
   MessageHandler,
@@ -83,7 +84,7 @@ export class WebSocketPollingManager {
   }
 
   // Subscribe genérico para recibir payload tipado según WebSocketMessageMap
-  subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler): () => void {
+  subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler<WebSocketMessageMap[K]>): () => void {
     const key = messageType as WebSocketMessageType
     if (!this.messageHandlers.has(key)) {
       this.messageHandlers.set(key, [])
