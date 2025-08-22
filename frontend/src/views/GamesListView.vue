@@ -1,12 +1,9 @@
 <template>
   <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <!-- Navegación común -->
-    <NavigationBar 
-      :show-admin="auth.isAdmin"
-      @navigate="handleNavigation"
-    />
+  <!-- Navegación común -->
+  <PageWithNav :show-admin="auth.isAdmin" @navigate="handleNavigation">
 
-    <div class="mobile-container">
+  <div class="mobile-container">
       <div class="container-fluid">
         <div class="row justify-content-center">
           <div class="col-12">
@@ -186,13 +183,14 @@
            style="border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);">
         {{ notification.message }}
       </div>
-    </div>
+  </div>
+  </PageWithNav>
   </div>
 </template>
 
 <script setup lang="ts">
 import CreateGameModal from '../components/CreateGameModal.vue'
-import NavigationBar from '../components/NavigationBar.vue'
+import PageWithNav from '../components/PageWithNav.vue'
 
 // Props para recibir los datos y métodos del composable
 interface Props {

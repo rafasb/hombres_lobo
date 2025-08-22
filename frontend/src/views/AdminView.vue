@@ -1,11 +1,7 @@
 <template>
   <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <!-- Navegación común -->
-    <NavigationBar 
-      :show-admin="true"
-      @navigate="handleNavigation"
-    />
-    <div class="container-lg py-4">
+    <PageWithNav :show-admin="true" @navigate="handleNavigation">
+      <div class="container-lg py-4">
       <div class="row">
         <div class="col-12">
           <!-- Header -->
@@ -88,13 +84,15 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </PageWithNav>
   </div>
+
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import NavigationBar from '../components/NavigationBar.vue'
+import PageWithNav from '../components/PageWithNav.vue'
 import AdminUserError from '../components/AdminUserError.vue'
 import AdminUserCards from '../components/AdminUserCards.vue'
 import AdminUserTable from '../components/AdminUserTable.vue'
@@ -145,4 +143,5 @@ onMounted(async () => {
     localError.value = 'No tienes permisos de administrador para ver esta página'
   }
 })
+
 </script>

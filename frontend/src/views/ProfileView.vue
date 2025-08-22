@@ -1,12 +1,9 @@
 <template>
   <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <!-- Navegación común -->
-    <NavigationBar 
-      :show-admin="isAdmin"
-      @navigate="handleNavigation"
-    />
-    
-    <div class="mobile-container">
+  <!-- Navegación común -->
+  <PageWithNav :show-admin="isAdmin" @navigate="handleNavigation">
+
+  <div class="mobile-container">
       <div class="container-fluid">
         <div class="row justify-content-center">
           <div class="col-12 col-sm-8 col-md-6">
@@ -79,11 +76,12 @@
         </div>
       </div>
     </div>
+    </PageWithNav>
   </div>
 </template>
 
 <script setup lang="ts">
-import NavigationBar from '../components/NavigationBar.vue'
+import PageWithNav from '../components/PageWithNav.vue'
 import { useProfile } from '../composables/useProfile'
 import { useNavigation } from '../composables/useNavigation'
 

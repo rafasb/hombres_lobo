@@ -1,12 +1,9 @@
 <template>
   <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <!-- Navegación común -->
-    <NavigationBar 
-      :show-admin="auth?.isAdmin"
-      @navigate="handleNavigation"
-    />
+  <!-- Navegación común -->
+  <PageWithNav :show-admin="auth?.isAdmin" @navigate="handleNavigation">
 
-    <div class="mobile-container">
+  <div class="mobile-container">
       <div class="container-fluid">
         <div class="row justify-content-center">
           <div class="col-12">
@@ -298,6 +295,7 @@
         </div>
       </div>
     </div>
+    </PageWithNav>
   </div>
 </template>
 
@@ -308,7 +306,7 @@ import { useGameLobby } from '../composables/useGameLobby'
 import { useGameConnection } from '../composables/useGameConnection'
 import { useNavigation } from '../composables/useNavigation'
 import { useAuthStore } from '../stores/authStore'
-import NavigationBar from '../components/NavigationBar.vue'
+import PageWithNav from '../components/PageWithNav.vue'
 import ConnectionStatus from '../components/ConnectionStatus.vue'
 
 const route = useRoute()
