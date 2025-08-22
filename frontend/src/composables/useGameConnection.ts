@@ -83,9 +83,13 @@ export function useGameConnection(gameId: string) {
       // Suscribirse a mensajes de estado del juego - adaptador para el backend
       const unsubGameState = wsManager.subscribe('system_message', (message) => {
         console.log('System message received:', message)
-        // Extraer players de data o raíz, con guards
-        const payload = (message as unknown) as { data?: Record<string, unknown>; players?: unknown }
-        const playersListRaw = payload.data?.players ?? payload.players
+        // El WebSocketManager pasa message.data a los handlers. Defendemos contra payload undefined.
+        const payload = (message ?? {}) as { data?: Record<string, unknown>; players?: unknown }
+        const playersListRaw = payload?.data?.players ?? payload?.players
+        // Si no hay payload útil, ignorar
+        if (!playersListRaw || !Array.isArray(playersListRaw)) {
+          return
+        }
         if (Array.isArray(playersListRaw)) {
           const connectedPlayersRaw = (payload.data && payload.data['connected_players']) ?? undefined
           const connectedPlayers = Array.isArray(connectedPlayersRaw) ? connectedPlayersRaw : undefined
@@ -120,13 +124,18 @@ export function useGameConnection(gameId: string) {
 
       // Suscribirse a cambios de estado de usuario según la referencia WebSocket
       const unsubUserStatusChanged = wsManager.subscribe('user_status_changed', (data) => {
-        const payload = data as { user_id: string; old_status?: string; new_status: string; message?: string }
+        // Defendemos contra data undefined
+        const payload = (data ?? {}) as { user_id?: string; old_status?: string; new_status?: string; message?: string }
         console.log('User status changed:', data)
+        if (!payload.user_id) {
+          // No hay información válida, ignorar
+          return
+        }
         const currentPlayers = [...gameConnectionState.value.playersStatus]
-        const existingPlayer = currentPlayers.find(p => p.playerId === data.user_id)
+        const existingPlayer = currentPlayers.find(p => p.playerId === payload.user_id)
         if (existingPlayer) {
           // Actualizar status y isConnected
-          if (['active','banned','connected','disconnected','in_game'].includes(payload.new_status)) {
+          if (['active','banned','connected','disconnected','in_game'].includes(payload.new_status || '')) {
             existingPlayer.status = payload.new_status as PlayerStatus['status']
           } else {
             existingPlayer.status = 'disconnected'

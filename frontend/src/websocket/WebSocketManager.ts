@@ -165,7 +165,13 @@ export class WebSocketManager {
     if (handlers) {
       handlers.forEach(handler => {
         try {
-          handler(message.data)
+          // Pasar message.data cuando esté presente para compatibilidad con handlers
+          // que esperan únicamente el payload; si no existe, pasar el mensaje completo.
+          const payload = (message as any).data !== undefined ? (message as any).data : message
+          if (payload === undefined) {
+            console.warn(`[WebSocketManager] Handler for ${message.type} will receive undefined payload`) 
+          }
+          handler(payload)
         } catch (error) {
           console.error(`Error in message handler for ${message.type}:`, error)
         }
