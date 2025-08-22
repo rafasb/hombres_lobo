@@ -1,4 +1,4 @@
-import axios from 'axios'
+import api from './api'
 import { useAuthStore } from '../stores/authStore'
 
 export async function login(username: string, password: string): Promise<{ access_token?: string; token_type?: string; error?: string }> {
@@ -7,7 +7,7 @@ export async function login(username: string, password: string): Promise<{ acces
     params.append('username', username);
     params.append('password', password);
 
-    const response = await axios.post('/login', params, {
+    const response = await api.post('/login', params, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
@@ -27,12 +27,11 @@ export async function login(username: string, password: string): Promise<{ acces
       })
       // Informar a la API que el usuario está conectado
       try {
-        await axios.put(
-          `/users/${profile.user.id}/status`,
-          { status: 'connected' },
-          { headers: { Authorization: `Bearer ${access_token}` } }
-        )
-      } catch (e) {
+          await api.put(
+            `/users/${profile.user.id}/status`,
+            { status: 'connected' }
+          )
+        } catch (e) {
         // No bloquear el login si falla, pero loguear el error
         console.error('No se pudo actualizar el estado del usuario a connected', e)
       }
@@ -44,11 +43,8 @@ export async function login(username: string, password: string): Promise<{ acces
 }
 
 export async function getProfile(): Promise<{ user?: { id: string; username: string; role: string }; error?: string }> {
-  const auth = useAuthStore()
   try {
-    const response = await axios.get('/users/me', {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
+    const response = await api.get('/users/me')
     
     // La nueva API devuelve una estructura con success, message y user
     const { user } = response.data

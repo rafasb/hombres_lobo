@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { getProfile } from '../services/authService'
+import api from '../services/api'
 import type { AuthUser } from '../types'
 
 // Event bus simple para comunicar logout
@@ -35,21 +36,15 @@ export const useAuthStore = defineStore('auth', {
     setUser(user: AuthUser) {
       this.user = user
     },
-    async logout() {
+  async logout() {
       // Emitir evento antes de limpiar los datos
       logoutEventBus.emit()
 
       // Informar a la API que el usuario está desconectado
       if (this.user && this.token) {
         try {
-          await fetch(`/users/${this.user.id}/status`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.token}`
-            },
-            body: JSON.stringify({ status: 'disconnected' })
-          })
+          // use centralized api client so Authorization header is handled in one place
+          await api.put(`/users/${this.user.id}/status`, { status: 'disconnected' })
         } catch (e) {
           // No bloquear el logout si falla
           console.error('No se pudo actualizar el estado del usuario a disconnected', e)
