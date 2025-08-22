@@ -36,6 +36,7 @@ export type {
   PlayerStatus,
   PlayerConnectionStatus,
   WebSocketMessageMap,
+  PlayerDTO,
   WebSocketMessageType,
   GameWebSocketMessage,
   WebSocketConfig,

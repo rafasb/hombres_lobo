@@ -10,10 +10,18 @@
  * Interfaz base para mensajes de WebSocket (genérica)
  * Se sugiere usar `GameWebSocketMessage` (discriminated union) en lugar de esta interfaz directa.
  */
-export interface WebSocketMessage<T = any> {
+export interface WebSocketMessage<T = unknown> {
   type: string
   data?: T
   timestamp?: string
+}
+
+/** DTO para representar jugadores en mensajes del backend. */
+export interface PlayerDTO {
+  id: string
+  username?: string
+  name?: string
+  status?: string
 }
 
 /**
@@ -123,9 +131,9 @@ export interface WebSocketMessageMap {
   cast_vote: { voter_id: string; target_id: string }
   get_voting_status: undefined
   vote_cast: { voter_id: string; target_id: string }
-  voting_started: { options?: any }
-  voting_ended: { results?: any }
-  voting_results: { results: any }
+  voting_started: { options?: Record<string, unknown> }
+  voting_ended: { results?: Record<string, unknown> }
+  voting_results: { results: Record<string, number> }
 
   // Acciones de roles
   role_action: { actor_id: string; action: string; target_id?: string }
@@ -139,9 +147,9 @@ export interface WebSocketMessageMap {
 
   // Sistema
   heartbeat: { response?: string } | undefined
-  error: { error_code: string; message: string; details?: Record<string, any> }
-  success: { action: string; message: string; data?: Record<string, any> }
-  system_message: { message: string; message_key?: string | null; params?: Record<string, any>; players?: any[] }
+  error: { error_code: string; message: string; details?: Record<string, unknown> }
+  success: { action: string; message: string; data?: Record<string, unknown> }
+  system_message: { message: string; message_key?: string | null; params?: Record<string, unknown>; players?: PlayerDTO[] }
 
   // Estado de conexión y jugadores
   game_connection_state: {
@@ -149,10 +157,10 @@ export interface WebSocketMessageMap {
     isUserInGame: boolean
     connectedPlayersCount: number
     totalPlayersCount: number
-    playersStatus: any[]
+    playersStatus: PlayerDTO[]
     lastUpdate: string | Date
   }
-  players_status_update: any[]
+  players_status_update: PlayerDTO[]
 }
 
 /**
@@ -180,7 +188,7 @@ export interface WebSocketConfig {
 /**
  * Interfaz para handlers de mensajes
  */
-export type MessageHandler<T = any> = (data: T) => void
+export type MessageHandler<T = unknown> = (data: T) => void
 
 /**
  * Mapa de handlers por tipo de mensaje tipado.
