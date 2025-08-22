@@ -1,7 +1,7 @@
 <template>
   <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
   <!-- Navegación común -->
-  <PageWithNav :show-admin="auth.isAdmin" @navigate="handleNavigation">
+  <PageWithNav :show-admin="showAdmin" @navigate="handleNavigation">
 
   <div class="mobile-container">
       <div class="container-fluid">
@@ -27,94 +27,21 @@
 
             <!-- Lista de partidas -->
             <div class="row g-4" v-if="hasGames">
-              <div 
-                class="col-12 col-md-6 col-lg-4" 
-                v-for="game in games" 
-                :key="game.id"
-              >
-                <div class="card h-100 game-card-hover" 
-                     style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: none; border-radius: 15px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease;"
-                     :class="getBootstrapCardClass(game.status)">
-                  
-                  <div class="card-header d-flex justify-content-between align-items-center border-0 pb-2" 
-                       style="background: transparent;">
-                    <h5 class="card-title mb-0 fw-bold text-dark text-truncate" style="max-width: 200px;">
-                      {{ game.name }}
-                    </h5>
-                    <span class="badge fs-6" :class="getStatusBadgeClass(game.status)">
-                      {{ getStatusText(game.status) }}
-                    </span>
-                  </div>
-                  
-                  <div class="card-body pt-2">
-                    <div class="mb-3">
-                      <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Jugadores:</span>
-                        <span class="fw-semibold">{{ game.players.length }}/{{ game.max_players }}</span>
-                      </div>
-                      
-                      <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Creador:</span>
-                        <span class="fw-semibold text-truncate" style="max-width: 120px;">{{ getCreatorName(game) }}</span>
-                      </div>
-                      
-                      <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Creada:</span>
-                        <span class="fw-semibold">{{ formatDate(game.created_at) }}</span>
-                      </div>
-                      
-                      <div class="d-flex justify-content-between mb-2" v-if="game.status !== 'waiting'">
-                        <span class="text-muted">Ronda:</span>
-                        <span class="fw-semibold">{{ game.current_round }}</span>
-                      </div>
-                    </div>
-                    
-                    <div class="d-flex flex-wrap gap-2">
-                      <button 
-                        v-if="canJoinGame(game)" 
-                        class="btn btn-success flex-fill"
-                        @click="joinGame(game.id)"
-                        :disabled="loading"
-                        style="border-radius: 10px;"
-                      >
-                        <i class="bi bi-box-arrow-in-right me-1"></i>
-                        Unirse
-                      </button>
-                      
-                      <button 
-                        v-if="canLeaveGame(game)" 
-                        class="btn btn-warning flex-fill"
-                        @click="leaveGame(game.id)"
-                        :disabled="loading"
-                        style="border-radius: 10px;"
-                      >
-                        <i class="bi bi-box-arrow-left me-1"></i>
-                        Abandonar
-                      </button>
-                      
-                      <button 
-                        v-if="canViewGame(game)" 
-                        class="btn btn-info flex-fill"
-                        @click="viewGame(game.id)"
-                        style="border-radius: 10px;"
-                      >
-                        <i class="bi bi-eye me-1"></i>
-                        Ver
-                      </button>
-                      
-                      <button 
-                        v-if="canDeleteGame(game)" 
-                        class="btn btn-danger flex-fill"
-                        @click="deleteGame(game.id)"
-                        :disabled="loading"
-                        style="border-radius: 10px;"
-                      >
-                        <i class="bi bi-trash me-1"></i>
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <div class="col-12 col-md-6 col-lg-4" v-for="game in games" :key="game.id">
+                <GameCard
+                  :game="game"
+                  :loading="loading"
+                  :canJoinGame="canJoinGame"
+                  :canLeaveGame="canLeaveGame"
+                  :canViewGame="canViewGame"
+                  :canDeleteGame="canDeleteGame"
+                  :getCreatorName="getCreatorName"
+                  :formatDate="formatDate"
+                  @join="joinGame"
+                  @leave="leaveGame"
+                  @view="viewGame"
+                  @delete="deleteGame"
+                />
               </div>
             </div>
             
@@ -191,24 +118,26 @@
 <script setup lang="ts">
 import CreateGameModal from '../components/CreateGameModal.vue'
 import PageWithNav from '../components/PageWithNav.vue'
+import GameCard from '../components/GameCard.vue'
+import type { Game, AuthUser } from '../types'
+import { computed, toRefs } from 'vue'
 
 // Props para recibir los datos y métodos del composable
 interface Props {
-  games: any[]
+  games: Game[]
   loading: boolean
   showCreateModal: boolean
   notification: any
   newGame: any
   playerOptions: number[]
   hasGames: boolean
-  auth: any
-  canJoinGame: (game: any) => boolean
-  canLeaveGame: (game: any) => boolean
-  canViewGame: (game: any) => boolean
-  canDeleteGame: (game: any) => boolean
-  getCreatorName: (game: any) => string
-  getStatusText: (status: string) => string
-  getGameCardClass: (status: string) => string
+  // Puede ser AuthUser o el store de auth (Pinia); permitimos también cualquier forma para compatibilidad
+  auth: AuthUser | any
+  canJoinGame: (game: Game) => boolean
+  canLeaveGame: (game: Game) => boolean
+  canViewGame: (game: Game) => boolean
+  canDeleteGame: (game: Game) => boolean
+  getCreatorName: (game: Game) => string
   formatDate: (dateString: string) => string
 }
 
@@ -224,8 +153,31 @@ interface Emits {
   (e: 'updateNewGame', value: any): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// Keep prop reactivity: use toRefs so children react to parent ref changes
+const {
+  auth,
+  games,
+  loading,
+  showCreateModal,
+  notification,
+  newGame,
+  playerOptions,
+  hasGames,
+  getCreatorName,
+  formatDate,
+  canJoinGame,
+  canLeaveGame,
+  canViewGame,
+  canDeleteGame
+} = toRefs(props as any)
+
+const showAdmin = computed(() => {
+  const a: any = auth?.value ?? auth
+  return a?.role === 'admin' || a?.isAdmin === true || a?.user?.role === 'admin'
+})
 
 // Métodos que emiten eventos al padre
 const createGame = () => emit('createGame')
@@ -238,41 +190,7 @@ const openCreateModal = () => emit('openCreateModal')
 const handleNavigation = (view: string) => emit('navigate', view)
 const updateNewGame = (value: any) => emit('updateNewGame', value)
 
-// Funciones auxiliares para Bootstrap
-const getBootstrapCardClass = (status: string) => {
-  const baseClasses = 'border-start border-4'
-  switch (status) {
-    case 'waiting':
-      return `${baseClasses} border-success`
-    case 'started':
-    case 'night':
-    case 'day':
-      return `${baseClasses} border-primary`
-    case 'paused':
-      return `${baseClasses} border-warning`
-    case 'finished':
-      return `${baseClasses} border-secondary opacity-75`
-    default:
-      return baseClasses
-  }
-}
-
-const getStatusBadgeClass = (status: string) => {
-  switch (status) {
-    case 'waiting':
-      return 'bg-success'
-    case 'started':
-    case 'night':
-    case 'day':
-      return 'bg-primary'
-    case 'paused':
-      return 'bg-warning'
-    case 'finished':
-      return 'bg-secondary'
-    default:
-      return 'bg-secondary'
-  }
-}
+// Helpers imported from composable: getBootstrapCardClass, getStatusBadgeClass, getStatusText
 </script>
 
 <style scoped>
