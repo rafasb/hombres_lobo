@@ -1,0 +1,24 @@
+@startuml Component Diagram
+title Component Diagram - Frontend WebSocket Integration
+
+package "Frontend (Vue 3)" {
+  component "WebSocketManager\n(src/websocket/WebSocketManager.ts)" as WSManager
+  component "BaseWebSocketManager\n(src/websocket/BaseWebSocketManager.ts)" as BaseWS
+  component "Pinia Store(s)\n(src/stores/*.ts)" as Stores
+  component "Composables\n(src/composables/*.ts)" as Composables
+  component "Views / Components\n(src/views/*.vue / src/components/*.vue)" as Views
+  component "Services (API)\n(src/services/*.ts)" as Services
+}
+
+component "Backend WebSocket Server\n(API / FastAPI WS)" as Backend
+
+WSManager -down-> BaseWS : extends / uses
+WSManager --> Stores : publica eventos / actualiza estado
+Views --> Composables : usa lógica
+Composables --> WSManager : solicita enviar mensajes / suscribirse
+Stores --> Views : provee estado reactivo
+Views --> Services : llamadas HTTP (creación/entrada de partidas)
+Views --> WSManager : acciones en tiempo real (join, vote, chat)
+WSManager --> Backend : conexión WebSocket (ws://... / wss://...)
+Backend --> WSManager : eventos en tiempo real (broadcast)
+@enduml

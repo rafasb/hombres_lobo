@@ -1,57 +1,73 @@
-import { ref, computed, onUnmounted } from 'vue'
+import { computed, onUnmounted } from 'vue'
 import { gameService } from '../services/gameService'
+import { useWebSocket } from './WebSocketManager'
+import { BaseWebSocketManager } from './BaseWebSocketManager'
 import type {
   WebSocketMessage,
-  WebSocketMessageMap,
   WebSocketMessageType,
-  ConnectionStatus,
-  MessageHandler,
-  MessageHandlersMap
+  MessageHandler
 } from '../types'
 
-export class WebSocketPollingManager {
+export class WebSocketPollingManager extends BaseWebSocketManager {
   private pollingTimer: number | null = null
-  private heartbeatTimer: number | null = null
-  private messageHandlers: MessageHandlersMap = new Map()
   private gameId: string
+  private token?: string
   private isActive = false
-  
-  public status = ref<ConnectionStatus>({
-    isConnected: false,
-    isReconnecting: false,
-    lastConnected: null,
-    reconnectAttempts: 0,
-    error: null
-  })
+  private simulate = false
 
-  public readonly maxReconnectAttempts = 5
+  // Real WebSocketManager instance (when not simulating)
+  private realManager: any | null = null
+
   public readonly pollingInterval = 3000 // 3 segundos
-  public readonly heartbeatInterval = 30000
 
-  constructor(gameId: string) {
+  // constructor allows enabling simulation or passing token
+  constructor(gameId: string, options?: { simulate?: boolean; token?: string }) {
+    super()
     this.gameId = gameId
+    this.simulate = !!options?.simulate
+    this.token = options?.token
   }
 
   connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        console.log('Starting WebSocket simulation via polling for game:', this.gameId)
-        
-        this.isActive = true
-        this.status.value = {
-          isConnected: true,
-          isReconnecting: false,
-          lastConnected: new Date(),
-          reconnectAttempts: 0,
-          error: null
+    if (this.simulate) {
+      return new Promise((resolve, reject) => {
+        try {
+          console.log('Starting WebSocket simulation via polling for game:', this.gameId)
+
+          this.isActive = true
+          this.status.value = {
+            isConnected: true,
+            isReconnecting: false,
+            lastConnected: new Date(),
+            reconnectAttempts: 0,
+            error: null
+          }
+
+          this.startPolling()
+          this.startHeartbeat()
+          resolve()
+
+        } catch (error) {
+          console.error('Error starting polling connection:', error)
+          this.status.value.error = 'No se pudo establecer la conexión'
+          reject(error)
         }
-        
-        this.startPolling()
-        this.startHeartbeat()
+      })
+    }
+
+    return new Promise(async (resolve, reject) => {
+      try {
+        const ws = useWebSocket(this.gameId)
+        this.realManager = ws.createConnection(this.token)
+
+        // Mirror status ref to the real manager's status so UI reactivity is preserved
+        this.status = this.realManager.status
+
+        await this.realManager.connect()
+
         resolve()
-        
       } catch (error) {
-        console.error('Error starting polling connection:', error)
+        console.error('Error creating real WebSocket connection:', error)
         this.status.value.error = 'No se pudo establecer la conexión'
         reject(error)
       }
@@ -59,10 +75,27 @@ export class WebSocketPollingManager {
   }
 
   disconnect(): void {
-    console.log('Disconnecting WebSocket polling')
-    
+    console.log('Disconnecting WebSocket polling/manager')
+
     this.isActive = false
-    
+
+    if (this.realManager) {
+      try {
+        this.realManager.disconnect()
+      } catch (e) {
+        console.warn('Error while disconnecting real manager', e)
+      }
+      this.realManager = null
+      this.status.value = {
+        isConnected: false,
+        isReconnecting: false,
+        lastConnected: null,
+        reconnectAttempts: 0,
+        error: null
+      }
+      return
+    }
+
     if (this.pollingTimer) {
       clearInterval(this.pollingTimer)
       this.pollingTimer = null
@@ -73,34 +106,24 @@ export class WebSocketPollingManager {
   }
 
   send(message: WebSocketMessage): boolean {
+    if (this.realManager) {
+      return this.realManager.send(message)
+    }
+
     console.log('WebSocket message (simulated):', message)
-    
-    // Simular el envío del mensaje procesándolo localmente
+
     setTimeout(() => {
       this.simulateMessage(message)
     }, 100)
-    
+
     return true
   }
 
-  // Subscribe genérico para recibir payload tipado según WebSocketMessageMap
-  subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler<WebSocketMessageMap[K]>): () => void {
-    const key = messageType as WebSocketMessageType
-    if (!this.messageHandlers.has(key)) {
-      this.messageHandlers.set(key, [])
+  subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler<any>): () => void {
+    if (this.realManager) {
+      return this.realManager.subscribe(messageType as any, handler as any)
     }
-
-    this.messageHandlers.get(key)!.push(handler)
-
-    return () => {
-      const handlers = this.messageHandlers.get(key)
-      if (handlers) {
-        const index = handlers.indexOf(handler)
-        if (index > -1) {
-          handlers.splice(index, 1)
-        }
-      }
-    }
+    return super.subscribe(messageType, handler)
   }
 
   private startPolling(): void {
@@ -108,19 +131,16 @@ export class WebSocketPollingManager {
       if (!this.isActive) return
       
       try {
-        // Obtener información actualizada del juego
         const gameData = await gameService.getGameById(this.gameId)
         
-        // Simular estado de conexión de los jugadores
         const playersStatus = gameData.players.map((player: any) => ({
           playerId: player.id,
           username: player.username,
-          isConnected: Math.random() > 0.3, // Simular 70% de conexión
+          isConnected: Math.random() > 0.3,
           lastSeen: new Date()
         }))
 
-        // Emitir actualización de estado del juego
-        this.handleMessage({
+        this.dispatchMessage({
           type: 'game_connection_state',
           data: {
             isUserConnected: true,
@@ -132,8 +152,7 @@ export class WebSocketPollingManager {
           }
         })
 
-        // Emitir actualización de jugadores
-        this.handleMessage({
+        this.dispatchMessage({
           type: 'players_status_update',
           data: playersStatus
         })
@@ -146,12 +165,10 @@ export class WebSocketPollingManager {
   }
 
   private simulateMessage(message: WebSocketMessage): void {
-    // Simular respuestas del servidor basadas en el tipo de mensaje
     switch (message.type) {
       case 'get_game_status':
-        // Simular respuesta de estado del juego
         setTimeout(() => {
-          this.handleMessage({
+          this.dispatchMessage({
             type: 'game_connection_state',
             data: {
               isUserConnected: true,
@@ -167,7 +184,7 @@ export class WebSocketPollingManager {
 
       case 'join_game':
         console.log('User joined game:', message.data)
-        this.handleMessage({
+        this.dispatchMessage({
           type: 'user_connection_status',
           data: { isConnected: true, isInGame: true }
         })
@@ -176,26 +193,6 @@ export class WebSocketPollingManager {
       case 'player_left_game':
         console.log('Player left game:', message.data)
         break
-
-      case 'heartbeat':
-        // Simular respuesta de heartbeat si es necesario
-        setTimeout(() => {
-          this.handleMessage({ type: 'heartbeat' })
-        }, 50)
-        break
-    }
-  }
-
-  private handleMessage(message: WebSocketMessage): void {
-  const handlers = this.messageHandlers.get((message as any).type as WebSocketMessageType)
-    if (handlers) {
-      handlers.forEach(handler => {
-        try {
-          handler(message.data)
-        } catch (error) {
-          console.error(`Error in message handler for ${message.type}:`, error)
-        }
-      })
     }
   }
 
@@ -208,15 +205,21 @@ export class WebSocketPollingManager {
     }
   }
 
-  private startHeartbeat(): void {
+  // Override heartbeat to respect `isActive` for polling/simulation
+  protected startHeartbeat(): void {
+    this.stopHeartbeat()
     this.heartbeatTimer = setInterval(() => {
-      if (this.isActive) {
-        this.send({ type: 'heartbeat' })
+      if (this.isActive || this.realManager) {
+        try {
+          this.send({ type: 'heartbeat' })
+        } catch {
+          // ignore
+        }
       }
     }, this.heartbeatInterval)
   }
 
-  private stopHeartbeat(): void {
+  protected stopHeartbeat(): void {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
@@ -228,24 +231,24 @@ export class WebSocketPollingManager {
 let wsManager: WebSocketPollingManager | null = null
 
 export function useWebSocketPolling(gameId?: string) {
-  const createConnection = () => {
+  const createConnection = (options?: { token?: string; simulate?: boolean }) => {
     if (!gameId) {
       throw new Error('gameId is required for WebSocket connection')
     }
-    
+
     if (wsManager) {
       wsManager.disconnect()
     }
-    
-    wsManager = new WebSocketPollingManager(gameId)
+
+    wsManager = new WebSocketPollingManager(gameId, options)
     return wsManager
   }
 
   const getConnection = () => wsManager
 
   const connectionStatus = computed(() => wsManager?.status.value || {
-    isConnected: false,
-    isReconnecting: false,
+  isConnected: false,
+  isReconnecting: false,
     lastConnected: null,
     reconnectAttempts: 0,
     error: null

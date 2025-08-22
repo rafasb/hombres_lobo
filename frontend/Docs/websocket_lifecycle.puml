@@ -1,0 +1,62 @@
+@startuml WebSocket lifecycle
+title Sequence - WebSocket lifecycle and game message flow
+
+actor PlayerUI as UI
+participant "WebSocketManager" as WS
+participant "Pinia Store" as Store
+participant "Backend WS" as Server
+
+== Conexión inicial ==
+UI -> WS : initConnect(authToken)
+WS -> Server : CONNECT / { type: "auth", token }
+Server -> WS : AUTH_OK / { userId, session }
+WS -> Store : commit('setConnected', true)
+WS -> UI : emit('connected')
+
+== Unirse al lobby / recibir lista de partidas ==
+UI -> WS : send({type:"subscribe_lobby"})
+WS -> Server : {"type":"subscribe","channel":"lobby"}
+Server -> WS : {"type":"lobby:list","games":[...]}
+WS -> Store : commit('setGames', [...])
+WS -> UI : emit('games:update')
+
+== Jugador entra en partida ==
+UI -> WS : send({type:"join_game", gameId})
+WS -> Server : {"type":"join_game","gameId":...}
+Server -> WS : {"type":"player:joined","player":{...}}
+WS -> Store : commit('addPlayer', player)
+WS -> UI : emit('player:joined')
+
+== Inicio de partida ==
+Server -> WS : {"type":"game:start","payload":{...}}
+WS -> Store : commit('setGameState', started)
+WS -> UI : emit('game:start')
+
+== Noche: acciones secretas (ej. hombres lobo) ==
+Server -> WS : {"type":"phase:night","allowed":["wolf","seer","witch"]}
+alt player is wolf
+  WS -> UI : emit('role:night:wolf', {peers})
+  UI -> WS : send({type:"night_action","targetId":...})
+  WS -> Server : {"type":"night_action","action":"kill","target":id}
+end
+Server -> WS : {"type":"night:result","victim":id, "extra":...}
+WS -> Store : commit('applyNightResult', {...})
+WS -> UI : emit('night:result')
+
+== Día: debate y votación ==
+UI -> WS : send({type:"vote","targetId":...})
+WS -> Server : {"type":"vote","from":userId,"target":id}
+Server -> WS : {"type":"vote:result","lynched":id}
+WS -> Store : commit('playerEliminated', id)
+WS -> UI : emit('player:eliminated', id)
+
+== Heartbeat / reconexión ==
+WS -> Server : {"type":"ping"}
+Server -> WS : {"type":"pong"}
+alt connection lost
+  WS -> WS : attempt reconnect (exponential backoff)
+  WS -> Server : reconnect with session token
+  Server -> WS : resume state or send full sync
+end
+
+@enduml

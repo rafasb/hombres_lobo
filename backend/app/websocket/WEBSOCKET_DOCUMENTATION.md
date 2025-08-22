@@ -104,7 +104,7 @@ Se recibe cuando un jugador se desconecta:
   "type": "player_disconnected",
   "user_id": "user123",
   "timestamp": "2025-01-30T22:00:00Z",
-  "game_id": "game-123"
+  "game_id": ""
 }
 ```
 

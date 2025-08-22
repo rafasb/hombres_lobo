@@ -1,37 +1,21 @@
-import { ref, computed, onUnmounted } from 'vue'
+import { computed, onUnmounted } from 'vue'
+import { BaseWebSocketManager } from './BaseWebSocketManager'
 import type {
   WebSocketMessage,
-  GameWebSocketMessage,
-  WebSocketMessageMap,
-  WebSocketMessageType,
-  ConnectionStatus,
-  MessageHandler,
-  MessageHandlersMap
+  GameWebSocketMessage
 } from '../types'
 
-export class WebSocketManager {
+export class WebSocketManager extends BaseWebSocketManager {
   private ws: WebSocket | null = null
   private reconnectTimer: number | null = null
-  private heartbeatTimer: number | null = null
-  private messageHandlers: MessageHandlersMap = new Map()
-  
-  // Add explicit property declarations
+
   private url: string
   private token?: string
-  
-  public status = ref<ConnectionStatus>({
-    isConnected: false,
-    isReconnecting: false,
-    lastConnected: null,
-    reconnectAttempts: 0,
-    error: null
-  })
 
-  public readonly maxReconnectAttempts = 5
   public readonly reconnectDelay = 3000
-  public readonly heartbeatInterval = 30000
 
   constructor(url: string, token?: string) {
+    super()
     this.url = url
     this.token = token
   }
@@ -39,8 +23,7 @@ export class WebSocketManager {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // Construir URL con token si está disponible
-        const wsUrl = this.token 
+        const wsUrl = this.token
           ? `${this.url}?token=${encodeURIComponent(this.token)}`
           : this.url
 
@@ -63,8 +46,7 @@ export class WebSocketManager {
           console.log('WebSocket closed:', event)
           this.status.value.isConnected = false
           this.stopHeartbeat()
-          
-          // Intentar reconectar si no fue un cierre intencional
+
           if (!event.wasClean && this.status.value.reconnectAttempts < this.maxReconnectAttempts) {
             this.attemptReconnect()
           }
@@ -78,13 +60,10 @@ export class WebSocketManager {
 
         this.ws.onmessage = (event) => {
           try {
-            // Intentar parsear y validar el mensaje como GameWebSocketMessage.
             const parsed = JSON.parse(event.data)
-            // Runtime check mínimo: debe tener type
             if (parsed && typeof parsed.type === 'string') {
-              // Mantener compatibilidad con tipos antiguos usando any cast
               const message = parsed as GameWebSocketMessage | WebSocketMessage
-              this.handleMessage(message as any)
+              this.dispatchMessage(message as any)
             } else {
               console.warn('Received WebSocket message without type:', parsed)
             }
@@ -135,50 +114,6 @@ export class WebSocketManager {
     }
   }
 
-  // Subscribe genérico para recibir payload tipado según WebSocketMessageMap
-  subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler<WebSocketMessageMap[K]>): () => void {
-    const key = messageType as WebSocketMessageType
-    if (!this.messageHandlers.has(key)) {
-      this.messageHandlers.set(key, [])
-    }
-
-    this.messageHandlers.get(key)!.push(handler)
-
-    // Devolver función para unsubscribe (usar la misma clave tipada)
-    return () => {
-      const handlers = this.messageHandlers.get(key)
-      if (handlers) {
-        const index = handlers.indexOf(handler)
-        if (index > -1) {
-          handlers.splice(index, 1)
-        }
-      }
-    }
-  }
-
-  private handleMessage(message: WebSocketMessage): void {
-    if (message.type === 'error') {
-      // Log completo para depuración de errores del backend
-      console.warn('[WebSocketManager] Mensaje de error recibido:', message)
-    }
-  const handlers = this.messageHandlers.get((message as any).type as WebSocketMessageType)
-    if (handlers) {
-      handlers.forEach(handler => {
-        try {
-          // Pasar message.data cuando esté presente para compatibilidad con handlers
-          // que esperan únicamente el payload; si no existe, pasar el mensaje completo.
-          const payload = (message as any).data !== undefined ? (message as any).data : message
-          if (payload === undefined) {
-            console.warn(`[WebSocketManager] Handler for ${message.type} will receive undefined payload`) 
-          }
-          handler(payload)
-        } catch (error) {
-          console.error(`Error in message handler for ${message.type}:`, error)
-        }
-      })
-    }
-  }
-
   private attemptReconnect(): void {
     if (this.status.value.reconnectAttempts >= this.maxReconnectAttempts) {
       console.log('Max reconnection attempts reached')
@@ -204,7 +139,7 @@ export class WebSocketManager {
     }, this.reconnectDelay)
   }
 
-  private startHeartbeat(): void {
+  protected startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         // Usar 'heartbeat' como en el backend en lugar de 'ping'
@@ -213,7 +148,7 @@ export class WebSocketManager {
     }, this.heartbeatInterval)
   }
 
-  private stopHeartbeat(): void {
+  protected stopHeartbeat(): void {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
@@ -226,14 +161,13 @@ let wsManager: WebSocketManager | null = null
 
 export function useWebSocket(gameId?: string) {
   const createConnection = (token?: string) => {
-    const baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
-    // Corregir URL para coincidir con el backend: /ws/{gameId} en lugar de /ws/games/{gameId}
+    const baseUrl = 'ws://localhost:8000'
     const wsUrl = gameId ? `${baseUrl}/ws/${gameId}` : `${baseUrl}/ws`
-    
+
     if (wsManager) {
       wsManager.disconnect()
     }
-    
+
     wsManager = new WebSocketManager(wsUrl, token)
     return wsManager
   }
@@ -248,7 +182,6 @@ export function useWebSocket(gameId?: string) {
     error: null
   })
 
-  // Cleanup al desmontar componentes
   onUnmounted(() => {
     // Solo desconectar si no hay otros componentes usando la conexión
     // En una implementación real, usaríamos un contador de referencias
@@ -260,3 +193,4 @@ export function useWebSocket(gameId?: string) {
     connectionStatus
   }
 }
+

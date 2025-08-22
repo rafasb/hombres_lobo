@@ -1,7 +1,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useWebSocket, WebSocketManager } from '../websocket/WebSocketManager'
+import { useWebSocketPolling } from '../websocket/WebSocketPollingManager'
 import { useAuthStore, logoutEventBus } from '../stores/authStore'
-import type { PlayerStatus } from '../types'
+import type { PlayerStatus, PlayerDTO } from '../types'
+import type { WebSocketPollingManager } from '../websocket/WebSocketPollingManager'
 
 export interface GameConnectionState {
   isUserConnected: boolean
@@ -14,10 +15,31 @@ export interface GameConnectionState {
 
 export function useGameConnection(gameId: string) {
   const auth = useAuthStore()
-  const { createConnection, connectionStatus } = useWebSocket(gameId)
+  const { createConnection, connectionStatus } = useWebSocketPolling(gameId)
   
-  let wsManager: WebSocketManager | null = null
+  let wsManager: WebSocketPollingManager | null = null
   let unsubscribeFunctions: (() => void)[] = []
+
+  const VALID_PLAYER_STATUSES = ['active', 'banned', 'connected', 'disconnected', 'in_game'] as const
+
+  const mapRawPlayerToStatus = (raw: any, connectedPlayers?: any[]): PlayerStatus => {
+    const player = raw as PlayerDTO
+    let status: PlayerStatus['status'] = 'disconnected'
+
+    if (player.status && VALID_PLAYER_STATUSES.includes(player.status as any)) {
+      status = player.status as PlayerStatus['status']
+    } else if (connectedPlayers && Array.isArray(connectedPlayers) && connectedPlayers.includes(player.id)) {
+      status = 'connected'
+    }
+
+    return {
+      playerId: player.id,
+      username: (player as any).name ?? player.username ?? 'unknown',
+      status,
+      isConnected: status === 'connected' || status === 'active' || status === 'in_game',
+      lastSeen: new Date()
+    }
+  }
   
   // Estado reactivo de la conexión del juego
   const gameConnectionState = ref<GameConnectionState>({
@@ -72,8 +94,8 @@ export function useGameConnection(gameId: string) {
         throw new Error('No hay token de autenticación')
       }
 
-      console.log('Initializing WebSocket connection for game:', gameId)
-      wsManager = createConnection(auth.token)
+  console.log('Initializing WebSocket connection for game:', gameId)
+  wsManager = createConnection({ token: auth.token, simulate: false })
 
   await wsManager.connect()
   console.log('WebSocket connection established')
@@ -81,105 +103,80 @@ export function useGameConnection(gameId: string) {
   wsManager.send({ type: 'join_game' })
 
       // Suscribirse a mensajes de estado del juego - adaptador para el backend
-      const unsubGameState = wsManager.subscribe('system_message', (message) => {
+  const handleSystemMessage = (message: unknown) => {
         console.log('System message received:', message)
-        // El WebSocketManager pasa message.data a los handlers. Defendemos contra payload undefined.
         const payload = (message ?? {}) as { data?: Record<string, unknown>; players?: unknown }
         const playersListRaw = payload?.data?.players ?? payload?.players
-        // Si no hay payload útil, ignorar
-        if (!playersListRaw || !Array.isArray(playersListRaw)) {
-          return
-        }
-        if (Array.isArray(playersListRaw)) {
-          const connectedPlayersRaw = (payload.data && payload.data['connected_players']) ?? undefined
-          const connectedPlayers = Array.isArray(connectedPlayersRaw) ? connectedPlayersRaw : undefined
-          const playersStatus: PlayerStatus[] = playersListRaw.map((p) => {
-            const player = p as import('../types').PlayerDTO
-            // Determinar el status real del jugador
-            let status: PlayerStatus['status'] = 'disconnected'
-            if (player.status && ['active', 'banned', 'connected', 'disconnected', 'in_game'].includes(player.status)) {
-              status = player.status as PlayerStatus['status']
-            } else if (connectedPlayers && (connectedPlayers as any).includes(player.id)) {
-              status = 'connected'
-            }
-            return {
-              playerId: player.id,
-              username: player.name ?? player.username ?? 'unknown',
-              status,
-              isConnected: status === 'connected' || status === 'active' || status === 'in_game',
-              lastSeen: new Date()
-            }
-          })
+        if (!playersListRaw || !Array.isArray(playersListRaw)) return
 
-          gameConnectionState.value = {
-            isUserConnected: true,
-            isUserInGame: true,
-            connectedPlayersCount: playersStatus.filter(p => p.isConnected).length,
-            totalPlayersCount: playersStatus.length,
-            playersStatus,
-            lastUpdate: new Date()
-          }
+        const connectedPlayersRaw = (payload.data && payload.data['connected_players']) ?? undefined
+        const connectedPlayers = Array.isArray(connectedPlayersRaw) ? connectedPlayersRaw : undefined
+        const playersStatus: PlayerStatus[] = playersListRaw.map((p) => mapRawPlayerToStatus(p, connectedPlayers))
+
+        gameConnectionState.value = {
+          isUserConnected: true,
+          isUserInGame: true,
+          connectedPlayersCount: playersStatus.filter(p => p.isConnected).length,
+          totalPlayersCount: playersStatus.length,
+          playersStatus,
+          lastUpdate: new Date()
         }
-      })
+      }
+
+  const unsubGameState = wsManager.subscribe('system_message', handleSystemMessage)
 
       // Suscribirse a cambios de estado de usuario según la referencia WebSocket
-      const unsubUserStatusChanged = wsManager.subscribe('user_status_changed', (data) => {
-        // Defendemos contra data undefined
+  const handleUserStatusChanged = (data: unknown) => {
         const payload = (data ?? {}) as { user_id?: string; old_status?: string; new_status?: string; message?: string }
-        console.log('User status changed:', data)
-        if (!payload.user_id) {
-          // No hay información válida, ignorar
-          return
-        }
+        if (!payload.user_id) return
         const currentPlayers = [...gameConnectionState.value.playersStatus]
         const existingPlayer = currentPlayers.find(p => p.playerId === payload.user_id)
-        if (existingPlayer) {
-          // Actualizar status y isConnected
-          if (['active','banned','connected','disconnected','in_game'].includes(payload.new_status || '')) {
-            existingPlayer.status = payload.new_status as PlayerStatus['status']
-          } else {
-            existingPlayer.status = 'disconnected'
-          }
-          existingPlayer.isConnected = existingPlayer.status === 'connected' || existingPlayer.status === 'active' || existingPlayer.status === 'in_game'
-          existingPlayer.lastSeen = new Date()
-          // Actualizar el estado global
-          gameConnectionState.value.playersStatus = currentPlayers
-          gameConnectionState.value.connectedPlayersCount = currentPlayers.filter(p => p.isConnected).length
-          gameConnectionState.value.lastUpdate = new Date()
-          console.log('Updated connection state:', gameConnectionState.value)
+        if (!existingPlayer) return
+
+        if (VALID_PLAYER_STATUSES.includes(payload.new_status as any)) {
+          existingPlayer.status = payload.new_status as PlayerStatus['status']
+        } else {
+          existingPlayer.status = 'disconnected'
         }
-      })
+        existingPlayer.isConnected = existingPlayer.status === 'connected' || existingPlayer.status === 'active' || existingPlayer.status === 'in_game'
+        existingPlayer.lastSeen = new Date()
+
+        gameConnectionState.value.playersStatus = currentPlayers
+        gameConnectionState.value.connectedPlayersCount = currentPlayers.filter(p => p.isConnected).length
+        gameConnectionState.value.lastUpdate = new Date()
+      }
+
+  const unsubUserStatusChanged = wsManager.subscribe('user_status_changed', handleUserStatusChanged)
 
       // Suscribirse a respuestas exitosas de cambio de estado
-      const unsubSuccess = wsManager.subscribe('success', (data) => {
+  const handleSuccess = (data: unknown) => {
         const payload = data as { action?: string; message?: string; data?: Record<string, unknown> } | undefined
         if (payload?.action === 'update_user_status') {
           console.log('Status update success:', payload)
-          // El estado ya se actualiza con user_status_changed, pero podemos loguear
         }
-      })
+      }
+
+  const unsubSuccess = wsManager.subscribe('success', handleSuccess)
 
       // Suscribirse a errores de cambio de estado
-      const unsubError = wsManager.subscribe('error', (data) => {
+  const handleError = (data: unknown) => {
         const payload = data as { error_code?: string; message?: string; details?: Record<string, unknown> } | undefined
         console.error('WebSocket error:', payload)
         if (payload?.error_code === 'INSUFFICIENT_PERMISSIONS') {
           console.error('Permission error:', payload.message)
         }
-      })
+      }
+
+  const unsubError = wsManager.subscribe('error', handleError)
 
       // Suscribirse a heartbeat del backend
-      const unsubHeartbeat = wsManager.subscribe('heartbeat', (data) => {
+  const handleHeartbeat = (data: unknown) => {
         const payload = data as { response?: string } | undefined
-        // El backend envía heartbeat, no necesitamos responder pong específicamente
-        // ya que el backend espera heartbeat de vuelta
-        if (payload?.response === 'pong') {
-          // Este es un pong del servidor, no necesitamos hacer nada
-        } else {
-          // Este es un ping del servidor, responder con heartbeat
-          wsManager?.send({ type: 'heartbeat' })
-        }
-      })
+        if (payload?.response === 'pong') return
+        wsManager?.send({ type: 'heartbeat' })
+      }
+
+  const unsubHeartbeat = wsManager.subscribe('heartbeat', handleHeartbeat)
 
       unsubscribeFunctions = [unsubGameState, unsubUserStatusChanged, unsubSuccess, unsubError, unsubHeartbeat]
 
