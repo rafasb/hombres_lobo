@@ -144,7 +144,7 @@ class GameHandler:
             
             await connection_manager.broadcast_to_game(
                 game_id,
-                start_message.model_dump(mode='json')
+                start_message
             )
             
             logger.info(f"Juego {game_id} iniciado por {user_id}")
@@ -186,7 +186,7 @@ class GameHandler:
             
             await connection_manager.broadcast_to_game(
                 game_id,
-                start_message.model_dump(mode='json')
+                start_message
             )
             
             # Notificar que el juego se inició automáticamente
@@ -357,7 +357,7 @@ class GameHandler:
             # Broadcast a todos los jugadores
             await connection_manager.broadcast_to_game(
                 game_id,
-                phase_message.model_dump(mode='json')
+                phase_message
             )
             
             # *** INTEGRACIÓN CON SISTEMA DE VOTACIONES ***
@@ -486,7 +486,7 @@ class GameHandler:
         
         await connection_manager.broadcast_to_game(
             game_id,
-            phase_message.model_dump()
+            phase_message
         )
     
     async def _check_admin_permissions(self, user_id: str, game_id: str) -> bool:

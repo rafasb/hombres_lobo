@@ -17,6 +17,23 @@
 
 ---
 
+## Garantía del Campo `type`
+
+El servidor garantiza que TODOS los mensajes salientes incluirán el campo `type` como una cadena.
+Esto facilita el enrutado en el frontend via `message.type`. Algunos valores canónicos incluyen:
+
+- `player_connected`, `player_disconnected`, `player_left_game`
+- `update_user_status`, `user_status_changed`, `user_status_update`
+- `join_game`, `start_game`, `restart_game`, `get_game_status`, `force_next_phase`
+- `cast_vote`, `get_voting_status`, `vote_cast`, `voting_started`, `voting_ended`, `voting_results`
+- `phase_changed`, `phase_timer`, `game_started`, `game_ended`
+- `role_action`, `night_action`, `player_eliminated`, `player_role_revealed`
+- `heartbeat`, `error`, `success`, `system_message`, `game_connection_state`, `players_status_update`, `user_connection_status`
+
+Si por alguna razón un emisor interno no especifica `type`, el servidor lo normalizará a `system_message`.
+
+---
+
 ## Conexión WebSocket
 
 ### Endpoint

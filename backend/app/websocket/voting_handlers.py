@@ -92,7 +92,7 @@ class VotingHandler:
             # Broadcast a todos en el juego
             await connection_manager.broadcast_to_game(
                 game_id,
-                vote_message.model_dump(mode='json')
+                vote_message
             )
             
             # También enviar estado actualizado
@@ -125,7 +125,7 @@ class VotingHandler:
             # Broadcast resultados
             await connection_manager.broadcast_to_game(
                 game_id,
-                results_message.model_dump(mode='json')
+                results_message
             )
             
             # Mensaje del sistema con resultado
@@ -144,7 +144,7 @@ class VotingHandler:
             
             await connection_manager.broadcast_to_game(
                 game_id,
-                system_message.model_dump(mode='json')
+                system_message
             )
             
         except Exception as e:
@@ -158,7 +158,7 @@ class VotingHandler:
         )
         await connection_manager.send_personal_message(
             connection_id,
-            error_message.model_dump(mode='json')
+            error_message
         )
     
     async def _send_success(self, connection_id: str, action: str, message: str):
@@ -170,7 +170,7 @@ class VotingHandler:
         )
         await connection_manager.send_personal_message(
             connection_id,
-            success_message.model_dump(mode='json')
+            success_message
         )
 
 # Instancia global del handler de votaciones

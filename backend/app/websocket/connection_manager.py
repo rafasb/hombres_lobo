@@ -135,13 +135,54 @@ class ConnectionManager:
                     print(f"WebSocket {connection_id} no está conectado, removiendo de conexiones activas")
                     await self.disconnect(connection_id)
                     return
-                
-                # Si el mensaje es un modelo Pydantic, usar su serialización
-                # Si es un dict simple, serializarlo con json.dumps
-                if hasattr(message, 'json'):
-                    message_text = message.json()
+                # Normalizar y asegurar que el mensaje tenga campo 'type'
+                message_dict = None
+
+                # Si es un objeto Pydantic o tiene model_dump, obtener dict
+                if hasattr(message, 'model_dump'):
+                    try:
+                        message_dict = message.model_dump()
+                    except Exception:
+                        # Fallback to dict() if available
+                        try:
+                            message_dict = message.dict()
+                        except Exception:
+                            message_dict = None
+
+                # Si es un dict
+                if message_dict is None and isinstance(message, dict):
+                    message_dict = message.copy()
+
+                # Si es un JSON string, intentar parsearlo
+                if message_dict is None and isinstance(message, str):
+                    try:
+                        message_dict = json.loads(message)
+                    except Exception:
+                        # No es JSON válido; envolver en system_message
+                        message_dict = {"type": "system_message", "message": str(message)}
+
+                # Si todavía no tenemos dict, convertir a str
+                if message_dict is None:
+                    message_dict = {"type": "system_message", "message": str(message)}
+
+                # Asegurar campo 'type' como string
+                msg_type = message_dict.get("type")
+                if msg_type is None:
+                    message_dict["type"] = "system_message"
                 else:
-                    message_text = json.dumps(message, default=str)
+                    # Si es Enum, intentar obtener su valor; fallback a str
+                    # Intentar obtener .value si existe, sino fallback a str
+                    try:
+                        val = getattr(msg_type, "value", None)
+                        message_dict["type"] = val if val is not None else str(msg_type)
+                    except Exception:
+                        try:
+                            message_dict["type"] = str(msg_type)
+                        except Exception:
+                            message_dict["type"] = "system_message"
+
+                # Serializar y enviar
+                message_text = json.dumps(message_dict, default=str)
                 await websocket.send_text(message_text)
             except Exception as e:
                 print(f"Error enviando mensaje personal a {connection_id}: {e}")
@@ -151,19 +192,46 @@ class ConnectionManager:
         """Broadcast mensaje a todos en un juego"""
         if game_id not in self.game_rooms:
             return
-        
-        # Agregar game_id al mensaje si es un dict
+        # Normalizar mensaje a dict y garantizar 'type'
+        message_dict = None
+
         if isinstance(message, dict):
-            message["game_id"] = game_id
-            message_text = json.dumps(message, default=str)
+            message_dict = message.copy()
+        elif hasattr(message, 'model_dump'):
+            try:
+                message_dict = message.model_dump()
+            except Exception:
+                try:
+                    message_dict = message.dict()
+                except Exception:
+                    message_dict = None
+        elif isinstance(message, str):
+            try:
+                message_dict = json.loads(message)
+            except Exception:
+                message_dict = {"message": message}
+
+        if message_dict is None:
+            message_dict = {"message": str(message)}
+
+        # Insertar game_id
+        message_dict["game_id"] = game_id
+
+        # Asegurar campo 'type'
+        msg_type = message_dict.get("type")
+        if msg_type is None:
+            message_dict["type"] = "system_message"
         else:
-            # Si es un modelo Pydantic, agregar game_id a través del dict
-            if hasattr(message, 'dict'):
-                message_dict = message.dict()
-                message_dict["game_id"] = game_id
-                message_text = json.dumps(message_dict, default=str)
-            else:
-                message_text = message.json() if hasattr(message, 'json') else str(message)
+            try:
+                val = getattr(msg_type, "value", None)
+                message_dict["type"] = val if val is not None else str(msg_type)
+            except Exception:
+                try:
+                    message_dict["type"] = str(msg_type)
+                except Exception:
+                    message_dict["type"] = "system_message"
+
+        message_text = json.dumps(message_dict, default=str)
         
         disconnected_connections = []
         
@@ -187,10 +255,42 @@ class ConnectionManager:
 
     async def broadcast_to_all(self, message):
         """Broadcast mensaje a todas las conexiones activas"""
-        if hasattr(message, 'json'):
-            message_text = message.json()
+        # Normalizar como en broadcast_to_game pero sin game_id
+        message_dict = None
+
+        if isinstance(message, dict):
+            message_dict = message.copy()
+        elif hasattr(message, 'model_dump'):
+            try:
+                message_dict = message.model_dump()
+            except Exception:
+                try:
+                    message_dict = message.dict()
+                except Exception:
+                    message_dict = None
+        elif isinstance(message, str):
+            try:
+                message_dict = json.loads(message)
+            except Exception:
+                message_dict = {"message": message}
+
+        if message_dict is None:
+            message_dict = {"message": str(message)}
+
+        msg_type = message_dict.get("type")
+        if msg_type is None:
+            message_dict["type"] = "system_message"
         else:
-            message_text = json.dumps(message, default=str)
+            try:
+                val = getattr(msg_type, "value", None)
+                message_dict["type"] = val if val is not None else str(msg_type)
+            except Exception:
+                try:
+                    message_dict["type"] = str(msg_type)
+                except Exception:
+                    message_dict["type"] = "system_message"
+
+        message_text = json.dumps(message_dict, default=str)
             
         disconnected_connections = []
         

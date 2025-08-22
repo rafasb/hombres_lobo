@@ -89,7 +89,7 @@ class MessageHandler:
         )
         await connection_manager.send_personal_message(
             connection_id,
-            error_message.model_dump()
+            error_message
         )
     
     async def send_success(self, connection_id: str, action: str, message: str, data: dict | None = None):
@@ -101,7 +101,7 @@ class MessageHandler:
         )
         await connection_manager.send_personal_message(
             connection_id,
-            success_message.model_dump()
+            success_message
         )
 
 # Instancia global del message handler
@@ -160,7 +160,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         )
         await connection_manager.send_personal_message(
             connection_id,
-            welcome_message.model_dump(mode='json')
+            welcome_message
         )
         
         # Loop principal de mensajes
