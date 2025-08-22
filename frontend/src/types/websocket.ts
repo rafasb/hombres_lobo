@@ -103,10 +103,10 @@ export interface WebSocketMessageMap {
   player_connected: { playerId: string; username: string }
   player_disconnected: { playerId: string }
   player_left_game: { playerId: string }
-  user_status_changed: { user_id: string; new_status: string }
+  user_status_changed: { user_id: string; old_status?: string; new_status: string; message?: string }
   update_user_status: { status: string }
   user_status_update: { user_id: string; status: string }
-  user_connection_status: { isConnected: boolean; isInGame?: boolean }
+  user_connection_status: { isConnected: boolean; isInGame: boolean }
 
   // Comandos de juego (generalmente sin payload)
   join_game: undefined
@@ -120,28 +120,28 @@ export interface WebSocketMessageMap {
   phase_timer: { remainingSeconds: number }
 
   // Votaciones
-  cast_vote: { voterId: string; targetId: string }
+  cast_vote: { voter_id: string; target_id: string }
   get_voting_status: undefined
-  vote_cast: { voterId: string; targetId: string }
+  vote_cast: { voter_id: string; target_id: string }
   voting_started: { options?: any }
   voting_ended: { results?: any }
   voting_results: { results: any }
 
   // Acciones de roles
-  role_action: { actorId: string; targetId?: string; payload?: any }
-  night_action: { actorId: string; action: string }
+  role_action: { actor_id: string; action: string; target_id?: string }
+  night_action: { actor_id: string; action: string }
 
   // Eventos del juego
-  player_eliminated: { playerId: string; reason?: string }
-  player_role_revealed: { playerId: string; role: string }
+  player_eliminated: { player_id: string; player_name?: string; role?: string; elimination_type?: string }
+  player_role_revealed: { player_id: string; role: string }
   game_started: { startedAt?: string }
   game_ended: { winner?: string }
 
   // Sistema
   heartbeat: { response?: string } | undefined
-  error: { error_code?: string; message?: string }
-  success: { action?: string; message?: string }
-  system_message: { message: string; players?: any[] }
+  error: { error_code: string; message: string; details?: Record<string, any> }
+  success: { action: string; message: string; data?: Record<string, any> }
+  system_message: { message: string; message_key?: string | null; params?: Record<string, any>; players?: any[] }
 
   // Estado de conexión y jugadores
   game_connection_state: {
