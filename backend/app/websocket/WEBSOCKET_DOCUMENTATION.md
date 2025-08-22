@@ -8,8 +8,8 @@
 > - ⚡ **Referencia rápida**: `WEBSOCKET_QUICK_REFERENCE.md`
 
 ### Estados Automáticos
-- Al **conectar** WebSocket → Usuario se marca como `connected`
-- Al **desconectar** WebSocket → Usuario se marca como `disconnected`
+- Al **conectar** WebSocket → Usuario se marca como `in_game` (`UserStatus.IN_GAME`)
+- Al **desconectar** WebSocket → Usuario se marca como `active` (`UserStatus.ACTIVE`)
 
 ### Nuevos Mensajes WebSocket
 - `update_user_status` - Cambiar estado propio

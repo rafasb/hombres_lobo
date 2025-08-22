@@ -96,17 +96,18 @@ class UserStatusHandler:
     async def auto_update_status_on_connect(self, user_id: str):
         """Actualizar automáticamente el estado a 'connected' cuando se conecta"""
         try:
-            status_update = UserStatusUpdate(status=UserStatus.CONNECTED)
+            # Nuevo comportamiento: al conectar al websocket, marcar como IN_GAME
+            status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
             updated_user, old_status = update_user_status(user_id, status_update)
-            
+
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
                 await self.broadcast_status_change(
-                    user_id, 
-                    old_status.value, 
-                    "connected"
+                    user_id,
+                    old_status.value,
+                    "in_game"
                 )
-                logger.info(f"Usuario {user_id} automáticamente marcado como conectado")
+                logger.info(f"Usuario {user_id} automáticamente marcado como 'in_game' al conectar")
         except Exception as e:
             logger.error(f"Error actualizando estado automático de conexión para {user_id}: {e}")
     
@@ -121,17 +122,18 @@ class UserStatusHandler:
             
             # Solo actualizar a disconnected si no hay otras conexiones del mismo usuario
             if len(user_connections) <= 1:  # <= 1 porque la conexión actual aún no se ha removido
-                status_update = UserStatusUpdate(status=UserStatus.DISCONNECTED)
+                # Nuevo comportamiento: al desconectar del websocket, marcar como ACTIVE
+                status_update = UserStatusUpdate(status=UserStatus.ACTIVE)
                 updated_user, old_status = update_user_status(user_id, status_update)
-                
+
                 if updated_user and old_status:
                     # Notificar cambio de estado a otros usuarios
                     await self.broadcast_status_change(
-                        user_id, 
-                        old_status.value, 
-                        "disconnected"
+                        user_id,
+                        old_status.value,
+                        "active"
                     )
-                    logger.info(f"Usuario {user_id} automáticamente marcado como desconectado")
+                    logger.info(f"Usuario {user_id} automáticamente marcado como 'active' al desconectar")
         except Exception as e:
             logger.error(f"Error actualizando estado automático de desconexión para {user_id}: {e}")
     
