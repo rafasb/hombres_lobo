@@ -1,10 +1,9 @@
 # Hombres Lobo
 
-Aplicación web orientada a móviles basada en FastAPI, Jinja2 y Bootstrap.
+## Arrancar el backend y frontend
 
-## Arrancar el backend
 ```bash
-/home/rafasb/desarrollo/hombres_lobo/venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+/home/rafasb/desarrollo/hombres_lobo/backend/start_server.sh
 ```
 
 # Descripción del juego

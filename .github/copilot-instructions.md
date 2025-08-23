@@ -1,18 +1,29 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
+# Instucciones generales:
+- Utiliza los principios de desarrollo SOLID.
+- Ejecuta las instrucciones paso a paso.
+- Antes de realizar cualquier cambio, analiza el contexto y las dependencias.
+- Revisa los cambios realizados para avitar errores o inconsistencias.
+- Ejecuta los tests si los hay.
+- Propon mejoras seguientes.
+
 ## Instrucciones para Copilot en el Proyecto Hombres Lobo
-- Se trata de una aplicación web SPA (Single Page Application), que debe estar orientada a móviles. Asegura la característica SPA y respetar el diseño responsivo.
-- El backend está desarrollado en Python con FastAPI. Si necesitas realizar cambios en el backend, sugiere los cambios necesarios de forma detallada.
-- El backend reside en el directorio `../backend/` y el frontend en `../frontend/`. Este último es el directorio de trabajo principal.
-- Manten los ficheros con el tamaño mínimo, separando las funcionalidades en componentes pequeños y reutilizables, siguiendo las buenas prácticas de desarrollo.
-- Sigue las buenas prácticas de desarrollo de software, incluyendo la separación de preocupaciones y la reutilización de componentes.
-- Siempre que introduzcas cambios en un fichero, analiza las dependencias y consecuencias para determinar si es necesario actualizar o refactorizar los otros ficheros relacionados.
-- En el directorio superior al directorio `../doc/`, encontrarás el directorio que contiene información sobre el proyecto, su estructura y detalles de implementación.
+
+- Se trata de una aplicación web SPA (Single Page Application), que debe estar orientada a móviles, salvo vistas especialmente anchas como la de administración. Asegura la característica SPA y respetar el diseño responsivo.
+
+- El backend reside en el directorio `backend/` y el frontend en `frontend/`. 
+
+- En el directorio superior al directorio `Docs/`, encontrarás el directorio que contiene información sobre el proyecto, su estructura y detalles de implementación.
 - Dispones de la documentación del backend en el fichero `./openapi.json`. Consulta el fichero cuando necesites información sobre las rutas y los datos que maneja el backend.
-- Sugiere siempre el siguiente paso a seguir, pero que sea de un alcance razonable, no un paso completo del proyecto. No te embarques en pasos con demasiadas tareas sin preguntar antes.
-- **IMPORTANTE:** El proyecto utiliza **Bootstrap 5** como framework de UI. Al crear nuevas vistas o funcionalidades, usa las clases de Bootstrap para styling y componentes. Evita crear CSS personalizado a menos que sea estrictamente necesario para funcionalidades específicas no cubiertas por Bootstrap.
+
+
+- El proyecto utiliza **Bootstrap 5** como framework de UI. Al crear nuevas vistas o funcionalidades, usa las clases de Bootstrap para styling y componentes. Evita crear CSS personalizado a menos que sea estrictamente necesario para funcionalidades específicas no cubiertas por Bootstrap.
+
 - Estructura de componentes actualizada: separa la vista pura con el template en el directorio `src/views` (usando clases Bootstrap), la lógica de negocio reutilizable en un fichero separado en el directorio `src/composables`, el wrapper simplificado que une ambos en `src/components/`. Los estilos CSS personalizados deben ser mínimos y solo cuando Bootstrap no cubra la funcionalidad.
+
 - **Convenciones de Bootstrap:** Utiliza el sistema de grid de Bootstrap, las clases de utilidad, componentes como cards, buttons, forms, modals, etc. Mantén la consistencia visual usando las variables CSS personalizadas definidas en `src/style.css`.
+
 - **Diseño móvil:** Asegúrate de usar las clases responsive de Bootstrap (col-*, d-*, etc.) y mantener el contenedor `.mobile-container` para simular el aspecto de aplicación móvil en desktop.
 - Recuerda utilizar Pinia para la gestión del estado de la aplicación y Vue Router para la navegación entre vistas.
 
