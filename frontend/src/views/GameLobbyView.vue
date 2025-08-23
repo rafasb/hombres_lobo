@@ -127,18 +127,18 @@
         </div>
 
         <!-- Lista de jugadores -->
-        <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-6">
           <div class="card shadow-sm h-100" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
             <div class="card-header bg-primary text-white">
               <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                   <i class="bi bi-people-fill me-2"></i>
-                  Jugadores ({{ game.players.length }})
+                          Jugadores ({{ game.players.length }})
                 </h5>
-                <small>
-                  <i class="bi bi-wifi me-1"></i>
-                  {{ gameConnectionState.connectedPlayersCount }} conectados
-                </small>
+                        <small>
+                          <i class="bi bi-controller me-1"></i>
+                          {{ inGameCount }} en la partida
+                        </small>
               </div>
             </div>
             <div class="card-body p-0">
@@ -158,9 +158,9 @@
                       <!-- Indicador de conexión -->
                       <span 
                         class="badge rounded-pill"
-                        :class="getPlayerConnectionStatus(player.id)?.isConnected ? 'bg-success' : 'bg-secondary'"
+                        :class="playerDotClass(player.id)"
                         style="width: 10px; height: 10px;"
-                        :title="getPlayerConnectionStatus(player.id)?.isConnected ? 'Conectado' : 'Desconectado'"
+                        :title="playerStatusText(player.id)"
                       ></span>
                       
                       <!-- Nombre del jugador -->
@@ -169,7 +169,7 @@
                       <!-- Indicador de actividad adicional -->
                       <small v-if="getPlayerConnectionStatus(player.id)?.lastSeen" 
                             class="text-muted">
-                        ({{ getPlayerConnectionStatus(player.id)?.isConnected ? 'En línea' : 'Desconectado' }})
+                        ({{ playerStatusText(player.id) }})
                       </small>
                     </div>
                     
@@ -183,9 +183,13 @@
                         <i class="bi bi-person-check me-1"></i>
                         Tú
                       </span>
-                      <span v-if="getPlayerConnectionStatus(player.id)?.isConnected" class="badge bg-success">
+                      <span v-if="getPlayerConnectionStatus(player.id)?.status === 'in_game'" class="badge bg-success">
+                        <i class="bi bi-controller me-1"></i>
+                        En partida
+                      </span>
+                      <span v-else-if="getPlayerConnectionStatus(player.id)?.status === 'connected'" class="badge bg-warning text-dark">
                         <i class="bi bi-wifi me-1"></i>
-                        Online
+                        Conectado
                       </span>
                     </div>
                   </div>
@@ -301,6 +305,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGameLobby } from '../composables/useGameLobby'
 import { useGameConnection } from '../composables/useGameConnection'
@@ -336,6 +341,27 @@ const {
   startGame,
   formatDate
 } = useGameLobby(gameId)
+
+// Computed helpers to show players in_game instead of only connected
+const inGameCount = computed(() => {
+  return gameConnectionState.value.playersStatus.filter(p => p.status === 'in_game').length
+})
+
+const playerDotClass = (playerId: string) => {
+  const st = getPlayerConnectionStatus(playerId)
+  if (!st) return 'bg-secondary'
+  if (st.status === 'in_game') return 'bg-success'
+  if (st.status === 'connected') return 'bg-warning'
+  return 'bg-secondary'
+}
+
+const playerStatusText = (playerId: string) => {
+  const st = getPlayerConnectionStatus(playerId)
+  if (!st) return 'Desconocido'
+  if (st.status === 'in_game') return 'En partida'
+  if (st.status === 'connected') return 'Conectado'
+  return 'Desconectado'
+}
 
 // Funciones wrapper para actualizar estado de jugadores
 const joinGame = async () => {

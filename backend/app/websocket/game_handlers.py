@@ -62,8 +62,11 @@ class GameHandler:
             # Agregar jugador al estado en memoria
             game_state.add_connected_player(user_id)
             
-            # Notificar estado actual del juego a todos los conectados
-            await self._send_game_status(game_id, game_state)
+            # Notificar solo la conexión del jugador (no enviar todo el estado aquí para evitar duplicados)
+            await connection_manager.broadcast_to_game(game_id, {
+                "type": "player_connected",
+                "user_id": user_id
+            }, exclude_connection=None)
             
             # *** NUEVA LÓGICA: Verificar si se alcanzó el número máximo de jugadores para auto-inicio ***
             if game_state.game_data and game_state.game_data.players:
@@ -435,7 +438,9 @@ class GameHandler:
             game_state = await game_state_manager.get_or_create_game_state(game_id)
             
             if game_state:
-                await self._send_game_status(game_id, game_state)
+                # Enviar el estado únicamente al solicitante para evitar duplicados
+                status_msg = self.build_game_status_message(game_id, game_state)
+                await connection_manager.send_personal_message(connection_id, status_msg)
             else:
                 await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
                 
