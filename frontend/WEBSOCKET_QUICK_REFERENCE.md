@@ -16,7 +16,7 @@ ws://localhost:8000/ws/{game_id}?token={jwt_token}
 ```json
 {
   "type": "update_user_status",
-  "status": "inactive"
+  "data": { "status": "inactive" }
 }
 ```
 
@@ -39,10 +39,12 @@ ws://localhost:8000/ws/{game_id}?token={jwt_token}
 ```json
 {
   "type": "user_status_changed",
-  "user_id": "uuid",
-  "old_status": "connected",
-  "new_status": "in_game",
-  "message": "Usuario uuid cambió su estado de 'connected' a 'in_game'"
+  "data": {
+    "user_id": "uuid",
+    "old_status": "connected",
+    "new_status": "in_game",
+    "message": "Usuario uuid cambió su estado de 'connected' a 'in_game'"
+  }
 }
 ```
 
@@ -63,7 +65,7 @@ const ws = new WebSocket(`ws://localhost:8000/ws/game123?token=${token}`);
 // Enviar cambio
 ws.send(JSON.stringify({
   type: 'update_user_status',
-  status: 'inactive'
+  data: { status: 'inactive' }
 }));
 
 // Escuchar cambios

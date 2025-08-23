@@ -56,13 +56,15 @@ const ws = new WebSocket(`ws://localhost:8000/ws/${gameId}?token=${access_token}
 ## Tipos de Mensajes
 
 ### Estructura Base
-Todos los mensajes siguen esta estructura base:
+Todos los mensajes siguen esta estructura base (envelope):
 ```json
 {
   "type": "message_type",
   "timestamp": "2025-01-30T22:00:00Z",
-  "game_id": "game-123",
-  // ... campos específicos del mensaje
+  "game_id": "game-123",          // opcional: cuando el mensaje está vinculado a una partida
+  "data": {                        // payload específico del mensaje
+    // ... campos del mensaje
+  }
 }
 ```
 
@@ -94,10 +96,11 @@ Se recibe cuando un jugador se desconecta:
 ### 2. Comandos de Juego (Envío)
 
 #### JOIN_GAME
-Para unirse a un juego:
+Para unirse a un juego (sin payload):
 ```json
 {
-  "type": "join_game"
+  "type": "join_game",
+  "data": {}
 }
 ```
 
@@ -116,6 +119,7 @@ Para obtener el estado actual del juego:
   "type": "get_game_status"
 }
 ```
+> Nota: el backend normaliza los mensajes de salida y espera que los clientes envíen el payload dentro del campo `data` cuando sea aplicable.
 
 #### FORCE_NEXT_PHASE
 Para forzar cambio a la siguiente fase (admin):
@@ -170,7 +174,7 @@ Para emitir un voto:
 ```json
 {
   "type": "cast_vote",
-  "target_id": "user123"
+  "data": { "target_id": "user123" }
 }
 ```
 
@@ -217,8 +221,10 @@ Para enviar mensaje de chat:
 ```json
 {
   "type": "chat_message",
-  "message": "Hola a todos!",
-  "channel": "all" // all, living, dead, wolves
+  "data": {
+    "message": "Hola a todos!",
+    "channel": "all" // all, living, dead, wolves
+  }
 }
 ```
 
@@ -238,14 +244,14 @@ Se recibe cuando alguien envía un mensaje:
 ### 6. Mensajes del Sistema
 
 #### SYSTEM_MESSAGE
-Mensajes informativos del sistema:
+Mensajes informativos del sistema (payload en `data`):
 ```json
 {
   "type": "system_message",
-  "message": "Estado del juego: night",
-  "message_key": "game_status_update", // para i18n
-  "params": {"phase": "night"},
   "data": {
+    "message": "Estado del juego: night",
+    "message_key": "game_status_update",
+    "params": {"phase": "night"},
     "game_id": "game-123",
     "phase": "night",
     "players": [
@@ -289,13 +295,13 @@ Respuesta del servidor:
 ### 8. Manejo de Errores
 
 #### ERROR
-Se recibe cuando ocurre un error:
+Se recibe cuando ocurre un error (detalles en `data`):
 ```json
 {
   "type": "error",
   "error_code": "INVALID_MESSAGE",
   "message": "Tipo de mensaje requerido",
-  "details": {},
+  "data": {},
   "timestamp": "2025-01-30T22:00:00Z"
 }
 ```
@@ -312,7 +318,7 @@ Se recibe cuando ocurre un error:
 - `NO_PERMISSIONS`: Sin permisos para la acción
 
 #### SUCCESS
-Se recibe para confirmar acciones exitosas:
+Se recibe para confirmar acciones exitosas (payload en `data`):
 ```json
 {
   "type": "success",
