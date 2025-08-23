@@ -40,9 +40,9 @@ ws://localhost:8000/ws/{game_id}?token={jwt_token}
 {
   "type": "user_status_changed",
   "user_id": "uuid",
-  "old_status": "active",
-  "new_status": "inactive",
-  "message": "Usuario uuid cambió su estado de 'active' a 'inactive'"
+  "old_status": "connected",
+  "new_status": "in_game",
+  "message": "Usuario uuid cambió su estado de 'connected' a 'in_game'"
 }
 ```
 

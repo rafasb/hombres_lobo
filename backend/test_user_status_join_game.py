@@ -9,6 +9,8 @@ import os
 # Agregar el directorio del proyecto al path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 
+import pytest
+
 from app.websocket.user_status_handlers import user_status_handler
 from app.services.user_service import get_user, create_user
 from app.models.user import User, UserAccessRole, UserStatus
@@ -16,6 +18,7 @@ from app.core.security import hash_password
 import uuid
 from app.websocket.connection_manager import connection_manager
 
+@pytest.mark.asyncio
 async def test_user_status_join_game():
     """Test para verificar cambios de estado al unirse a partida"""
     print("🧪 Iniciando test de cambio de estado al unirse a partida...")
@@ -127,10 +130,10 @@ async def test_user_status_join_game():
         
         # Verificar transiciones de estado esperadas
         expected_transitions = [
-            ("inicial", "active"),
+            ("inicial", "disconnected"),
             ("conectar", "connected"), 
             ("unirse", "in_game"),
-            ("iniciar", "alive_in_game"),
+            ("iniciar", "in_game"),
             ("muerte", "in_game"),
             ("salir", "connected"),
             ("desconectar", "disconnected")

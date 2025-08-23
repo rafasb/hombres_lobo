@@ -6,8 +6,7 @@ ws://localhost:8000/ws/{game_id}?token={jwt_token}
 ```
 
 ## 📊 Estados Disponibles
-- `active` - Usuario activo (Usuario/Admin)
-- `inactive` - Usuario inactivo (Usuario/Admin) 
+- `in_game` - Usuario en partida (Usuario/Auto) 
 - `connected` - Conectado (Usuario/Admin/Auto)
 - `disconnected` - Desconectado (Usuario/Admin/Auto)
 - `banned` - Baneado (**Solo Admin**)
@@ -16,7 +15,7 @@ ws://localhost:8000/ws/{game_id}?token={jwt_token}
 ```json
 {
   "type": "update_user_status",
-  "status": "inactive"
+  "status": "in_game"
 }
 ```
 
@@ -25,11 +24,11 @@ ws://localhost:8000/ws/{game_id}?token={jwt_token}
 {
   "type": "success",
   "action": "update_user_status",
-  "message": "Estado actualizado de 'connected' a 'inactive'",
+  "message": "Estado actualizado de 'connected' a 'in_game'",
   "data": {
     "user_id": "uuid",
     "old_status": "connected",
-    "new_status": "inactive",
+    "new_status": "in_game",
     "updated_at": "2025-08-08T22:40:11.915599+00:00"
   }
 }
@@ -40,9 +39,9 @@ ws://localhost:8000/ws/{game_id}?token={jwt_token}
 {
   "type": "user_status_changed",
   "user_id": "uuid",
-  "old_status": "active",
-  "new_status": "inactive",
-  "message": "Usuario uuid cambió su estado de 'active' a 'inactive'"
+  "old_status": "connected",
+  "new_status": "in_game",
+  "message": "Usuario uuid cambió su estado de 'connected' a 'in_game'"
 }
 ```
 
@@ -63,7 +62,7 @@ const ws = new WebSocket(`ws://localhost:8000/ws/game123?token=${token}`);
 // Enviar cambio
 ws.send(JSON.stringify({
   type: 'update_user_status',
-  status: 'inactive'
+  status: 'in_game'
 }));
 
 // Escuchar cambios

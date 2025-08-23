@@ -6,8 +6,8 @@ import { gameService } from '../services/gameService'
 import type { Game } from '../types'
 
 export function useGamesList() {
-  // Actualizar estado del usuario a 'active' al entrar en la vista, salvo si está 'banned'
-  useUserStatusOnView('active')
+  // Actualizar estado del usuario a 'connected' al entrar en la vista, salvo si está 'banned'
+  useUserStatusOnView('connected')
   const router = useRouter()
   const auth = useAuthStore()
   

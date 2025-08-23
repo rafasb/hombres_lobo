@@ -22,10 +22,10 @@ Al conectarse exitosamente, el usuario se marca automáticamente como `connected
 {
   "type": "user_status_changed",
   "user_id": "uuid-del-usuario",
-  "old_status": "active",
+  "old_status": "disconnected",
   "new_status": "connected",
   "timestamp": "2025-08-09T00:40:08.907970",
-  "message": "Usuario {user_id} cambió su estado de 'active' a 'connected'"
+  "message": "Usuario {user_id} cambió su estado de 'disconnected' a 'connected'"
 }
 ```
 
@@ -33,11 +33,11 @@ Al conectarse exitosamente, el usuario se marca automáticamente como `connected
 
 | Estado | Descripción | Quién puede establecerlo |
 |--------|-------------|-------------------------|
-| `active` | Usuario activo y disponible | Usuario, Admin |
 | `inactive` | Usuario inactivo temporalmente | Usuario, Admin |
 | `connected` | Usuario conectado a la aplicación | Usuario, Admin, Automático |
 | `disconnected` | Usuario desconectado | Usuario, Admin, Automático |
 | `banned` | Usuario bloqueado/baneado | **Solo Admin** |
+| `in_game` | Usuario unido a la partida | Usuario, Automático |
 
 ## 🎮 Cambios Manuales de Estado
 
@@ -47,7 +47,7 @@ Para cambiar manualmente el estado, envía este mensaje vía WebSocket:
 ```json
 {
   "type": "update_user_status",
-  "status": "inactive",
+  "status": "disconnected",
   "timestamp": 1691544000000
 }
 ```
@@ -57,11 +57,11 @@ Para cambiar manualmente el estado, envía este mensaje vía WebSocket:
 {
   "type": "success",
   "action": "update_user_status",
-  "message": "Estado actualizado de 'connected' a 'inactive'",
+  "message": "Estado actualizado de 'connected' a 'disconnected'",
   "data": {
     "user_id": "uuid-del-usuario",
     "old_status": "connected",
-    "new_status": "inactive",
+    "new_status": "disconnected",
     "updated_at": "2025-08-08T22:40:11.915599+00:00"
   },
   "timestamp": "2025-08-09T00:40:11.926407"

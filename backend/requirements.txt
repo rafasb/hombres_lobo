@@ -9,3 +9,4 @@ pytest
 httpx
 sqlalchemy>=2.0.0
 alembic
+pytest-asyncio==1.1.0

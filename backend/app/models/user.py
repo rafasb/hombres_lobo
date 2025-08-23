@@ -10,7 +10,7 @@ class UserAccessRole(str, Enum):
     PLAYER = "player"
 
 class UserStatus(str, Enum):
-    ''' Estados de usuario: banned, connected, disconnected, in_game, alive_in_game '''
+    ''' Estados de usuario: banned, connected, disconnected, in_game '''
     BANNED = "banned"   # Usuario bloqueado/baneado
     CONNECTED = "connected" # Usuario conectado a la aplicación
     DISCONNECTED = "disconnected" # Usuario desconectado de la aplicación

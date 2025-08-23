@@ -18,7 +18,7 @@ export interface BaseUser {
  */
 export interface User extends BaseUser {
   email: string
-  status: 'active' | 'banned' | 'connected' | 'disconnected' | 'in_game'
+  status: 'banned' | 'connected' | 'disconnected' | 'in_game'
   in_game: boolean
   game_id: string | null
 }
@@ -47,4 +47,4 @@ export type UserRole = 'admin' | 'player'
 /**
  * Tipo para el estado de usuario
  */
-export type UserStatus = 'active' | 'banned' | 'connected' | 'disconnected' | 'in_game'
+export type UserStatus = 'banned' | 'connected' | 'disconnected' | 'in_game'

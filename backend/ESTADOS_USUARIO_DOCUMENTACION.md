@@ -7,16 +7,14 @@ El sistema de estados de usuario maneja automáticamente las transiciones de est
 ## Estados Disponibles
 
 ### Estados Base
-- `ACTIVE`: Estado inicial por defecto de todos los usuarios
 - `BANNED`: Usuario bloqueado/baneado (solo admins pueden establecer este estado)
 
 ### Estados de Conexión
 - `CONNECTED`: Usuario conectado a la aplicación vía WebSocket
-- `DISCONNECTED`: Usuario desconectado de la aplicación
+- `DISCONNECTED`: Usuario desconectado de la aplicación. Estado inicial por defecto de todos los usuarios
 
 ### Estados de Juego
 - `IN_GAME`: Usuario en una partida activa (puede estar vivo o muerto)
-- `ALIVE_IN_GAME`: Usuario vivo en una partida activa
 
 ## Transiciones Automáticas
 
@@ -30,16 +28,6 @@ El sistema de estados de usuario maneja automáticamente las transiciones de est
 - **Transición**: `CONNECTED` → `IN_GAME`
 - **Función**: `auto_update_status_on_join(connection_id, message_data)`
 
-### Al Iniciar Partida
-- **Trigger**: La partida inicia oficialmente
-- **Transición**: `IN_GAME` → `ALIVE_IN_GAME` (para todos los jugadores)
-- **Función**: `auto_update_status_on_game_start(user_ids[])`
-
-### Al Morir en Partida
-- **Trigger**: Un jugador es eliminado/muere
-- **Transición**: `ALIVE_IN_GAME` → `IN_GAME`
-- **Función**: `auto_update_status_on_player_death(user_id)`
-
 ### Al Salir de Partida
 - **Trigger**: Usuario abandona o termina la partida
 - **Transición**: `IN_GAME` → `CONNECTED`
@@ -47,25 +35,13 @@ El sistema de estados de usuario maneja automáticamente las transiciones de est
 
 ### Al Desconectarse
 - **Trigger**: Usuario se desconecta del WebSocket
-- **Transición**: `cualquier_estado` → `DISCONNECTED`
+- **Transición**: `cualquier_estado` → `CONNECTED`
 - **Función**: `auto_update_status_on_disconnect(user_id)`
 
 ## Flujo Típico de Estados
 
 ```
-ACTIVE (inicial)
-   ↓ (conectar WebSocket)
-CONNECTED
-   ↓ (unirse a partida)
-IN_GAME
-   ↓ (partida inicia)
-ALIVE_IN_GAME
-   ↓ (jugador muere)
-IN_GAME (observando)
-   ↓ (partida termina/salir)
-CONNECTED
-   ↓ (desconectar)
-DISCONNECTED
+
 ```
 
 ## Implementación Técnica

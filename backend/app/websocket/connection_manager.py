@@ -145,7 +145,6 @@ class ConnectionManager:
                     try:
                         message_dict = message.model_dump()
                     except Exception:
-                        # Fallback to dict() if available
                         try:
                             message_dict = message.dict()
                         except Exception:
@@ -167,24 +166,45 @@ class ConnectionManager:
                 if message_dict is None:
                     message_dict = {"type": "system_message", "message": str(message)}
 
-                # Asegurar campo 'type' como string
-                msg_type = message_dict.get("type")
-                if msg_type is None:
-                    message_dict["type"] = "system_message"
+                # Normalizar el envelope: siempre dejar un objeto con keys: type (string), data (object) y timestamp
+                # Conservamos game_id si existe. Si el mensaje ya incluye 'data', lo respetamos.
+                # Extraemos y normalizamos el campo type a string
+                raw_type = message_dict.get("type")
+                if raw_type is None:
+                    normalized_type = "system_message"
                 else:
-                    # Si es Enum, intentar obtener su valor; fallback a str
-                    # Intentar obtener .value si existe, sino fallback a str
                     try:
-                        val = getattr(msg_type, "value", None)
-                        message_dict["type"] = val if val is not None else str(msg_type)
+                        val = getattr(raw_type, "value", None)
+                        normalized_type = val if val is not None else str(raw_type)
                     except Exception:
                         try:
-                            message_dict["type"] = str(msg_type)
+                            normalized_type = str(raw_type)
                         except Exception:
-                            message_dict["type"] = "system_message"
+                            normalized_type = "system_message"
 
-                # Serializar y enviar
-                message_text = json.dumps(message_dict, default=str)
+                # Build normalized envelope
+                envelope = {
+                    "type": normalized_type,
+                    "timestamp": message_dict.get("timestamp") or datetime.now().isoformat()
+                }
+
+                # Keep game_id at top-level when present
+                if "game_id" in message_dict and message_dict.get("game_id") is not None:
+                    envelope["game_id"] = message_dict.get("game_id")
+
+                # If the original dict already provides a 'data' payload, use it; otherwise, move other fields into 'data'
+                if "data" in message_dict and isinstance(message_dict.get("data"), dict):
+                    envelope["data"] = message_dict.get("data")
+                else:
+                    # Move all keys except type/game_id/timestamp into data
+                    data_payload = {}
+                    for k, v in message_dict.items():
+                        if k in ("type", "game_id", "timestamp"):
+                            continue
+                        data_payload[k] = v
+                    envelope["data"] = data_payload
+
+                message_text = json.dumps(envelope, default=str)
                 # Log outgoing personal message
                 try:
                     self.logger.info(f"SEND -> connection_id={connection_id} message={message_text}")
@@ -199,7 +219,7 @@ class ConnectionManager:
         """Broadcast mensaje a todos en un juego"""
         if game_id not in self.game_rooms:
             return
-        # Normalizar mensaje a dict y garantizar 'type'
+        # Normalizar mensaje a envelope consistente { type, data, timestamp, game_id? }
         message_dict = None
 
         if isinstance(message, dict):
@@ -221,24 +241,40 @@ class ConnectionManager:
         if message_dict is None:
             message_dict = {"message": str(message)}
 
-        # Insertar game_id
+        # Ensure game_id is present in final envelope
         message_dict["game_id"] = game_id
 
-        # Asegurar campo 'type'
-        msg_type = message_dict.get("type")
-        if msg_type is None:
-            message_dict["type"] = "system_message"
+        # Normalize to envelope
+        raw_type = message_dict.get("type")
+        if raw_type is None:
+            normalized_type = "system_message"
         else:
             try:
-                val = getattr(msg_type, "value", None)
-                message_dict["type"] = val if val is not None else str(msg_type)
+                val = getattr(raw_type, "value", None)
+                normalized_type = val if val is not None else str(raw_type)
             except Exception:
                 try:
-                    message_dict["type"] = str(msg_type)
+                    normalized_type = str(raw_type)
                 except Exception:
-                    message_dict["type"] = "system_message"
+                    normalized_type = "system_message"
 
-        message_text = json.dumps(message_dict, default=str)
+        envelope = {
+            "type": normalized_type,
+            "game_id": game_id,
+            "timestamp": message_dict.get("timestamp") or datetime.now().isoformat()
+        }
+
+        if "data" in message_dict and isinstance(message_dict.get("data"), dict):
+            envelope["data"] = message_dict.get("data")
+        else:
+            data_payload = {}
+            for k, v in message_dict.items():
+                if k in ("type", "game_id", "timestamp"):
+                    continue
+                data_payload[k] = v
+            envelope["data"] = data_payload
+
+        message_text = json.dumps(envelope, default=str)
         # Log broadcast to game
         try:
             self.logger.info(f"BROADCAST game={game_id} exclude={exclude_connection} message={message_text}")
@@ -267,7 +303,7 @@ class ConnectionManager:
 
     async def broadcast_to_all(self, message):
         """Broadcast mensaje a todas las conexiones activas"""
-        # Normalizar como en broadcast_to_game pero sin game_id
+        # Normalizar a envelope consistente { type, data, timestamp }
         message_dict = None
 
         if isinstance(message, dict):
@@ -289,20 +325,35 @@ class ConnectionManager:
         if message_dict is None:
             message_dict = {"message": str(message)}
 
-        msg_type = message_dict.get("type")
-        if msg_type is None:
-            message_dict["type"] = "system_message"
+        raw_type = message_dict.get("type")
+        if raw_type is None:
+            normalized_type = "system_message"
         else:
             try:
-                val = getattr(msg_type, "value", None)
-                message_dict["type"] = val if val is not None else str(msg_type)
+                val = getattr(raw_type, "value", None)
+                normalized_type = val if val is not None else str(raw_type)
             except Exception:
                 try:
-                    message_dict["type"] = str(msg_type)
+                    normalized_type = str(raw_type)
                 except Exception:
-                    message_dict["type"] = "system_message"
+                    normalized_type = "system_message"
 
-        message_text = json.dumps(message_dict, default=str)
+        envelope = {
+            "type": normalized_type,
+            "timestamp": message_dict.get("timestamp") or datetime.now().isoformat()
+        }
+
+        if "data" in message_dict and isinstance(message_dict.get("data"), dict):
+            envelope["data"] = message_dict.get("data")
+        else:
+            data_payload = {}
+            for k, v in message_dict.items():
+                if k in ("type", "timestamp"):
+                    continue
+                data_payload[k] = v
+            envelope["data"] = data_payload
+
+        message_text = json.dumps(envelope, default=str)
         # Log broadcast to all
         try:
             self.logger.info(f"BROADCAST_ALL message={message_text}")

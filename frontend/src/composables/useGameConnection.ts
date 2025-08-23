@@ -20,7 +20,7 @@ export function useGameConnection(gameId: string) {
   let wsManager: WebSocketPollingManager | null = null
   let unsubscribeFunctions: (() => void)[] = []
 
-  const VALID_PLAYER_STATUSES = ['active', 'banned', 'connected', 'disconnected', 'in_game'] as const
+  const VALID_PLAYER_STATUSES = ['banned', 'connected', 'disconnected', 'in_game'] as const
 
   const mapRawPlayerToStatus = (raw: any, connectedPlayers?: any[]): PlayerStatus => {
     const player = raw as PlayerDTO
@@ -36,7 +36,7 @@ export function useGameConnection(gameId: string) {
       playerId: player.id,
       username: (player as any).name ?? player.username ?? 'unknown',
       status,
-      isConnected: status === 'connected' || status === 'active' || status === 'in_game',
+      isConnected: status === 'connected' || status === 'in_game',
       lastSeen: new Date()
     }
   }
@@ -138,7 +138,7 @@ export function useGameConnection(gameId: string) {
         } else {
           existingPlayer.status = 'disconnected'
         }
-        existingPlayer.isConnected = existingPlayer.status === 'connected' || existingPlayer.status === 'active' || existingPlayer.status === 'in_game'
+        existingPlayer.isConnected = existingPlayer.status === 'connected' || existingPlayer.status === 'in_game'
         existingPlayer.lastSeen = new Date()
 
         gameConnectionState.value.playersStatus = currentPlayers
@@ -220,24 +220,30 @@ export function useGameConnection(gameId: string) {
   // Enviar mensaje de actualización de estado
   const updateUserStatus = (status: string) => {
     if (wsManager && connectionStatus.value.isConnected) {
-      // Crear mensaje personalizado para cambio de estado (usar data)
+      // Crear mensaje personalizado para cambio de estado. Incluir gameId cuando el usuario
+      // pasa a 'in_game' para que el backend tenga contexto de la partida.
+      const data: Record<string, unknown> = { status }
+      if (status === 'in_game' && gameId) {
+        data['game_id'] = gameId
+      }
       wsManager.send({
         type: 'update_user_status',
-        data: { status }
+        status: status,
+        game_id: status === 'in_game' ? gameId : undefined
       })
     }
   }
 
   // Notificar que el usuario entró al lobby
   const notifyUserJoinedLobby = () => {
-    // Cambiar estado del usuario a 'active' cuando se une al lobby
+    // Cambiar estado del usuario a 'in_game' cuando se une al lobby
     updateUserStatus('in_game')
   }
 
   // Notificar que el usuario salió del lobby
   const notifyUserLeftLobby = () => {
-    // Cambiar estado del usuario a 'active' cuando sale del lobby
-    updateUserStatus('active')
+    // Cambiar estado del usuario a 'connected' cuando sale del lobby
+    updateUserStatus('connected')
   }
 
   // Obtener el estado de un jugador específico

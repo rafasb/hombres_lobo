@@ -163,7 +163,7 @@ export interface GameWebSocketMessage extends WebSocketMessage {
 ```typescript
 // Enumeraciones tipadas para usuarios
 export type UserRole = 'admin' | 'player'
-export type UserStatus = 'active' | 'banned' | 'connected' | 'disconnected' | 'in_game'
+export type UserStatus = 'banned' | 'connected' | 'disconnected' | 'in_game'
 
 // Enumeraciones tipadas para WebSocket
 export type WebSocketMessageType = 'game_update' | 'player_joined' | 'player_left' | 'heartbeat'

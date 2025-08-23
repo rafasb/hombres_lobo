@@ -151,7 +151,7 @@ class WebSocketTester:
         # 5. Probar cambio manual de estado vía WebSocket
         print("\n🔄 Probando cambios manuales de estado...")
         
-        test_states = ["inactive", "active", "disconnected", "connected"]
+        test_states = ["banned", "disconnected", "connected", "in_game"]
         for state in test_states:
             await self.send_status_update(state)
             await asyncio.sleep(2)  # Esperar respuesta

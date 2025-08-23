@@ -42,7 +42,7 @@ export interface ConnectionStatus {
 export interface PlayerStatus {
   playerId: string
   username: string
-  status: 'active' | 'banned' | 'connected' | 'disconnected' | 'in_game'
+  status: 'banned' | 'connected' | 'disconnected' | 'in_game'
   isConnected: boolean
   lastSeen: Date | null  // null cuando nunca se ha conectado
 }

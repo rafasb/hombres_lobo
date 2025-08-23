@@ -27,8 +27,8 @@ class UserStatusHandler:
         """Manejar solicitud de cambio de estado"""
         try:
             # Validar campos requeridos
-            if "status" not in message_data:
-                await self.send_error(connection_id, "MISSING_FIELD", "Campo 'status' requerido")
+            if "status" not in message_data['data']:
+                await self.send_error(connection_id, "MISSING_FIELD", f"Campo 'status' requerido. El contenido de message_data es: {message_data}")
                 return
             
             # Obtener información de conexión
@@ -43,7 +43,7 @@ class UserStatusHandler:
                 return
             
             # Validar estado solicitado
-            requested_status = message_data["status"]
+            requested_status = message_data["data"]["status"]
             if requested_status not in self.status_mapping:
                 await self.send_error(connection_id, "INVALID_STATUS", f"Estado inválido: {requested_status}")
                 return
