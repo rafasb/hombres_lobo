@@ -18,7 +18,7 @@ from app.database import (
     engine, Base, SessionLocal, UserDB, GameDB,
     get_db_session
 )
-from app.models.user import UserRole, UserStatus
+from app.models.user import UserAccessRole, UserStatus
 from app.models.game_and_roles import GameStatus
 from app.core.security import hash_password
 from sqlalchemy import text, Index
@@ -130,8 +130,8 @@ def create_initial_users():
                 username=admin_username,
                 email=admin_email,
                 hashed_password=hash_password(admin_password),
-                role=UserRole.ADMIN.value,
-                status=UserStatus.ACTIVE.value,
+                role=UserAccessRole.ADMIN.value,
+                status=UserStatus.DISCONNECTED.value,
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC)
             )
@@ -145,8 +145,8 @@ def create_initial_users():
                 username=user_username,
                 email=user_email,
                 hashed_password=hash_password(user_password),
-                role=UserRole.PLAYER.value,
-                status=UserStatus.ACTIVE.value,
+                role=UserAccessRole.PLAYER.value,
+                status=UserStatus.DISCONNECTED.value,
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC)
             )
@@ -170,11 +170,11 @@ def create_database_info():
         game_count = db.query(GameDB).count()
         
         # Estadísticas por rol
-        admin_count = db.query(UserDB).filter(UserDB.role == UserRole.ADMIN.value).count()
-        player_count = db.query(UserDB).filter(UserDB.role == UserRole.PLAYER.value).count()
+        admin_count = db.query(UserDB).filter(UserDB.role == UserAccessRole.ADMIN.value).count()
+        player_count = db.query(UserDB).filter(UserDB.role == UserAccessRole.PLAYER.value).count()
         
         # Estadísticas por estado
-        active_users = db.query(UserDB).filter(UserDB.status == UserStatus.ACTIVE.value).count()
+        banned_users = db.query(UserDB).filter(UserDB.status == UserStatus.BANNED.value).count()
         
         # Estadísticas de partidas
         waiting_games = db.query(GameDB).filter(GameDB.status == GameStatus.WAITING.value).count()
@@ -188,7 +188,7 @@ def create_database_info():
                     "total": user_count,
                     "admins": admin_count,
                     "players": player_count,
-                    "active": active_users
+                    "banned": banned_users
                 },
                 "games": {
                     "total": game_count,

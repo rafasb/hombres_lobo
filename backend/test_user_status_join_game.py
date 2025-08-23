@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 
 from app.websocket.user_status_handlers import user_status_handler
 from app.services.user_service import get_user, create_user
-from app.models.user import User, UserRole, UserStatus
+from app.models.user import User, UserAccessRole, UserStatus
 from app.core.security import hash_password
 import uuid
 from app.websocket.connection_manager import connection_manager
@@ -30,8 +30,8 @@ async def test_user_status_join_game():
             id=str(uuid.uuid4()),
             username="test_player_join",
             email="test_join@example.com",
-            role=UserRole.PLAYER,
-            status=UserStatus.ACTIVE,
+            role=UserAccessRole.PLAYER,
+            status=UserStatus.DISCONNECTED,
             hashed_password=hashed
         )
         create_user(new_user)

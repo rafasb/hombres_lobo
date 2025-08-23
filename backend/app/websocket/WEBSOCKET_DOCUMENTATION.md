@@ -9,7 +9,7 @@
 
 ### Estados Automáticos
 - Al **conectar** WebSocket → Usuario se marca como `in_game` (`UserStatus.IN_GAME`)
-- Al **desconectar** WebSocket → Usuario se marca como `active` (`UserStatus.ACTIVE`)
+- Al **desconectar** WebSocket → Usuario se marca como `active` (`UserStatus.CONNECTED`) ya que sigue en la app.
 
 ### Nuevos Mensajes WebSocket
 - `update_user_status` - Cambiar estado propio

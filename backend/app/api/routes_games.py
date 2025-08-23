@@ -17,7 +17,7 @@ from app.models.game_responses import (
     GameStatusUpdateResponse,
     GameDeleteResponse
 )
-from app.models.user import UserRole, User
+from app.models.user import UserAccessRole, User
 from app.services.game_service import (
     create_game,
     get_game,
@@ -110,7 +110,7 @@ def join_game_endpoint(game_id: str, user: User = Depends(get_current_user)):
 @router.post("/{game_id}/assign-roles", response_model=GameRoleAssignmentResponse)
 def assign_roles_endpoint(game_id: str, user=Depends(get_current_user)):
     """Permite al creador o admin iniciar el reparto de roles y comenzar la partida."""
-    is_admin = user.role == UserRole.ADMIN
+    is_admin = user.role == UserAccessRole.ADMIN
     game = assign_roles(game_id, get_current_user_id(), is_admin)
     if game:
         game_response = game_to_game_response(game)
@@ -162,7 +162,7 @@ def update_game(game_id: str, data: dict = Body(...), user=Depends(get_current_u
     name = data.get("name")
     max_players = data.get("max_players")
     roles = data.get("roles")
-    is_admin = user.role == UserRole.ADMIN
+    is_admin = user.role == UserAccessRole.ADMIN
     
     updated = update_game_params(game_id, user.id, name, max_players, roles, is_admin)
     if updated:
@@ -195,7 +195,7 @@ def update_game_status(
     game_id: str, status: GameStatus = Body(...), user=Depends(get_current_user)
 ):
     """Permite al creador o admin iniciar, pausar, avanzar fase o detener la partida."""
-    is_admin = user.role == UserRole.ADMIN
+    is_admin = user.role == UserAccessRole.ADMIN
     
     # Obtener estado previo
     current_game = get_game(game_id)
@@ -221,7 +221,7 @@ def update_game_status(
 @router.delete("/{game_id}", response_model=GameDeleteResponse)
 def delete_game_by_creator(game_id: str, user=Depends(get_current_user)):
     """Permite al creador o admin eliminar la partida si está en estado WAITING o PAUSED."""
-    is_admin = user.role == UserRole.ADMIN
+    is_admin = user.role == UserAccessRole.ADMIN
     
     if creator_delete_game(game_id, user.id, is_admin):
         return GameDeleteResponse(

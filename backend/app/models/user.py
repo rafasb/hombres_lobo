@@ -4,19 +4,17 @@ from datetime import datetime, UTC
 
 # Modelo de usuario (Pydantic)
 
-class UserRole(str, Enum):
+class UserAccessRole(str, Enum):
     """Roles de usuario: admin, player"""
     ADMIN = "admin"
     PLAYER = "player"
 
 class UserStatus(str, Enum):
-    ''' Estados de usuario: active, banned, connected, disconnected, in_game, alive_in_game '''
-    ACTIVE = "active"   # Estado por defecto del usuario
+    ''' Estados de usuario: banned, connected, disconnected, in_game, alive_in_game '''
     BANNED = "banned"   # Usuario bloqueado/baneado
     CONNECTED = "connected" # Usuario conectado a la aplicación
     DISCONNECTED = "disconnected" # Usuario desconectado de la aplicación
     IN_GAME = "in_game" # Usuario en una partida activa
-    ALIVE_IN_GAME = "alive_in_game"  # Indica si el usuario está vivo en la partida (game)
 
 class UserBase(BaseModel):
     ''' atributos básicos del usuario '''
@@ -28,9 +26,10 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
 
 class User(UserBase):
+    ''' Modelo completo de usuario '''
     id: str
-    role: UserRole = UserRole.PLAYER
-    status: UserStatus = UserStatus.ACTIVE
+    role: UserAccessRole = UserAccessRole.PLAYER
+    status: UserStatus = UserStatus.DISCONNECTED  # Estado inicial al crear usuario
     hashed_password: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

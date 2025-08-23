@@ -12,7 +12,7 @@ Actualizado para reflejar los cambios en el modelo de datos:
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Body
-from app.models.user import UserRole, UserUpdate, UserStatusUpdate
+from app.models.user import UserAccessRole, UserUpdate, UserStatusUpdate
 from app.models.user_responses import (
     UserProfileResponse,
     UsersListResponse,
@@ -37,7 +37,7 @@ def get_my_profile(current_user=Depends(get_current_user)):
 def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
     """Obtiene los datos de un usuario específico por su ID."""
     # Verificar que solo puede ver su propio perfil o ser admin
-    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+    if current_user.role != UserAccessRole.ADMIN and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Solo puedes acceder a tu propio perfil")
     
     user_obj = get_user(user_id)
@@ -106,14 +106,14 @@ def update_user_status_endpoint(
     Los usuarios pueden cambiar su propio estado entre 'connected', 'disconnected' e 'in_game'.
     """
     # Verificar permisos
-    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
+    if current_user.id != user_id and current_user.role != UserAccessRole.ADMIN:
         raise HTTPException(
             status_code=403, 
             detail="Solo puedes cambiar tu propio estado de conexión o ser administrador"
         )
     
     # Solo admins pueden banear usuarios
-    if status_update.status.value == "banned" and current_user.role != UserRole.ADMIN:
+    if status_update.status.value == "banned" and current_user.role != UserAccessRole.ADMIN:
         raise HTTPException(
             status_code=403, 
             detail="Solo los administradores pueden banear usuarios"

@@ -19,10 +19,8 @@ class UserStatusHandler:
         self.status_mapping = {
             "connected": UserStatus.CONNECTED,
             "disconnected": UserStatus.DISCONNECTED,
-            "active": UserStatus.ACTIVE,
             "banned": UserStatus.BANNED,
             "in_game": UserStatus.IN_GAME,
-            "alive_in_game": UserStatus.ALIVE_IN_GAME,
         }
     
     async def handle_update_user_status(self, connection_id: str, message_data: dict):
@@ -122,8 +120,8 @@ class UserStatusHandler:
             
             # Solo actualizar a disconnected si no hay otras conexiones del mismo usuario
             if len(user_connections) <= 1:  # <= 1 porque la conexión actual aún no se ha removido
-                # Nuevo comportamiento: al desconectar del websocket, marcar como ACTIVE
-                status_update = UserStatusUpdate(status=UserStatus.ACTIVE)
+                # Nuevo comportamiento: al desconectar del websocket, marcar como CONNECTED
+                status_update = UserStatusUpdate(status=UserStatus.CONNECTED)
                 updated_user, old_status = update_user_status(user_id, status_update)
 
                 if updated_user and old_status:
@@ -197,11 +195,11 @@ class UserStatusHandler:
             logger.error(f"Error actualizando estado automático al salir de partida para {user_id}: {e}")
     
     async def auto_update_status_on_game_start(self, user_ids: list[str]):
-        """Actualizar automáticamente el estado a 'alive_in_game' cuando inicia la partida"""
+        """Actualizar automáticamente el estado a 'in_game' cuando inicia la partida"""
         try:
             for user_id in user_ids:
-                # Actualizar estado a 'alive_in_game'
-                status_update = UserStatusUpdate(status=UserStatus.ALIVE_IN_GAME)
+                # Actualizar estado a 'in_game'
+                status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
                 updated_user, old_status = update_user_status(user_id, status_update)
                 
                 if updated_user and old_status:
@@ -209,9 +207,9 @@ class UserStatusHandler:
                     await self.broadcast_status_change(
                         user_id, 
                         old_status.value, 
-                        "alive_in_game"
+                        "in_game"
                     )
-                    logger.info(f"Usuario {user_id} automáticamente marcado como 'alive_in_game' al iniciar partida")
+                    logger.info(f"Usuario {user_id} automáticamente marcado como 'in_game' al iniciar partida")
                 else:
                     logger.warning(f"No se pudo actualizar estado para usuario {user_id} al iniciar partida")
                     

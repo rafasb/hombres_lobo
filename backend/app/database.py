@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
-from app.models.user import User, UserRole, UserStatus
+from app.models.user import User, UserAccessRole, UserStatus
 from app.models.game_and_roles import Game, GameStatus, GameResponse
 from app.core.security import hash_password
 from dotenv import load_dotenv
@@ -40,8 +40,8 @@ class UserDB(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default=UserRole.PLAYER.value)
-    status = Column(String, nullable=False, default=UserStatus.ACTIVE.value)
+    role = Column(String, nullable=False, default=UserAccessRole.PLAYER.value)
+    status = Column(String, nullable=False, default=UserStatus.DISCONNECTED.value)
     in_game = Column(Boolean, nullable=False, default=False)
     game_id = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.now())
@@ -54,7 +54,7 @@ class UserDB(Base):
             username=getattr(self, 'username'),
             email=getattr(self, 'email'),
             hashed_password=getattr(self, 'hashed_password'),
-            role=UserRole(getattr(self, 'role')),
+            role=UserAccessRole(getattr(self, 'role')),
             status=UserStatus(getattr(self, 'status')),
             in_game=getattr(self, 'in_game'),
             game_id=getattr(self, 'game_id'),
@@ -250,8 +250,8 @@ if admin_username and admin_email and admin_password:
                     username=admin_username,
                     email=admin_email,
                     hashed_password=hash_password(admin_password),
-                    role=UserRole.ADMIN.value,
-                    status=UserStatus.ACTIVE.value,
+                    role=UserAccessRole.ADMIN.value,
+                    status=UserStatus.DISCONNECTED.value,
                     created_at=datetime.now(UTC),
                     updated_at=datetime.now(UTC)
                 )

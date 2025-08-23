@@ -4,7 +4,7 @@ Incluye funciones para crear, obtener, actualizar y listar usuarios usando la ba
 """
 
 from app.database import save_user, load_user, load_all_users, delete_user as db_delete_user
-from app.models.user import User, UserUpdate, UserRole, UserStatus, UserStatusUpdate
+from app.models.user import User, UserUpdate, UserAccessRole, UserStatus, UserStatusUpdate
 from typing import Optional, List
 from datetime import datetime, UTC
 from app.core.security import hash_password
@@ -18,7 +18,7 @@ class UserService:
         """Crea un nuevo usuario en la base de datos."""
         users = load_all_users()
         if not users:
-            user.role = UserRole.ADMIN  # Primer usuario es admin
+            user.role = UserAccessRole.ADMIN  # Primer usuario es admin
         user.created_at = datetime.now(UTC)
         user.updated_at = datetime.now(UTC)
         # Solo hashear si no es ya un hash (evita doble hash)
@@ -80,7 +80,7 @@ class UserService:
 def create_user(user: User) -> None:
     users = load_all_users()
     if not users:
-        user.role = UserRole.ADMIN  # Primer usuario es admin
+        user.role = UserAccessRole.ADMIN  # Primer usuario es admin
     user.created_at = datetime.now(UTC)
     user.updated_at = datetime.now(UTC)
     # Solo hashear si no es ya un hash (evita doble hash)

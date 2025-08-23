@@ -5,7 +5,7 @@ Estos endpoints no requieren autenticación previa.
 """
 
 from fastapi import APIRouter, HTTPException, Form, status
-from app.models.user import User, UserRole, UserStatus
+from app.models.user import User, UserAccessRole, UserStatus
 from app.models.user_responses import LoginResponse, UserProfileResponse
 from app.services.user_service import create_user, get_all_users
 from app.core.security import hash_password, verify_password, create_access_token
@@ -20,8 +20,8 @@ def register_user(username: str = Form(...), email: str = Form(...), password: s
         id=str(uuid.uuid4()),
         username=username,
         email=email,
-        role=UserRole.PLAYER,
-        status=UserStatus.ACTIVE,
+        role=UserAccessRole.PLAYER,
+        status=UserStatus.DISCONNECTED,
         hashed_password=hashed
     )
     create_user(user)
