@@ -183,7 +183,7 @@ export function useGameLobby(gameId: string) {
   onUnmounted(async () => {
     // Al desmontar, si el usuario sigue en la partida, actualizar su estado a 'connected'
     if (auth.user) {
-      try { await updateUserStatus(auth.user.id, { status: 'in_game', game_id: undefined }) } catch (e) { console.warn('No se pudo actualizar el estado del usuario al desmontar', e) }
+      try { await updateUserStatus(auth.user.id, { status: 'connected', game_id: undefined }) } catch (e) { console.warn('No se pudo actualizar el estado del usuario al desmontar', e) }
     }
     try { gameStore.clear() } catch (e) { /* ignore */ }
   })

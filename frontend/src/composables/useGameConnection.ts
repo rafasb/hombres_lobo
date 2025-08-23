@@ -228,8 +228,7 @@ export function useGameConnection(gameId: string) {
       }
       wsManager.send({
         type: 'update_user_status',
-        status: status,
-        game_id: status === 'in_game' ? gameId : undefined
+        data
       })
     }
   }
