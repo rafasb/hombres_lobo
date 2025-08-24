@@ -1,0 +1,45 @@
+@startuml backend_websocket_elements
+title Backend WebSocket - Component Diagram
+
+
+
+actor "WebSocket Client" as Client
+
+component "websocket_endpoint" as Endpoint
+component "connection_manager\n(ConnectionManager)" as ConnMgr
+component "message_handler\n(MessageHandler)" as MsgHandler
+
+component "game_handler\n(GameHandler)" as GameH
+component "voting_handler\n(VotingHandler)" as VotingH
+component "user_status_handler\n(UserStatusHandler)" as UserStatusH
+
+component "game_state_manager" as GameStateSvc
+component "voting_service" as VotingSvc
+component "game_service\n(join_game, get_game)" as GameSvc
+component "user_service\n(get_user, update_user_status)" as UserSvc
+
+Client --> Endpoint : connect
+Endpoint -> ConnMgr : connect
+Endpoint -> UserStatusH : update_status
+Endpoint -> Client : welcome
+
+Endpoint -> MsgHandler : message
+MsgHandler --> GameH : game
+MsgHandler --> VotingH : vote
+MsgHandler --> UserStatusH : status
+
+GameH -> GameStateSvc : game_state
+GameH -> ConnMgr : broadcast
+GameH ..> VotingSvc : start_voting
+
+VotingH -> VotingSvc : voting_svc
+VotingSvc -> VotingH : vote_cb
+VotingH -> ConnMgr : broadcast
+
+UserStatusH -> UserSvc : update_user
+UserStatusH -> ConnMgr : notify
+
+Endpoint -> ConnMgr : disconnect
+ConnMgr -> UserStatusH : update_status
+
+@enduml

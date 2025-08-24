@@ -1,0 +1,75 @@
+@startuml backend_websocket_classes
+title Backend WebSocket - Message / Class Diagram
+
+
+
+class WebSocketMessage {
+  - type: MessageType
+  - game_id: str | None
+  - user_id: str | None
+  - timestamp: datetime
+  - data: dict
+}
+
+class SystemMessage {
+  - message: str
+  - message_key: str | None
+  - params: dict
+}
+
+class ErrorMessage {
+  - error_code: str
+  - message: str
+  - details: dict
+}
+
+class SuccessMessage {
+  - action: str
+  - message: str
+  - data: dict
+}
+
+class VoteMessage {
+  - voter_id: str
+  - target_id: str
+  - vote_type: str
+}
+
+class VotingResultsMessage {
+  - vote_type: str
+  - results: dict
+  - eliminated_player: str | None
+  - is_tie: bool
+}
+
+class UserStatusChangedMessage {
+  - user_id: str
+  - old_status: str
+  - new_status: str
+}
+
+enum MessageType {
+  PLAYER_CONNECTED
+  PLAYER_DISCONNECTED
+  UPDATE_USER_STATUS
+  JOIN_GAME
+  START_GAME
+  CAST_VOTE
+  VOTING_STARTED
+  VOTING_ENDED
+  VOTING_RESULTS
+  PHASE_CHANGED
+  HEARTBEAT
+  ERROR
+  SUCCESS
+  SYSTEM_MESSAGE
+}
+
+WebSocketMessage "1" -- "*" SystemMessage : may contain
+WebSocketMessage "1" -- "*" ErrorMessage : may contain
+WebSocketMessage "1" -- "*" SuccessMessage : may contain
+WebSocketMessage "1" -- "*" VoteMessage : may contain
+WebSocketMessage "1" -- "1" VotingResultsMessage : may contain
+WebSocketMessage "1" -- "*" UserStatusChangedMessage : may contain
+
+@enduml
