@@ -4,7 +4,7 @@ Maneja eventos de conexión, desconexión y mensajes básicos
 """
 from fastapi import WebSocket, WebSocketDisconnect
 from app.websocket.connection_manager import connection_manager
-from app.websocket.messages import (
+from backend.app.websocket.messages_types import (
     MessageType, ErrorMessage, SuccessMessage, SystemMessage
 )
 from app.websocket.game_handlers import game_handler

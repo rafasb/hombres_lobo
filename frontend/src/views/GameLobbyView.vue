@@ -144,12 +144,12 @@
             <div class="card-body p-0">
               <div class="list-group list-group-flush">
                 <div 
-                  v-for="player in playerUsers" 
+                  v-for="player in playersList" 
                   :key="player.id"
                   class="list-group-item"
                   :class="{ 
-                    'list-group-item-primary': player.id === auth.user?.id,
-                    'list-group-item-warning': player.id === game.creator_id && player.id !== auth.user?.id
+                    'list-group-item-primary': player.id === localUserId,
+                    'list-group-item-warning': player.id === game.creator_id && player.id !== localUserId
                   }"
                   style="background: rgba(255, 255, 255, 0.8);"
                 >
@@ -179,7 +179,7 @@
                         <i class="bi bi-crown me-1"></i>
                         Creador
                       </span>
-                      <span v-if="player.id === auth.user?.id" class="badge bg-primary">
+                      <span v-if="player.id === localUserId" class="badge bg-primary">
                         <i class="bi bi-person-check me-1"></i>
                         Tú
                       </span>
@@ -307,16 +307,22 @@
 import { onMounted } from 'vue'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import type { GamePlayer } from '../types/game'
 import { useGameLobby } from '../composables/useGameLobby'
 import { useGameConnection } from '../composables/useGameConnection'
 import { useNavigation } from '../composables/useNavigation'
 import { useAuthStore } from '../stores/authStore'
+import { usePlayerStore } from '../stores/player'
+import { useUserStore } from '../stores/user'
 import PageWithNav from '../components/PageWithNav.vue'
 import ConnectionStatus from '../components/ConnectionStatus.vue'
 
 const route = useRoute()
 const gameId = route.params.id as string
 const auth = useAuthStore()
+// Read-only reactive sources from Pinia stores (prefer these for rendering)
+const playerStore = usePlayerStore()
+const userStore = useUserStore()
 const { handleNavigation } = useNavigation()
 
 const {
@@ -362,6 +368,18 @@ const playerStatusText = (playerId: string) => {
   if (st.status === 'connected') return 'Conectado'
   return 'Desconectado'
 }
+
+// Derived players list: prefer the player store (populated by WS), fallback to
+// the composable's playerUsers (initial HTTP load). Read-only for now.
+const playersList = computed<GamePlayer[]>(() => {
+  if (playerStore.players && playerStore.players.length > 0) return playerStore.players
+  // `playerUsers` is a ref/computed from the composable and should match GamePlayer[]
+  return (playerUsers as unknown) as GamePlayer[]
+})
+
+// Prefer the lightweight `user` store for current user identity/status. If not
+// populated, fallback to the auth store user (existing behavior).
+const localUserId = computed(() => userStore.user?.id ?? auth.user?.id)
 
 // Funciones wrapper para actualizar estado de jugadores
 const joinGame = async () => {

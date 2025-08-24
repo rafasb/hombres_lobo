@@ -3,7 +3,7 @@ Handlers para gestión de estado de usuarios via WebSocket
 Maneja cambios de estado automáticos y notificaciones en tiempo real
 """
 from app.websocket.connection_manager import connection_manager
-from app.websocket.messages import (
+from backend.app.websocket.messages_types import (
     UserStatusChangedMessage, ErrorMessage, SuccessMessage
 )
 from app.services.user_service import update_user_status

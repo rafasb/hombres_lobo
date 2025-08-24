@@ -4,7 +4,7 @@ Maneja eventos de votación en tiempo real
 """
 from datetime import datetime
 from app.websocket.connection_manager import connection_manager
-from app.websocket.messages import (
+from backend.app.websocket.messages_types import (
     MessageType, VoteMessage, VotingResultsMessage, SystemMessage, ErrorMessage
 )
 from app.services.voting_service import voting_service
@@ -163,7 +163,7 @@ class VotingHandler:
     
     async def _send_success(self, connection_id: str, action: str, message: str):
         """Enviar mensaje de éxito"""
-        from app.websocket.messages import SuccessMessage
+        from backend.app.websocket.messages_types import SuccessMessage
         success_message = SuccessMessage(
             action=action,
             message=message

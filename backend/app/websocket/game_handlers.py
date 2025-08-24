@@ -3,7 +3,7 @@ Game Handlers para WebSocket
 Maneja eventos específicos del juego: iniciar, unirse, fases, etc.
 """
 from app.websocket.connection_manager import connection_manager
-from app.websocket.messages import (
+from backend.app.websocket.messages_types import (
     MessageType, GameStartedMessage, PhaseChangedMessage
 )
 from app.services.game_state_service import game_state_manager, GameState
