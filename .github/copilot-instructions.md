@@ -8,6 +8,20 @@
 - Ejecuta los tests si los hay.
 - Propon mejoras seguientes.
 
+# Instrucciones para las comunicaciones frontend-backend:
+
+El principal objetivo es simplificar el proceso de comunicación, así como los mensajes e interacciones, manteniendo la funcionalidad de la aplicación.
+
+Dado que existe una API con endpoints para la gestión de toda la información del juego, y que el flujo de la partida se gestiona en el backend, el frontend enviará la información mediante llamadas a la API, para actualizar la información de la base de datos del backend y activar los cambios de flujo de la partida, si es el caso.
+
+Para permitir la interactividad entre los miembros de cada partida, será el backend el responsable de enviar mensajes a través del websocket a todos los miembros de una misma partida, cuando alguno de los datos asociados a los miembros de la partida o asociados a la partida hayan sido modificados.
+
+El frontend, al recibir los mensajes del backend con las actualizaciones de los datos de la partida y sus participantes, almacenará esta información en local (usando Pinia).
+
+Las modificaciones en los datos de pínia se realizarán mediante los stores siguientes Auth, (ya existente), User (para los datos de usuario: id, username, estado: connected, in_game, disconnected), Player (para la información del usuario relacionada con el juego, como el rol, vivo/muerto, etc).
+
+Las modificaciones de datos en Pinia permitirán que los datos mostrados en los componentes VUE sean reactivos, actualizandose cuando se modifiquen en el store.
+
 ## Instrucciones para Copilot en el Proyecto Hombres Lobo
 
 - Se trata de una aplicación web SPA (Single Page Application), que debe estar orientada a móviles, salvo vistas especialmente anchas como la de administración. Asegura la característica SPA y respetar el diseño responsivo.
