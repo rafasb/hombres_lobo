@@ -12,7 +12,7 @@ from app.models.player_actions import (
     SheriffSuccessorResponse,
     PlayerInfo,
 )
-from app.services.player_action_service import (
+from app.services.sheriff_action_service import (
     is_sheriff,
     can_sheriff_break_tie,
     has_day_vote_tie,
@@ -22,6 +22,7 @@ from app.services.player_action_service import (
     sheriff_choose_successor,
     get_sheriff_eligible_successors,
 )
+from app.services.user_service import UserService
 from app.core.dependencies import get_current_user
 from typing import List, Dict
 
@@ -62,9 +63,9 @@ def break_voting_tie(
     
     # Buscar información del jugador eliminado
     eliminated_username = None
-    for player in updated_game.players:
-        if player.id == tiebreaker_request.target_id:
-            eliminated_username = player.username
+    for player_id, player in updated_game.players:
+        if player_id == tiebreaker_request.target_id:
+            eliminated_username = UserService.get_username_by_id(player_id)
             break
     
     if not eliminated_username:
@@ -156,9 +157,9 @@ def choose_successor(
     
     # Buscar información del sucesor
     successor_username = None
-    for player in updated_game.players:
-        if player.id == successor_request.successor_id:
-            successor_username = player.username
+    for player_id, player in updated_game.players:
+        if player_id == successor_request.successor_id:
+            successor_username = UserService.get_username_by_id(player_id)
             break
     
     if not successor_username:

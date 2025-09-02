@@ -112,7 +112,7 @@ def get_alive_players_in_game(game_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
     # Verificar que el usuario está en la partida
-    user_in_game = any(player.id == user.id for player in game.players)
+    user_in_game = any(player == user.id for player in game.players)
     if not user_in_game:
         raise HTTPException(
             status_code=403,
@@ -140,10 +140,10 @@ def get_warewolf_consensus(game_id: str, user=Depends(get_current_user)):
         # También permitir si es hombre lobo que ya actuó esta noche
         from app.services.game_service import get_game
         game = get_game(game_id)
-        if not game or user.id not in game.roles:
+        if not game or user.id not in game.players:
             raise HTTPException(status_code=403, detail="No tienes permisos para ver esta información")
         
-        user_role = game.roles[user.id]
+        user_role = game.players[user.id]
         if user_role.role.value != "warewolf" or not user_role.is_alive:
             raise HTTPException(status_code=403, detail="No tienes permisos para ver esta información")
     

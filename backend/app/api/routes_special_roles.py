@@ -10,11 +10,11 @@ from app.models.player_actions import (
     SeerVisionResponse,
     PlayerInfo,
 )
-from app.services.player_action_service import (
-    can_seer_act,
+from app.services.seer_action_service import (
     seer_vision,
     get_seer_vision_result,
     get_seer_eligible_targets,
+    get_seer_service
 )
 from app.core.dependencies import get_current_user
 from typing import List, Dict
@@ -39,12 +39,6 @@ def use_seer_vision(
     Returns:
         Respuesta con el resultado de la investigación
     """
-    # Verificar si el jugador puede actuar como vidente
-    if not can_seer_act(game_id, user.id):
-        raise HTTPException(
-            status_code=400,
-            detail="No puedes usar tu habilidad de vidente en este momento"
-        )
     
     # Realizar la visión
     updated_game = seer_vision(game_id, user.id, vision_request.target_id)
@@ -84,12 +78,6 @@ def get_seer_targets(game_id: str, user=Depends(get_current_user)):
     Returns:
         Lista de jugadores vivos que pueden ser investigados
     """
-    # Verificar si el jugador puede actuar como vidente
-    if not can_seer_act(game_id, user.id):
-        raise HTTPException(
-            status_code=403,
-            detail="No tienes permisos para ver esta información"
-        )
     
     eligible_targets = get_seer_eligible_targets(game_id, user.id)
     return [PlayerInfo(**target) for target in eligible_targets]
@@ -107,5 +95,5 @@ def check_seer_can_act(game_id: str, user=Depends(get_current_user)):
     Returns:
         Diccionario indicando si puede usar su habilidad de vidente
     """
-    can_act = can_seer_act(game_id, user.id)
-    return {"can_act": can_act}
+    seer = get_seer_service(game_id, user.id)
+    return {"can_act": not seer.has_acted_tonight if seer else False}

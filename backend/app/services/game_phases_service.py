@@ -10,6 +10,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+# TODO - Integrar con GameState para sincronizar fases y estados
 class GamePhase(Enum):
     """Fases del juego"""
     WAITING = "waiting"          # Sala de espera
@@ -20,6 +22,7 @@ class GamePhase(Enum):
     TRIAL = "trial"             # Juicio/defensa
     EXECUTION = "execution"     # Ejecución
     FINISHED = "finished"       # Juego terminado
+    PAUSED = "paused"         # Juego en pausa
 
 class PhaseConfig:
     """Configuración de una fase"""
@@ -34,6 +37,7 @@ class GamePhaseController:
     # Configuración por defecto de fases
     DEFAULT_PHASE_CONFIG = {
         GamePhase.WAITING: PhaseConfig(0, GamePhase.STARTING, False),  # No auto advance
+        GamePhase.PAUSED: PhaseConfig(0, GamePhase.PAUSED, False),      # No auto advance
         GamePhase.STARTING: PhaseConfig(1, GamePhase.NIGHT, True),     # 1 minuto para preparar
         GamePhase.NIGHT: PhaseConfig(3, GamePhase.DAY, True),          # 3 minutos fase nocturna
         GamePhase.DAY: PhaseConfig(5, GamePhase.VOTING, True),         # 5 minutos discusión

@@ -4,7 +4,7 @@ Incluye funciones para cambiar estados de partida y asignar roles.
 """
 
 from app.database import save_game, load_game
-from app.models.game_and_roles import Game, GameStatus, GameRole, PlayerInfo
+from app.models.game_and_player import Game, GameStatus, Roles, PlayerInfo
 from typing import Optional
 import random
 
@@ -65,10 +65,10 @@ def assign_roles(game_id: str, user_id: str, is_admin: bool = False) -> Optional
     
     # Añadir hombres lobo
     for _ in range(num_werewolves):
-        available_roles.append(GameRole.WAREWOLF)
+        available_roles.append(Roles.WAREWOLF)
     
     # Añadir roles especiales (máximo 1 de cada tipo, según disponibilidad)
-    special_roles = [GameRole.SEER, GameRole.WITCH, GameRole.HUNTER, GameRole.CUPID]
+    special_roles = [Roles.SEER, Roles.WITCH, Roles.HUNTER, Roles.CUPID]
     remaining_slots = num_players - num_werewolves
     
     # Asignar roles especiales si hay suficientes jugadores
@@ -81,34 +81,31 @@ def assign_roles(game_id: str, user_id: str, is_admin: bool = False) -> Optional
     
     # El resto son aldeanos
     while len(available_roles) < num_players:
-        available_roles.append(GameRole.VILLAGER)
+        available_roles.append(Roles.VILLAGER)
     
     # Mezclar roles aleatoriamente
     random.shuffle(available_roles)
     
     # Asignar roles a jugadores
-    game.roles = {}
-    for i, player_id in enumerate(game.players):
+    game.players = {}
+    for i, player_id in enumerate(game.player_ids):
         player_info = PlayerInfo(
             role=available_roles[i],
-            is_alive=True,
-            is_revealed=False
+            player_id=player_id,
+            is_alive=True
         )
         
         # Configurar habilidades específicas según el rol
-        if available_roles[i] == GameRole.WITCH:
+        if available_roles[i] == Roles.WITCH:
             player_info.has_healing_potion = True
             player_info.has_poison_potion = True
-        elif available_roles[i] == GameRole.CUPID:
-            player_info.is_cupid = True
-        elif available_roles[i] == GameRole.SHERIFF:
+        elif available_roles[i] == Roles.SHERIFF:
             player_info.has_double_vote = True
             player_info.can_break_ties = True
-        elif available_roles[i] == GameRole.HUNTER:
+        elif available_roles[i] == Roles.HUNTER:
             player_info.can_revenge_kill = True
-            player_info.has_used_revenge = False
         
-        game.roles[player_id] = player_info
+        game.players[player_id] = player_info
     
     # Cambiar estado de la partida a STARTED
     game.status = GameStatus.STARTED
@@ -132,9 +129,9 @@ def reset_night_actions(game_id: str) -> Optional[Game]:
         return None
     
     # Reiniciar el estado de acciones nocturnas para todos los jugadores
-    for player_id in game.roles:
-        game.roles[player_id].has_acted_tonight = False
-        game.roles[player_id].target_player_id = None
+    for player_id in game.players:
+        game.players[player_id].has_acted_tonight = False
+        game.players[player_id].target_player_id = None
     
     # Limpiar las acciones nocturnas registradas
     game.night_actions = {}

@@ -13,7 +13,9 @@ from app.models.player_actions import (
     CupidAvailableTargetsResponse,
     LoversStatusResponse
 )
-from app.services import player_action_service
+from app.services.cupid_action_service import is_cupid, can_cupid_choose_lovers, cupid_choose_lovers, get_cupid_available_targets, check_lovers_victory_condition, initialize_cupid_night_actions, reset_cupid_night_actions
+from app.services.cupid_action_service import check_lovers_death as check_lovers_death_service
+from app.services.user_service import UserService
 
 router = APIRouter(prefix="/cupid", tags=["cupid"])
 
@@ -28,21 +30,21 @@ async def choose_lovers(
     Permite a Cupido elegir a dos jugadores como enamorados.
     """
     # Verificar que el usuario actual es Cupido
-    if not player_action_service.is_cupid(game_id, current_user.id):
+    if not is_cupid(game_id, current_user.id):
         raise HTTPException(
             status_code=403,
             detail="Solo Cupido puede elegir enamorados"
         )
     
     # Verificar que puede elegir enamorados
-    if not player_action_service.can_cupid_choose_lovers(game_id, current_user.id):
+    if not can_cupid_choose_lovers(game_id, current_user.id):
         raise HTTPException(
             status_code=400,
             detail="No puedes elegir enamorados en este momento"
         )
     
     # Elegir enamorados
-    updated_game = player_action_service.cupid_choose_lovers(
+    updated_game = cupid_choose_lovers(
         game_id, current_user.id, request.lover1_id, request.lover2_id
     )
     
@@ -53,14 +55,9 @@ async def choose_lovers(
         )
     
     # Obtener nombres de usuario de los enamorados
-    lover1_username = None
-    lover2_username = None
-    for player in updated_game.players:
-        if player.id == request.lover1_id:
-            lover1_username = player.username
-        elif player.id == request.lover2_id:
-            lover2_username = player.username
-    
+    lover1_username = UserService.get_username_by_id(request.lover1_id)
+    lover2_username = UserService.get_username_by_id(request.lover2_id)
+
     return CupidChooseLoversResponse(
         success=True,
         message="Enamorados elegidos exitosamente",
@@ -80,23 +77,21 @@ async def get_cupid_status(
     Obtiene el estado actual de Cupido.
     """
     # Verificar que el usuario actual es Cupido
-    if not player_action_service.is_cupid(game_id, current_user.id):
+    if not is_cupid(game_id, current_user.id):
         raise HTTPException(
             status_code=403,
             detail="Solo Cupido puede ver este estado"
         )
     
-    status = player_action_service.get_cupid_status(game_id, current_user.id)
-    
-    return CupidStatusResponse(
-        success=True,
-        message="Estado de Cupido obtenido",
-        has_chosen_lovers=status["has_chosen_lovers"],
-        lover1_id=status["lover1_id"],
-        lover1_username=status["lover1_username"],
-        lover2_id=status["lover2_id"],
-        lover2_username=status["lover2_username"]
-    )
+    status = await get_cupid_status(game_id, current_user)
+
+    if isinstance(status, CupidStatusResponse):
+        return status
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Error al obtener el estado de Cupido"
+        )
 
 
 @router.get("/available-targets/{game_id}", response_model=CupidAvailableTargetsResponse)
@@ -108,20 +103,20 @@ async def get_available_targets(
     Obtiene la lista de jugadores disponibles para enamorar.
     """
     # Verificar que el usuario actual es Cupido
-    if not player_action_service.is_cupid(game_id, current_user.id):
+    if not is_cupid(game_id, current_user.id):
         raise HTTPException(
             status_code=403,
             detail="Solo Cupido puede ver los objetivos disponibles"
         )
     
     # Verificar que puede elegir
-    if not player_action_service.can_cupid_choose_lovers(game_id, current_user.id):
+    if not can_cupid_choose_lovers(game_id, current_user.id):
         raise HTTPException(
             status_code=400,
             detail="No puedes elegir enamorados en este momento"
         )
     
-    targets = player_action_service.get_cupid_available_targets(game_id, current_user.id)
+    targets = get_cupid_available_targets(game_id, current_user.id)
     
     return CupidAvailableTargetsResponse(
         success=True,
@@ -138,24 +133,17 @@ async def get_lovers_status(
     """
     Obtiene el estado de enamorado del jugador actual.
     """
-    status = player_action_service.get_lovers_status(game_id, current_user.id)
-    
-    # Solo revelar información si el jugador es efectivamente enamorado
-    if not status["is_lover"]:
-        return LoversStatusResponse(
-            success=True,
-            message="No eres enamorado",
-            is_lover=False
+    status = await get_lovers_status(game_id, current_user)
+
+    if isinstance(status, HTTPException):
+        raise status
+    elif isinstance(status, LoversStatusResponse):
+        return status
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Error al obtener el estado de enamorado"
         )
-    
-    return LoversStatusResponse(
-        success=True,
-        message="Estado de enamorado obtenido",
-        is_lover=status["is_lover"],
-        partner_id=status["partner_id"],
-        partner_username=status["partner_username"],
-        both_alive=status["both_alive"]
-    )
 
 
 @router.post("/check-lovers-death/{game_id}")
@@ -170,9 +158,9 @@ async def check_lovers_death(
     """
     # Esta función debería ser solo para administradores o llamadas internas del sistema
     # Por simplicidad, permitimos que cualquier jugador la llame
-    
-    deaths = player_action_service.check_lovers_death(game_id, dead_player_id)
-    
+
+    deaths = check_lovers_death_service(game_id, dead_player_id)
+
     return {
         "success": True,
         "message": "Verificación de muerte de enamorados completada",
@@ -188,7 +176,7 @@ async def check_lovers_victory(
     """
     Verifica si los enamorados han ganado la partida.
     """
-    victory_info = player_action_service.check_lovers_victory_condition(game_id)
+    victory_info = check_lovers_victory_condition(game_id)
     
     if victory_info:
         return {
@@ -214,13 +202,13 @@ async def initialize_cupid(
     Inicializa las acciones nocturnas de Cupido.
     """
     # Verificar que el usuario actual es Cupido
-    if not player_action_service.is_cupid(game_id, current_user.id):
+    if not is_cupid(game_id, current_user.id):
         raise HTTPException(
             status_code=403,
             detail="Solo Cupido puede inicializar sus acciones"
         )
     
-    success = player_action_service.initialize_cupid_night_actions(game_id, current_user.id)
+    success = initialize_cupid_night_actions(game_id, current_user.id)
     
     if not success:
         raise HTTPException(
@@ -244,7 +232,7 @@ async def reset_cupid_actions(
     Solo para administradores o el sistema.
     """
     # En una implementación real, esto debería ser solo para administradores
-    success = player_action_service.reset_cupid_night_actions(game_id)
+    success = reset_cupid_night_actions(game_id)
     
     if not success:
         raise HTTPException(

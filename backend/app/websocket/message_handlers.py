@@ -5,7 +5,8 @@ Maneja eventos de conexión, desconexión y mensajes básicos
 from fastapi import WebSocket, WebSocketDisconnect
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages_types import (
-    MessageType, ErrorMessage, SuccessMessage, SystemMessage
+    MessageType, ErrorCode, WsMessageError, WsMessageSuccess, SystemMessage,
+    WebSocketMessageV2, WsMessagePlayerId, WsSystemMessage, SystemMessageType
 )
 from app.websocket.game_handlers import game_handler
 from app.websocket.voting_handlers import voting_handler
@@ -13,6 +14,7 @@ from app.websocket.user_status_handlers import user_status_handler
 from app.core.security import verify_access_token
 import json
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +44,7 @@ class MessageHandler:
             logger.info(f"RECV <- connection_id={connection_id} message={message_data}")
             # Validar estructura básica del mensaje
             if "type" not in message_data:
-                await self.send_error(connection_id, "INVALID_MESSAGE", "Tipo de mensaje requerido")
+                await self.send_error(connection_id, ErrorCode.INVALID_MESSAGE, "Tipo de mensaje requerido")
                 return
             
             message_type = MessageType(message_data["type"])
@@ -51,22 +53,26 @@ class MessageHandler:
             if message_type in self.handlers:
                 await self.handlers[message_type](connection_id, message_data)
             else:
-                await self.send_error(connection_id, "UNKNOWN_MESSAGE_TYPE", f"Tipo de mensaje no soportado: {message_type}")
+                await self.send_error(connection_id, ErrorCode.UNKNOWN_MESSAGE_TYPE, f"Tipo de mensaje no soportado: {message_type}")
                 
         except ValueError as e:
-            await self.send_error(connection_id, "INVALID_MESSAGE_TYPE", str(e))
+            await self.send_error(connection_id, ErrorCode.INVALID_MESSAGE_TYPE, str(e))
         except Exception as e:
             logger.error(f"Error manejando mensaje de {connection_id}: {e}")
-            await self.send_error(connection_id, "INTERNAL_ERROR", "Error interno del servidor")
+            await self.send_error(connection_id, ErrorCode.INTERNAL_ERROR, "Error interno del servidor")
     
     async def handle_heartbeat(self, connection_id: str, message_data: dict):
         """Manejar heartbeat/ping"""
-        # Responder con pong
-        await connection_manager.send_personal_message(connection_id, {
-            "type": MessageType.HEARTBEAT,
-            "response": "pong",
-            "timestamp": message_data.get("timestamp")
-        })
+        # Responder con pong usando WebSocketMessageV2
+        heartbeat_response = WebSocketMessageV2(
+            type=MessageType.HEARTBEAT,
+            data={
+                "response": "pong",
+                "timestamp": message_data.get("timestamp")
+            },
+            timestamp=datetime.now()
+        )
+        await connection_manager.send_personal_message(connection_id, heartbeat_response)
         
     async def handle_join_game(self, connection_id: str, message_data: dict):
         """Delegar a game handler"""
@@ -81,13 +87,18 @@ class MessageHandler:
         """Delegar a game handler"""
         await game_handler.handle_get_game_status(connection_id, message_data)
     
-    async def send_error(self, connection_id: str, error_code: str, message: str, details: dict | None = None):
+    async def send_error(self, connection_id: str, error_code: ErrorCode, message: str, details: dict | None = None):
         """Enviar mensaje de error a conexión específica"""
-        error_message = ErrorMessage(
+        error_message = WsMessageError(
+            type=MessageType.ERROR,
             error_code=error_code,
-            message=message,
-            details=details or {}
+            data=message,
+            timestamp=datetime.now()
         )
+        # Agregar details si se proporciona
+        if details:
+            error_message.data = f"{message} - Details: {details}"
+        
         await connection_manager.send_personal_message(
             connection_id,
             error_message
@@ -95,10 +106,14 @@ class MessageHandler:
     
     async def send_success(self, connection_id: str, action: str, message: str, data: dict | None = None):
         """Enviar mensaje de éxito a conexión específica"""
-        success_message = SuccessMessage(
-            action=action,
-            message=message,
-            data=data or {}
+        success_data = message
+        if data:
+            success_data = f"{message} - Data: {data}"
+            
+        success_message = WsMessageSuccess(
+            type=MessageType.SUCCESS,
+            data=success_data,
+            timestamp=datetime.now()
         )
         await connection_manager.send_personal_message(
             connection_id,
@@ -153,11 +168,13 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         except Exception as e:
             logger.warning(f"Error actualizando estado a conectado para {user_id}: {e}")
         
-        # Enviar mensaje de bienvenida
-        welcome_message = SystemMessage(
-            message=f"Conectado al juego {game_id}",
-            message_key="connected_to_game",
-            params={"game_id": game_id}
+        # Enviar mensaje de bienvenida usando SystemMessage
+        welcome_message = WsSystemMessage(
+            type=MessageType.SYSTEM_MESSAGE,
+            data=f"Conectado al juego {game_id}",
+            message_key=SystemMessageType.CONNECTED_TO_GAME,
+            params={"game_id": game_id},
+            timestamp=datetime.now()
         )
         await connection_manager.send_personal_message(
             connection_id,
@@ -182,14 +199,14 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
             except json.JSONDecodeError:
                 await message_handler.send_error(
                     connection_id,
-                    "INVALID_JSON",
+                    ErrorCode.INVALID_MESSAGE,
                     "Formato JSON inválido"
                 )
             except Exception as e:
                 logger.error(f"Error en websocket loop: {e}")
                 await message_handler.send_error(
                     connection_id,
-                    "INTERNAL_ERROR",
+                    ErrorCode.INTERNAL_ERROR,
                     "Error interno del servidor"
                 )
                 

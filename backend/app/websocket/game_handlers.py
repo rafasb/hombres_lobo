@@ -4,13 +4,16 @@ Maneja eventos específicos del juego: iniciar, unirse, fases, etc.
 """
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages_types import (
-    MessageType, GameStartedMessage, PhaseChangedMessage
+    MessageType, GameStartedMessage, PhaseChangedMessage, 
+    WsMessagePlayerId, WebSocketMessageGameStatus, WsMessageError,
+    WsMessageSuccess, ErrorCode, WsPhaseChangedMessage,
+    WsTimerMessage, WsVotingStartedMessage, WsMessageGameStatus
 )
 from app.services.game_state_service import game_state_manager, GameState
 from app.services.game_phases_service import GamePhase
 from app.services.voting_service import voting_service, VoteType
 from app.services.game_service import join_game, get_game
-from app.services.user_service import get_user
+from app.services.user_service import get_user, UserService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,7 +35,7 @@ class GameHandler:
             # Obtener o crear estado del juego
             game_state = await game_state_manager.get_or_create_game_state(game_id)
             if not game_state:
-                await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
+                await self._send_error(connection_id, ErrorCode.GAME_NOT_FOUND, "Juego no encontrado")
                 return
             
             # Verificar si el usuario está en la base de datos del juego
@@ -56,17 +59,19 @@ class GameHandler:
             
             # Verificar que el game_state sea válido después de posibles modificaciones
             if not game_state:
-                await self._send_error(connection_id, "GAME_NOT_FOUND", "Error cargando estado del juego")
+                await self._send_error(connection_id, ErrorCode.GAME_NOT_FOUND, "Error cargando estado del juego")
                 return
             
             # Agregar jugador al estado en memoria
             game_state.add_connected_player(user_id)
             
             # Notificar solo la conexión del jugador (no enviar todo el estado aquí para evitar duplicados)
-            await connection_manager.broadcast_to_game(game_id, {
-                "type": "player_connected",
-                "user_id": user_id
-            }, exclude_connection=None)
+            await connection_manager.broadcast_to_game(
+                game_id, 
+                WsMessagePlayerId(
+                    type=MessageType.PLAYER_CONNECTED,
+                    data=user_id), 
+                    exclude_connection=None)
             
             # *** NUEVA LÓGICA: Verificar si se alcanzó el número máximo de jugadores para auto-inicio ***
             if game_state.game_data and game_state.game_data.players:
@@ -99,7 +104,7 @@ class GameHandler:
             
         except Exception as e:
             logger.error(f"Error en join_game: {e}")
-            await self._send_error(connection_id, "JOIN_ERROR", "Error uniéndose al juego")
+            await self._send_error(connection_id, ErrorCode.JOIN_ERROR, "Error uniéndose al juego")
     
     async def handle_start_game(self, connection_id: str, message_data: dict):
         """Manejar inicio de juego"""
@@ -113,7 +118,7 @@ class GameHandler:
             
             game_state = await game_state_manager.get_or_create_game_state(game_id)
             if not game_state:
-                await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
+                await self._send_error(connection_id, ErrorCode.GAME_NOT_FOUND, "Juego no encontrado")
                 return
             
             # Verificar que sea el creador (por ahora saltamos esta verificación)
@@ -140,11 +145,15 @@ class GameHandler:
             )
             
             # Notificar inicio de juego
-            start_message = GameStartedMessage(
-                players=[{"id": p, "name": f"Player {p}"} for p in game_state.connected_players],
-                roles_assigned=True
+            # start_message = GameStartedMessage(
+            #     players=[{"id": p, "name": f"Player {p}"} for p in game_state.connected_players],
+            #     roles_assigned=True
+            # )
+            start_message = WebSocketMessageGameStatus(
+                type=MessageType.GAME_STARTED,
+                data=game_state.game_data
             )
-            
+
             await connection_manager.broadcast_to_game(
                 game_id,
                 start_message
@@ -154,7 +163,7 @@ class GameHandler:
             
         except Exception as e:
             logger.error(f"Error en start_game: {e}")
-            await self._send_error(connection_id, "START_ERROR", "Error iniciando juego")
+            await self._send_error(connection_id, ErrorCode.START_GAME_ERROR, "Error iniciando juego")
     
     async def _auto_start_game(self, game_id: str, game_state: GameState):
         """Iniciar juego automáticamente cuando se alcanza el máximo de jugadores"""
@@ -182,9 +191,9 @@ class GameHandler:
             )
             
             # Notificar inicio automático de juego
-            start_message = GameStartedMessage(
-                players=[{"id": p, "name": f"Player {p}"} for p in game_state.connected_players],
-                roles_assigned=True
+            start_message = WebSocketMessageGameStatus(
+                type=MessageType.GAME_STARTED,
+                data=game_state.game_data
             )
             
             await connection_manager.broadcast_to_game(
@@ -192,23 +201,14 @@ class GameHandler:
                 start_message
             )
             
-            # Notificar que el juego se inició automáticamente
-            auto_start_notification = {
-                "type": "game_auto_started",
-                "message": "¡El juego se ha iniciado automáticamente al completarse todos los jugadores!"
-            }
-            
-            await connection_manager.broadcast_to_game(game_id, auto_start_notification)
-            
             logger.info(f"Juego {game_id} iniciado automáticamente")
             
         except Exception as e:
             logger.error(f"Error en auto-inicio del juego {game_id}: {e}")
             # Notificar error a todos los jugadores
-            error_notification = {
-                "type": "auto_start_error",
-                "message": "Error al iniciar el juego automáticamente. Puedes intentar iniciarlo manualmente."
-            }
+            error_notification = WsMessageError(
+                data="Error al iniciar el juego automáticamente. Puedes intentar iniciarlo manualmente."
+            )
             await connection_manager.broadcast_to_game(game_id, error_notification)
     
     async def handle_restart_game(self, connection_id: str, message_data: dict):
@@ -223,12 +223,12 @@ class GameHandler:
             
             # Verificar que el usuario tenga permisos de admin
             if not await self._check_admin_permissions(user_id, game_id):
-                await self._send_error(connection_id, "INSUFFICIENT_PERMISSIONS", "Solo los administradores pueden reiniciar la partida")
+                await self._send_error(connection_id, ErrorCode.INSUFFICIENT_PERMISSIONS, "Solo los administradores pueden reiniciar la partida")
                 return
             
             game_state = await game_state_manager.get_or_create_game_state(game_id)
             if not game_state:
-                await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
+                await self._send_error(connection_id, ErrorCode.GAME_NOT_FOUND, "Juego no encontrado")
                 return
             
             logger.info(f"Admin {user_id} reiniciando juego {game_id}")
@@ -253,11 +253,10 @@ class GameHandler:
             game_state.eliminated_players.clear()
             
             # Notificar reinicio a todos los jugadores
-            restart_message = {
-                "type": "game_restarted",
-                "message": "La partida ha sido reiniciada por el administrador",
-                "admin": user_id
-            }
+            restart_message = WebSocketMessageGameStatus(
+                type=MessageType.GAME_RESTARTED,
+                data=game_state.game_data
+            )
             
             await connection_manager.broadcast_to_game(game_id, restart_message)
             
@@ -265,22 +264,16 @@ class GameHandler:
             await self._send_game_status(game_id, game_state)
             
             # Confirmación al admin
-            success_message = {
-                "type": MessageType.SUCCESS.value,
-                "action": "restart_game",
-                "message": "Partida reiniciada exitosamente",
-                "data": {
-                    "game_id": game_id,
-                    "restarted_by": user_id
-                }
-            }
+            success_message = WsMessageSuccess(
+                data=f"Partida reiniciada {game_id} exitosamente por {user_id}"
+            )
             await connection_manager.send_personal_message(connection_id, success_message)
             
             logger.info(f"Juego {game_id} reiniciado por admin {user_id}")
             
         except Exception as e:
             logger.error(f"Error en restart_game: {e}")
-            await self._send_error(connection_id, "RESTART_ERROR", "Error reiniciando la partida")
+            await self._send_error(connection_id, ErrorCode.RESTART_GAME_ERROR, "Error reiniciando la partida")
 
     async def handle_force_next_phase(self, connection_id: str, message_data: dict):
         """Manejar cambio forzado a la siguiente fase (solo creador)"""
@@ -296,7 +289,7 @@ class GameHandler:
             # Obtener estado del juego
             game_state = await game_state_manager.get_or_create_game_state(game_id)
             if not game_state:
-                await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
+                await self._send_error(connection_id, ErrorCode.GAME_NOT_FOUND, "Juego no encontrado")
                 return
             
             # TODO: Verificar que sea el creador del juego
@@ -304,7 +297,7 @@ class GameHandler:
             
             # Verificar que el juego esté iniciado
             if not game_state.phase_controller or not game_state.phase_controller.is_active:
-                await self._send_error(connection_id, "GAME_NOT_STARTED", "El juego no está iniciado")
+                await self._send_error(connection_id, ErrorCode.GAME_NOT_STARTED, "El juego no está iniciado")
                 return
             
             # Obtener la siguiente fase
@@ -312,7 +305,7 @@ class GameHandler:
             phase_config = game_state.phase_controller.phase_config.get(current_phase)
             
             if not phase_config:
-                await self._send_error(connection_id, "INVALID_PHASE", "Fase actual inválida")
+                await self._send_error(connection_id, ErrorCode.INVALID_PHASE, "Fase actual inválida")
                 return
             
             next_phase = phase_config.next_phase
@@ -322,24 +315,18 @@ class GameHandler:
             
             if success:
                 # Enviar confirmación al creador
-                success_message = {
-                    "type": MessageType.SUCCESS.value,
-                    "action": "force_next_phase",
-                    "message": f"Fase cambiada manualmente de {current_phase.value} a {next_phase.value}",
-                    "data": {
-                        "old_phase": current_phase.value,
-                        "new_phase": next_phase.value
-                    }
-                }
+                success_message = WsMessageSuccess(
+                    data=f"Fase cambiada manualmente de {current_phase.value} a {next_phase.value}"
+                )
                 await connection_manager.send_personal_message(connection_id, success_message)
                 
                 logger.info(f"Usuario {user_id} forzó cambio de fase en juego {game_id}: {current_phase.value} -> {next_phase.value}")
             else:
-                await self._send_error(connection_id, "PHASE_CHANGE_FAILED", "No se pudo cambiar la fase")
+                await self._send_error(connection_id, ErrorCode.PHASE_CHANGE_FAILED, "No se pudo cambiar la fase")
                 
         except Exception as e:
             logger.error(f"Error en force_next_phase: {e}")
-            await self._send_error(connection_id, "FORCE_PHASE_ERROR", "Error forzando cambio de fase")
+            await self._send_error(connection_id, ErrorCode.PHASE_FORCE_FAILED, "Error forzando cambio de fase")
     
     async def _on_phase_changed(self, game_id: str, old_phase: GamePhase, new_phase: GamePhase):
         """Callback cuando cambia la fase del juego"""
@@ -352,8 +339,8 @@ class GameHandler:
             phase_info = game_state.phase_controller.get_phase_info()
             
             # Crear mensaje de cambio de fase
-            phase_message = PhaseChangedMessage(
-                phase=new_phase.value,
+            phase_message = WsPhaseChangedMessage(
+                data=new_phase.value,
                 duration=phase_info["duration"]
             )
             
@@ -394,14 +381,14 @@ class GameHandler:
             
             if success:
                 # Notificar inicio de votación
-                voting_message = {
-                    "type": MessageType.VOTING_STARTED.value,
-                    "vote_type": "day_vote",
-                    "duration": 120,
-                    "eligible_voters": eligible_voters,
-                    "vote_targets": vote_targets,
-                    "game_id": game_id
-                }
+                voting_message = WsVotingStartedMessage(
+                    data=VoteType.DAY_VOTE,
+                    duration=120,
+                    type=MessageType.VOTING_STARTED,
+                    game_id=game_id,
+                    eligible_voters=eligible_voters,
+                    vote_targets=vote_targets
+                )
                 
                 await connection_manager.broadcast_to_game(game_id, voting_message)
                 logger.info(f"Votación diurna iniciada para juego {game_id}")
@@ -414,13 +401,12 @@ class GameHandler:
     async def _on_phase_timer(self, game_id: str, phase: GamePhase, time_remaining: int):
         """Callback para updates de timer de fase"""
         try:
-            # Enviar update de timer
-            timer_message = {
-                "type": MessageType.PHASE_TIMER.value,
-                "phase": phase.value,
-                "time_remaining": time_remaining,
-                "game_id": game_id
-            }
+            # Enviar update de timer a todos los jugadores
+            timer_message = WsTimerMessage(
+                phase=phase.value,
+                data=time_remaining,
+                game_id=game_id
+            )
             
             await connection_manager.broadcast_to_game(game_id, timer_message)
             
@@ -439,23 +425,26 @@ class GameHandler:
             
             if game_state:
                 # Enviar el estado únicamente al solicitante para evitar duplicados
-                status_msg = self.build_game_status_message(game_id, game_state)
+                status_msg = WebSocketMessageGameStatus(
+                    type=MessageType.GET_GAME_STATUS,
+                    data=game_state.game_data
+                )
                 await connection_manager.send_personal_message(connection_id, status_msg)
             else:
-                await self._send_error(connection_id, "GAME_NOT_FOUND", "Juego no encontrado")
+                await self._send_error(connection_id, ErrorCode.GAME_NOT_FOUND, "Juego no encontrado")
                 
         except Exception as e:
             logger.error(f"Error en get_game_status: {e}")
-            await self._send_error(connection_id, "STATUS_ERROR", "Error obteniendo estado")
+            await self._send_error(connection_id, ErrorCode.STATUS_ERROR, "Error obteniendo estado")
     
-    async def _send_game_status(self, game_id: str, game_state):
+    async def _send_game_status(self, game_id: str, game_state: GameState):
         """Enviar estado del juego a todos los conectados"""
         from app.database import load_user
         
         # Obtener información completa de jugadores
         players_info = []
         if game_state.game_data and game_state.game_data.players:
-            for player_id in game_state.game_data.players:
+            for player_id in game_state.game_data.player_ids:
                 user = load_user(player_id)
                 if user:
                     players_info.append({
@@ -463,7 +452,7 @@ class GameHandler:
                         "name": user.username,
                         "is_alive": player_id not in game_state.eliminated_players,
                         "is_connected": player_id in game_state.connected_players,
-                        "role": game_state.game_data.roles.get(player_id, {}).get("role") if game_state.game_data.roles else None
+                        "role": game_state.game_data.players.get(player_id).role if game_state.game_data.players.get(player_id) else None
                     })
         
         status_message = {
@@ -479,10 +468,12 @@ class GameHandler:
                 "time_remaining": game_state.get_phase_time_remaining()
             }
         }
+        status_message = self.build_game_status_message(game_id, game_state)
+        # TODO: Cambiar a WebSocketMessageGameStatus si es posible
 
         await connection_manager.broadcast_to_game(game_id, status_message)
 
-    def build_game_status_message(self, game_id: str, game_state) -> dict:
+    def build_game_status_message(self, game_id: str, game_state: GameState) -> WebSocketMessageGameStatus:
         """Construir y devolver el dict con el estado del juego (sin enviarlo).
 
         Útil para enviar el estado sólo al cliente recién conectado.
@@ -491,7 +482,8 @@ class GameHandler:
 
         players_info = []
         if game_state.game_data and game_state.game_data.players:
-            for player_id in game_state.game_data.players:
+            for player_state in game_state.game_data.players:
+                player_id = player_state.player_id
                 user = load_user(player_id)
                 if user:
                     players_info.append({
@@ -499,11 +491,11 @@ class GameHandler:
                         "name": user.username,
                         "is_alive": player_id not in game_state.eliminated_players,
                         "is_connected": player_id in game_state.connected_players,
-                        "role": game_state.game_data.roles.get(player_id, {}).get("role") if game_state.game_data.roles else None
+                        "role": player_state.info.role if player_state.info else None
                     })
 
         status_message = {
-            "type": MessageType.SYSTEM_MESSAGE.value,
+            "type": MessageType.GET_GAME_STATUS.value,
             "message": f"Estado del juego: {game_state.phase.value}",
             "data": {
                 "game_id": game_id,
@@ -515,13 +507,24 @@ class GameHandler:
                 "time_remaining": game_state.get_phase_time_remaining()
             }
         }
+        status_message = WsMessageGameStatus(
+            game_id=game_id,
+            phase=game_state.phase,
+            players=players_info,
+            connected_players=list(game_state.connected_players),
+            living_players=game_state.get_living_players(),
+            dead_players=game_state.get_dead_players(),
+            current_round=game_state.current_round,
+            is_first_night=game_state.is_first_night,
+            time_remaining=game_state.get_phase_time_remaining()
+        )
 
         return status_message
     
-    async def _send_phase_change(self, game_id: str, game_state):
+    async def _send_phase_change(self, game_id: str, game_state: GameState):
         """Enviar cambio de fase"""
-        phase_message = PhaseChangedMessage(
-            phase=game_state.phase.value,
+        phase_message = WsPhaseChangedMessage(
+            data=game_state.phase.value,
             duration=int(game_state.phase_duration.total_seconds())
         )
         
@@ -546,11 +549,9 @@ class GameHandler:
             game_state = await game_state_manager.get_or_create_game_state(game_id)
             if game_state and game_state.game_data:
                 # Buscar el rol del usuario
-                if game_state.game_data.roles and user_id in game_state.game_data.roles:
-                    user_role = game_state.game_data.roles[user_id]
-                    # Para simplificar, también permitir que el creador sea admin
-                    if user_role.role.value == "admin" or game_info.creator_id == user_id:
-                        return True
+                isAdmin = UserService.is_user_admin(user_id)
+                if isAdmin or game_info.creator_id == user_id:
+                    return True
             
             # Por ahora, permitir al creador en cualquier caso
             return game_info.creator_id == user_id
@@ -559,13 +560,12 @@ class GameHandler:
             logger.error(f"Error verificando permisos de admin: {e}")
             return False
 
-    async def _send_error(self, connection_id: str, error_code: str, message: str):
+    async def _send_error(self, connection_id: str, error_code: ErrorCode, message: str):
         """Enviar mensaje de error"""
-        error_message = {
-            "type": MessageType.ERROR.value,
-            "error_code": error_code,
-            "message": message
-        }
+        error_message = WsMessageError(
+            error_code=error_code,
+            data=message
+        )
         await connection_manager.send_personal_message(connection_id, error_message)
 
 # Instancia global del game handler

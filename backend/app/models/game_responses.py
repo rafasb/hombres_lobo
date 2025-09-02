@@ -5,7 +5,7 @@ Define las estructuras de datos para las respuestas de la API de games.
 
 from pydantic import BaseModel
 from typing import List
-from app.models.game_and_roles import GameResponse
+from app.models.game_and_player import Game
 
 
 class GameActionResponse(BaseModel):
@@ -42,7 +42,7 @@ class GameListResponse(BaseModel):
     """Respuesta para el listado de partidas."""
     success: bool
     message: str
-    games: List[GameResponse]
+    games: List[Game]
     total_games: int
 
 
@@ -50,14 +50,14 @@ class GameCreateResponse(BaseModel):
     """Respuesta para la creación de una partida."""
     success: bool
     message: str
-    game: GameResponse
+    game: Game
 
 
 class GameUpdateResponse(BaseModel):
     """Respuesta para la actualización de parámetros de una partida."""
     success: bool
     message: str
-    game: GameResponse
+    game: Game
     updated_fields: List[str]
 
 
@@ -65,7 +65,7 @@ class GameStatusUpdateResponse(BaseModel):
     """Respuesta para la actualización del estado de una partida."""
     success: bool
     message: str
-    game: GameResponse
+    game: Game
     previous_status: str
     new_status: str
 
@@ -74,7 +74,7 @@ class GameRoleAssignmentResponse(BaseModel):
     """Respuesta para la asignación de roles en una partida."""
     success: bool
     message: str
-    game: GameResponse
+    game: Game
     assigned_roles_count: int
     players_with_roles: int
 
@@ -83,4 +83,4 @@ class GameGetResponse(BaseModel):
     """Respuesta para obtener información de una partida específica."""
     success: bool
     message: str
-    game: GameResponse
+    game: Game

@@ -9,6 +9,13 @@ import asyncio
 import uuid
 from datetime import datetime
 import logging
+from enum import Enum
+from app.websocket.messages_types import MessageType, WsMessagePlayerId, WebSocketMessageV2 as WebSocketMessage
+
+class WebSocketState(str, Enum):
+    CONNECTING = "CONNECTING"
+    CONNECTED = "CONNECTED"
+    DISCONNECTED = "DISCONNECTED"
 
 class ConnectionManager:
     def __init__(self):
@@ -28,6 +35,29 @@ class ConnectionManager:
         self.heartbeat_task = None
         self.logger = logging.getLogger("websocket.connection_manager")
 
+    def _normalize_message(self, connection_id , message: WebSocketMessage) -> str:
+        # Normalizar mensaje: asumimos WebSocketMessage (pydantic). Si falla, usar fallback sencillo.
+        # connection_id es solo para logging, puede ser un broadcast.
+        try:
+            message_dict = message.model_dump()
+        except Exception:
+            message_dict = {"message": str(message)}
+
+        # Asegurar campo type mínimo
+        if "type" not in message_dict:
+            message_dict["type"] = "system_message"
+
+        message_text = json.dumps(message_dict, default=str)
+
+        connection_id_safe = connection_id if connection_id else "N/A"
+
+        try:
+            self.logger.info(f"SEND -> connection_id={connection_id_safe} message={message_text}")
+        except Exception:
+            print(f"SEND -> connection_id={connection_id_safe} message={message_text}")
+
+        return message_text
+
     async def connect(self, websocket: WebSocket, user_id: str, game_id: str | None = None):
         """Conectar un cliente WebSocket"""
         await websocket.accept()
@@ -40,11 +70,12 @@ class ConnectionManager:
         self.connection_users[connection_id] = user_id
         
         # Información de conexión
+        now = datetime.now()
         self.connection_info[connection_id] = {
             "user_id": user_id,
             "game_id": game_id,
-            "connected_at": datetime.now(),
-            "last_heartbeat": datetime.now()
+            "connected_at": now,
+            "last_heartbeat": now
         }
         
         # Unir a room de juego si se especifica
@@ -71,11 +102,12 @@ class ConnectionManager:
                     
                     # Notificar a otros en la room (user_id ya fue obtenido arriba)
                     if user_id:
-                        await self.broadcast_to_game(game_id, {
-                            "type": "player_disconnected",
-                            "user_id": user_id,
-                            "timestamp": datetime.now().isoformat()
-                        }, exclude_connection=connection_id)
+                        await self.broadcast_to_game(
+                            game_id, 
+                            WsMessagePlayerId(
+                                type=MessageType.PLAYER_LEFT_GAME,
+                                data=user_id), 
+                            exclude_connection=connection_id)
             
             # Limpiar registros
             del self.active_connections[connection_id]
@@ -107,11 +139,12 @@ class ConnectionManager:
         # Notificar a otros en la room
         user_id = self.connection_users.get(connection_id)
         if user_id:
-            await self.broadcast_to_game(game_id, {
-                "type": "player_connected",
-                "user_id": user_id,
-                "timestamp": datetime.now().isoformat()
-            }, exclude_connection=connection_id)
+            await self.broadcast_to_game(
+                game_id, 
+                WsMessagePlayerId(
+                    type=MessageType.IN_GAME,
+                    data=user_id),
+                exclude_connection=connection_id)
 
     async def leave_game_room(self, connection_id: str, game_id: str):
         """Salir de room de juego"""
@@ -121,239 +154,72 @@ class ConnectionManager:
             # Notificar salida
             user_id = self.connection_users.get(connection_id)
             if user_id:
-                await self.broadcast_to_game(game_id, {
-                    "type": "player_left_game",
-                    "user_id": user_id,
-                    "timestamp": datetime.now().isoformat()
-                })
+                await self.broadcast_to_game(
+                    game_id,
+                    WsMessagePlayerId(
+                        type=MessageType.PLAYER_LEFT_GAME,
+                        data=user_id),
+                )
 
-    async def send_personal_message(self, connection_id: str, message):
-        """Enviar mensaje a conexión específica"""
-        if connection_id in self.active_connections:
-            websocket = self.active_connections[connection_id]
-            try:
-                # Verificar el estado del WebSocket antes de enviar
-                if websocket.client_state.name != "CONNECTED":
-                    print(f"WebSocket {connection_id} no está conectado, removiendo de conexiones activas")
-                    await self.disconnect(connection_id)
-                    return
-                # Normalizar y asegurar que el mensaje tenga campo 'type'
-                message_dict = None
-
-                # Si es un objeto Pydantic o tiene model_dump, obtener dict
-                if hasattr(message, 'model_dump'):
-                    try:
-                        message_dict = message.model_dump()
-                    except Exception:
-                        try:
-                            message_dict = message.dict()
-                        except Exception:
-                            message_dict = None
-
-                # Si es un dict
-                if message_dict is None and isinstance(message, dict):
-                    message_dict = message.copy()
-
-                # Si es un JSON string, intentar parsearlo
-                if message_dict is None and isinstance(message, str):
-                    try:
-                        message_dict = json.loads(message)
-                    except Exception:
-                        # No es JSON válido; envolver en system_message
-                        message_dict = {"type": "system_message", "message": str(message)}
-
-                # Si todavía no tenemos dict, convertir a str
-                if message_dict is None:
-                    message_dict = {"type": "system_message", "message": str(message)}
-
-                # Normalizar el envelope: siempre dejar un objeto con keys: type (string), data (object) y timestamp
-                # Conservamos game_id si existe. Si el mensaje ya incluye 'data', lo respetamos.
-                # Extraemos y normalizamos el campo type a string
-                raw_type = message_dict.get("type")
-                if raw_type is None:
-                    normalized_type = "system_message"
-                else:
-                    try:
-                        val = getattr(raw_type, "value", None)
-                        normalized_type = val if val is not None else str(raw_type)
-                    except Exception:
-                        try:
-                            normalized_type = str(raw_type)
-                        except Exception:
-                            normalized_type = "system_message"
-
-                # Build normalized envelope
-                envelope = {
-                    "type": normalized_type,
-                    "timestamp": message_dict.get("timestamp") or datetime.now().isoformat()
-                }
-
-                # Keep game_id at top-level when present
-                if "game_id" in message_dict and message_dict.get("game_id") is not None:
-                    envelope["game_id"] = message_dict.get("game_id")
-
-                # If the original dict already provides a 'data' payload, use it; otherwise, move other fields into 'data'
-                if "data" in message_dict and isinstance(message_dict.get("data"), dict):
-                    envelope["data"] = message_dict.get("data")
-                else:
-                    # Move all keys except type/game_id/timestamp into data
-                    data_payload = {}
-                    for k, v in message_dict.items():
-                        if k in ("type", "game_id", "timestamp"):
-                            continue
-                        data_payload[k] = v
-                    envelope["data"] = data_payload
-
-                message_text = json.dumps(envelope, default=str)
-                # Log outgoing personal message
-                try:
-                    self.logger.info(f"SEND -> connection_id={connection_id} message={message_text}")
-                except Exception:
-                    print(f"SEND -> connection_id={connection_id} message={message_text}")
-                await websocket.send_text(message_text)
-            except Exception as e:
-                print(f"Error enviando mensaje personal a {connection_id}: {e}")
+    async def send_personal_message(self, connection_id: str, message: WebSocketMessage):
+        if connection_id not in self.active_connections:
+            return
+        websocket = self.active_connections.get(connection_id)
+        try:
+            if not websocket or websocket.client_state.name != "CONNECTED":
+                self.logger.debug(f"WebSocket {connection_id} no está conectado, removiendo de conexiones activas")
                 await self.disconnect(connection_id)
+                return
 
-    async def broadcast_to_game(self, game_id: str, message, exclude_connection: str | None = None):
+            message_text = self._normalize_message(connection_id, message)
+
+            await websocket.send_text(message_text)
+
+        except Exception:
+            # Loguear stacktrace y desconectar en caso de error
+            self.logger.exception(f"Error enviando mensaje personal a {connection_id}")
+            await self.disconnect(connection_id)
+
+    async def broadcast_to_game(self, game_id: str, message: WebSocketMessage, exclude_connection: str | None = None):
         """Broadcast mensaje a todos en un juego"""
         if game_id not in self.game_rooms:
             return
-        # Normalizar mensaje a envelope consistente { type, data, timestamp, game_id? }
-        message_dict = None
+        # Normalizar mensaje similar a send_personal_message
+        message_text = self._normalize_message(f'broadcast-{game_id}', message)
 
-        if isinstance(message, dict):
-            message_dict = message.copy()
-        elif hasattr(message, 'model_dump'):
-            try:
-                message_dict = message.model_dump()
-            except Exception:
-                try:
-                    message_dict = message.dict()
-                except Exception:
-                    message_dict = None
-        elif isinstance(message, str):
-            try:
-                message_dict = json.loads(message)
-            except Exception:
-                message_dict = {"message": message}
-
-        if message_dict is None:
-            message_dict = {"message": str(message)}
-
-        # Ensure game_id is present in final envelope
-        message_dict["game_id"] = game_id
-
-        # Normalize to envelope
-        raw_type = message_dict.get("type")
-        if raw_type is None:
-            normalized_type = "system_message"
-        else:
-            try:
-                val = getattr(raw_type, "value", None)
-                normalized_type = val if val is not None else str(raw_type)
-            except Exception:
-                try:
-                    normalized_type = str(raw_type)
-                except Exception:
-                    normalized_type = "system_message"
-
-        envelope = {
-            "type": normalized_type,
-            "game_id": game_id,
-            "timestamp": message_dict.get("timestamp") or datetime.now().isoformat()
-        }
-
-        if "data" in message_dict and isinstance(message_dict.get("data"), dict):
-            envelope["data"] = message_dict.get("data")
-        else:
-            data_payload = {}
-            for k, v in message_dict.items():
-                if k in ("type", "game_id", "timestamp"):
-                    continue
-                data_payload[k] = v
-            envelope["data"] = data_payload
-
-        message_text = json.dumps(envelope, default=str)
-        # Log broadcast to game
         try:
             self.logger.info(f"BROADCAST game={game_id} exclude={exclude_connection} message={message_text}")
         except Exception:
             print(f"BROADCAST game={game_id} exclude={exclude_connection} message={message_text}")
-        
+
         disconnected_connections = []
-        
-        for connection_id in self.game_rooms[game_id]:
-            if connection_id != exclude_connection and connection_id in self.active_connections:
-                websocket = self.active_connections[connection_id]
-                try:
-                    # Verificar el estado del WebSocket antes de enviar
-                    if websocket.client_state.name == "CONNECTED":
-                        await websocket.send_text(message_text)
-                    else:
-                        # WebSocket no está conectado, marcarlo para desconexión
-                        disconnected_connections.append(connection_id)
-                except Exception as e:
-                    print(f"Error enviando mensaje a conexión {connection_id}: {e}")
+
+        # Iterar sobre copia para evitar RuntimeError si la room cambia mientras iteramos
+        for connection_id in list(self.game_rooms[game_id]):
+            if connection_id == exclude_connection:
+                continue
+
+            websocket = self.active_connections.get(connection_id)
+            if not websocket:
+                disconnected_connections.append(connection_id)
+                continue
+
+            try:
+                if getattr(websocket, "client_state", None) and websocket.client_state.name == "CONNECTED":
+                    await websocket.send_text(message_text)
+                else:
                     disconnected_connections.append(connection_id)
-        
-        # Limpiar conexiones muertas
+            except Exception:
+                self.logger.exception(f"Error enviando mensaje a conexión {connection_id}")
+                disconnected_connections.append(connection_id)
+
         for connection_id in disconnected_connections:
             await self.disconnect(connection_id)
 
-    async def broadcast_to_all(self, message):
+    async def broadcast_to_all(self, message: WebSocketMessage):
         """Broadcast mensaje a todas las conexiones activas"""
-        # Normalizar a envelope consistente { type, data, timestamp }
-        message_dict = None
-
-        if isinstance(message, dict):
-            message_dict = message.copy()
-        elif hasattr(message, 'model_dump'):
-            try:
-                message_dict = message.model_dump()
-            except Exception:
-                try:
-                    message_dict = message.dict()
-                except Exception:
-                    message_dict = None
-        elif isinstance(message, str):
-            try:
-                message_dict = json.loads(message)
-            except Exception:
-                message_dict = {"message": message}
-
-        if message_dict is None:
-            message_dict = {"message": str(message)}
-
-        raw_type = message_dict.get("type")
-        if raw_type is None:
-            normalized_type = "system_message"
-        else:
-            try:
-                val = getattr(raw_type, "value", None)
-                normalized_type = val if val is not None else str(raw_type)
-            except Exception:
-                try:
-                    normalized_type = str(raw_type)
-                except Exception:
-                    normalized_type = "system_message"
-
-        envelope = {
-            "type": normalized_type,
-            "timestamp": message_dict.get("timestamp") or datetime.now().isoformat()
-        }
-
-        if "data" in message_dict and isinstance(message_dict.get("data"), dict):
-            envelope["data"] = message_dict.get("data")
-        else:
-            data_payload = {}
-            for k, v in message_dict.items():
-                if k in ("type", "timestamp"):
-                    continue
-                data_payload[k] = v
-            envelope["data"] = data_payload
-
-        message_text = json.dumps(envelope, default=str)
+        message_text = self._normalize_message("broadcast_all", message)
+        
         # Log broadcast to all
         try:
             self.logger.info(f"BROADCAST_ALL message={message_text}")
@@ -416,10 +282,10 @@ class ConnectionManager:
                         # Verificar el estado del WebSocket antes de enviar
                         if websocket.client_state.name == "CONNECTED":
                             # Enviar ping
-                            await websocket.send_text(json.dumps({
-                                "type": "heartbeat",
-                                "timestamp": current_time.isoformat()
-                            }))
+                            data = WebSocketMessage(
+                                type=MessageType.HEARTBEAT,
+                                data={}).model_dump()
+                            await websocket.send_text(json.dumps(data))
                             
                             # Actualizar último heartbeat
                             if connection_id in self.connection_info:

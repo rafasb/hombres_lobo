@@ -3,11 +3,18 @@
 
 from fastapi import APIRouter, HTTPException, Depends
 from app.core.dependencies import get_current_user
-from app.services import player_action_service, game_service
+from app.services.wild_child_action_service import (
+    is_wild_child, can_wild_child_choose_model,
+    get_available_models_for_wild_child, wild_child_choose_model, 
+    check_wild_child_transformation, notify_werewolves_of_new_member, 
+    get_wild_child_transformation_info, process_wild_child_death_check
+)
 from app.models.player_actions import (
     WildChildChooseModelRequest, WildChildChooseModelResponse,
     WildChildStatusResponse, WildChildAvailableModelsResponse
 )
+from app.services import game_service
+from app.services.user_service import UserService
 
 router = APIRouter(prefix="/wild-child", tags=["wild-child"])
 
@@ -23,13 +30,13 @@ async def get_wild_child_status(
     wild_child_id = current_user.id
     
     # Verificar que el jugador es el Niño Salvaje
-    if not player_action_service.is_wild_child(game_id, wild_child_id):
+    if not is_wild_child(game_id, wild_child_id):
         raise HTTPException(
             status_code=403,
             detail="Solo el Niño Salvaje puede acceder a esta información"
         )
     
-    status_info = player_action_service.get_wild_child_status(game_id, wild_child_id)
+    status_info: WildChildStatusResponse = await get_wild_child_status(game_id, wild_child_id)
     
     if not status_info:
         raise HTTPException(
@@ -37,14 +44,18 @@ async def get_wild_child_status(
             detail="No se pudo obtener información del Niño Salvaje"
         )
     
+    has_model = status_info.has_model if hasattr(status_info, 'has_model') else False
+    model_player_id = status_info.model_player_id if hasattr(status_info, 'model_player_id') else None
+    model_username = status_info.model_username if hasattr(status_info, 'model_username') else None
+
     return WildChildStatusResponse(
         success=True,
         message="Estado del Niño Salvaje obtenido correctamente",
-        has_model=status_info.get("has_model", False),
-        model_player_id=status_info.get("model_player_id"),
-        model_username=status_info.get("model_username"),
-        is_transformed=status_info.get("is_transformed", False),
-        current_role=status_info.get("current_role", "wild_child")
+        has_model=has_model,
+        model_player_id=model_player_id,
+        model_username=model_username,
+        is_transformed=status_info.is_transformed if hasattr(status_info, 'is_transformed') else False,
+        current_role=status_info.current_role if hasattr(status_info, 'current_role') else "wild_child"
     )
 
 
@@ -59,13 +70,13 @@ async def get_available_models(
     wild_child_id = current_user.id
     
     # Verificar que el jugador es el Niño Salvaje
-    if not player_action_service.is_wild_child(game_id, wild_child_id):
+    if not is_wild_child(game_id, wild_child_id):
         raise HTTPException(
             status_code=403,
             detail="Solo el Niño Salvaje puede acceder a esta información"
         )
     
-    available_models = player_action_service.get_available_models_for_wild_child(game_id, wild_child_id)
+    available_models = get_available_models_for_wild_child(game_id, wild_child_id)
     
     return WildChildAvailableModelsResponse(
         success=True,
@@ -86,7 +97,7 @@ async def choose_model(
     wild_child_id = current_user.id
     
     # Verificar que el jugador es el Niño Salvaje y puede elegir modelo
-    if not player_action_service.can_wild_child_choose_model(game_id, wild_child_id):
+    if not can_wild_child_choose_model(game_id, wild_child_id):
         raise HTTPException(
             status_code=403,
             detail="No puedes elegir un modelo en este momento"
@@ -97,8 +108,8 @@ async def choose_model(
     model_username = None
     if game:
         for player in game.players:
-            if player.id == request.model_player_id:
-                model_username = player.username
+            if player == request.model_player_id:
+                model_username = UserService.get_username_by_id(player)
                 break
     
     if not model_username:
@@ -108,7 +119,7 @@ async def choose_model(
         )
     
     # Realizar la elección
-    updated_game = player_action_service.wild_child_choose_model(
+    updated_game = wild_child_choose_model(
         game_id, wild_child_id, request.model_player_id
     )
     
@@ -136,7 +147,7 @@ async def check_can_choose_model(
     """
     wild_child_id = current_user.id
     
-    can_choose = player_action_service.can_wild_child_choose_model(game_id, wild_child_id)
+    can_choose = can_wild_child_choose_model(game_id, wild_child_id)
     
     return {
         "success": True,
@@ -156,7 +167,7 @@ async def get_transformation_info(
     wild_child_id = current_user.id
     
     # Verificar que el jugador es o era el Niño Salvaje
-    transformation_info = player_action_service.get_wild_child_transformation_info(game_id, wild_child_id)
+    transformation_info = get_wild_child_transformation_info(game_id, wild_child_id)
     
     if not transformation_info:
         raise HTTPException(
@@ -184,7 +195,7 @@ async def check_transformation_trigger(
     # Este endpoint podría ser usado por el sistema para verificar transformaciones
     # después de muertes en el juego
     
-    transformations = player_action_service.check_wild_child_transformation(game_id, dead_player_id)
+    transformations = check_wild_child_transformation(game_id, dead_player_id)
     
     return {
         "success": True,
@@ -205,13 +216,13 @@ async def get_werewolf_notification(
     
     # Verificar que el usuario es un hombre lobo
     game = game_service.get_game(game_id)
-    if not game or user_id not in game.roles:
+    if not game or user_id not in game.players:
         raise HTTPException(
             status_code=404,
             detail="Partida o jugador no encontrado"
         )
     
-    user_role = game.roles[user_id]
+    user_role = game.players[user_id]
     if user_role.role != "warewolf" or not user_role.is_alive:
         raise HTTPException(
             status_code=403,
@@ -220,17 +231,17 @@ async def get_werewolf_notification(
     
     # Buscar Niños Salvajes transformados recientemente
     new_werewolves = []
-    for player_id, role_info in game.roles.items():
+    for player_id, role_info in game.players.items():
         if (role_info.role == "warewolf" and 
             role_info.has_transformed and
             player_id != user_id):
             
             # Obtener nombre del jugador
             for player in game.players:
-                if player.id == player_id:
+                if player == player_id:
                     new_werewolves.append({
                         "id": player_id,
-                        "username": player.username,
+                        "username": UserService.get_username_by_id(player),
                         "original_role": "wild_child"
                     })
                     break
@@ -252,7 +263,7 @@ async def initialize_wild_child(
     """
     wild_child_id = current_user.id
     
-    success = player_action_service.initialize_wild_child(game_id, wild_child_id)
+    success = initialize_wild_child(game_id, wild_child_id)
     
     if not success:
         raise HTTPException(
@@ -275,7 +286,7 @@ async def process_death_checks(
     Procesa todas las verificaciones de muerte para posibles transformaciones.
     (Endpoint para uso del sistema después de procesar muertes)
     """
-    transformations = player_action_service.process_wild_child_death_check(game_id)
+    transformations = process_wild_child_death_check(game_id)
     
     return {
         "success": True,

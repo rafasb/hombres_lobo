@@ -5,9 +5,14 @@ Este módulo orquesta el flujo completo del juego "Hombres Lobo".
 
 from typing import Dict, List, Any, Optional
 from app.database import load_game, save_game
-from app.models.game_and_roles import GameStatus, GameRole, Game
+from app.models.game_and_player import GameStatus, Roles, Game
 from app.services import player_action_service
+from app.services.witch_action_service import process_witch_night_actions, reset_witch_night_actions, get_witch_night_info
+from app.services.wild_child_action_service import check_wild_child_transformation, notify_werewolves_of_new_member, reset_wild_child_night_actions, can_wild_child_choose_model
+from app.services.cupid_action_service import check_lovers_death, check_lovers_victory_condition, can_cupid_choose_lovers
 from app.services.game_flow_service import reset_night_actions
+from app.services.sheriff_action_service import promote_sheriff_successor
+from app.services.seer_action_service import reset_seer_night_actions
 from app.services.user_service import UserService
 import logging
 
@@ -192,7 +197,7 @@ class GameFlowController:
     
     def _process_witch_actions(self, game_id: str) -> Dict[str, List[str]]:
         """Procesa las acciones de la bruja."""
-        return player_action_service.process_witch_night_actions(game_id)
+        return process_witch_night_actions(game_id)
     
     def _resolve_night_deaths(self, game_id: str, werewolf_results: Dict, witch_results: Dict) -> List[str]:
         """
@@ -210,8 +215,8 @@ class GameFlowController:
             # Verificar si la bruja curó a la víctima
             if victim_id not in witch_results["healed"]:
                 # La víctima muere
-                if victim_id in game.roles:
-                    game.roles[victim_id].is_alive = False
+                if victim_id in game.players:
+                    game.players[victim_id].is_alive = False
                     deaths.append(victim_id)
         
         # Las muertes por veneno ya se procesaron en process_witch_night_actions
@@ -232,12 +237,12 @@ class GameFlowController:
         
         for dead_player_id in dead_players:
             # 1. Verificar transformación del Niño Salvaje
-            transformations = player_action_service.check_wild_child_transformation(game_id, dead_player_id)
+            transformations = check_wild_child_transformation(game_id, dead_player_id)
             consequences["transformations"].extend(transformations)
             
             # Notificar a hombres lobo sobre nuevos miembros
             for transformation in transformations:
-                werewolves = player_action_service.notify_werewolves_of_new_member(
+                werewolves = notify_werewolves_of_new_member(
                     game_id, transformation["wild_child_id"]
                 )
                 consequences["notifications"].append({
@@ -247,7 +252,7 @@ class GameFlowController:
                 })
             
             # 2. Verificar muerte de enamorados
-            lover_deaths = player_action_service.check_lovers_death(game_id, dead_player_id)
+            lover_deaths = check_lovers_death(game_id, dead_player_id)
             consequences["additional_deaths"].extend(lover_deaths)
             
             if lover_deaths:
@@ -259,11 +264,11 @@ class GameFlowController:
             
             # 3. Verificar venganza del cazador
             game = load_game(game_id)
-            if game and dead_player_id in game.roles:
-                role_info = game.roles[dead_player_id]
-                if (role_info.role == GameRole.HUNTER and 
+            if game and dead_player_id in game.players:
+                role_info = game.players[dead_player_id]
+                if (role_info.role == Roles.HUNTER and 
                     role_info.can_revenge_kill and 
-                    not role_info.has_used_revenge):
+                    not role_info.has_acted_tonight):
                     
                     consequences["notifications"].append({
                         "type": "hunter_revenge_available",
@@ -272,10 +277,10 @@ class GameFlowController:
             
             # 4. Verificar promoción de sucesor del alguacil
             game = load_game(game_id)
-            if game and dead_player_id in game.roles:
-                role_info = game.roles[dead_player_id]
-                if role_info.role == GameRole.SHERIFF and role_info.successor_id:
-                    promoted_game = player_action_service.promote_sheriff_successor(game_id, dead_player_id)
+            if game and dead_player_id in game.players:
+                role_info = game.players[dead_player_id]
+                if role_info.role == Roles.SHERIFF and role_info.successor_id:
+                    promoted_game = promote_sheriff_successor(game_id, dead_player_id)
                     if promoted_game:
                         consequences["notifications"].append({
                             "type": "sheriff_succession",
@@ -329,8 +334,8 @@ class GameFlowController:
         # Marcar al jugador como muerto
         if lynched_player:
             game = load_game(game_id)
-            if game and lynched_player in game.roles:
-                game.roles[lynched_player].is_alive = False
+            if game and lynched_player in game.players:
+                game.players[lynched_player].is_alive = False
                 save_game(game)
         
         return {
@@ -350,8 +355,8 @@ class GameFlowController:
             return None
         
         sheriff_id = None
-        for player_id, role_info in game.roles.items():
-            if role_info.role == GameRole.SHERIFF and role_info.is_alive:
+        for player_id, role_info in game.players.items():
+            if role_info.role == Roles.SHERIFF and role_info.is_alive:
                 sheriff_id = player_id
                 break
         
@@ -375,16 +380,16 @@ class GameFlowController:
         alive_villagers = 0
         alive_players = []
         
-        for player_id, role_info in game.roles.items():
+        for player_id, role_info in game.players.items():
             if role_info.is_alive:
                 alive_players.append(player_id)
-                if role_info.role == GameRole.WAREWOLF:
+                if role_info.role == Roles.WAREWOLF:
                     alive_werewolves += 1
                 else:
                     alive_villagers += 1
         
         # 1. Verificar victoria de enamorados
-        lovers_victory = player_action_service.check_lovers_victory_condition(game_id)
+        lovers_victory = check_lovers_victory_condition(game_id)
         if lovers_victory:
             return {
                 "game_over": True,
@@ -395,8 +400,8 @@ class GameFlowController:
         # 2. Verificar victoria de hombres lobo
         if alive_werewolves >= alive_villagers:
             werewolf_winners = []
-            for player_id, role_info in game.roles.items():
-                if role_info.is_alive and role_info.role == GameRole.WAREWOLF:
+            for player_id, role_info in game.players.items():
+                if role_info.is_alive and role_info.role == Roles.WAREWOLF:
                     username = None
                     for player in game.players:
                         if player == player_id:
@@ -417,8 +422,8 @@ class GameFlowController:
         # 3. Verificar victoria de aldeanos
         if alive_werewolves == 0:
             villager_winners = []
-            for player_id, role_info in game.roles.items():
-                if role_info.is_alive and role_info.role != GameRole.WAREWOLF:
+            for player_id, role_info in game.players.items():
+                if role_info.is_alive and role_info.role != Roles.WAREWOLF:
                     username = None
                     for player in game.players:
                         if player == player_id:
@@ -471,10 +476,9 @@ class GameFlowController:
         reset_night_actions(game_id)
         
         # Resetear acciones específicas de cada rol
-        player_action_service.reset_seer_night_actions(game_id)
-        player_action_service.reset_witch_night_actions(game_id)
-        player_action_service.reset_wild_child_night_actions(game_id)
-        player_action_service.reset_cupid_night_actions(game_id)
+        reset_seer_night_actions(game_id)
+        reset_witch_night_actions(game_id)
+        reset_wild_child_night_actions(game_id)
     
     def get_game_state_summary(self, game_id: str) -> Dict[str, Any]:
         """
@@ -489,7 +493,7 @@ class GameFlowController:
         alive_players = []
         dead_players = []
         
-        for player_id, role_info in game.roles.items():
+        for player_id, role_info in game.players.items():
             role_name = role_info.role.value
             if role_name not in role_counts:
                 role_counts[role_name] = {"alive": 0, "dead": 0}
@@ -528,39 +532,39 @@ class GameFlowController:
         
         if game.status == GameStatus.NIGHT:
             # Verificar acciones nocturnas pendientes
-            for player_id, role_info in game.roles.items():
+            for player_id, role_info in game.players.items():
                 if not role_info.is_alive:
                     continue
                 
                 # Hombres lobo
-                if role_info.role == GameRole.WAREWOLF:
+                if role_info.role == Roles.WAREWOLF:
                     if not self._has_werewolf_voted(game_id, player_id):
                         pending.append({"player_id": player_id, "action": "werewolf_attack"})
                 
                 # Vidente
-                elif role_info.role == GameRole.SEER:
-                    if not role_info.has_used_vision_tonight:
+                elif role_info.role == Roles.SEER:
+                    if not role_info.has_acted_tonight:
                         pending.append({"player_id": player_id, "action": "seer_vision"})
                 
                 # Bruja
-                elif role_info.role == GameRole.WITCH:
-                    witch_info = player_action_service.get_witch_night_info(game_id, player_id)
+                elif role_info.role == Roles.WITCH:
+                    witch_info = get_witch_night_info(game_id, player_id)
                     if witch_info["can_heal"] or witch_info["can_poison"]:
                         pending.append({"player_id": player_id, "action": "witch_actions"})
                 
                 # Cupido (solo primera noche)
-                elif role_info.role == GameRole.CUPID and game.current_round == 1:
-                    if player_action_service.can_cupid_choose_lovers(game_id, player_id):
+                elif role_info.role == Roles.CUPID and game.current_round == 1:
+                    if can_cupid_choose_lovers(game_id, player_id):
                         pending.append({"player_id": player_id, "action": "cupid_lovers"})
                 
                 # Niño Salvaje (solo primera noche)
-                elif role_info.role == GameRole.WILD_CHILD and game.current_round == 1:
-                    if player_action_service.can_wild_child_choose_model(game_id, player_id):
+                elif role_info.role == Roles.WILD_CHILD and game.current_round == 1:
+                    if can_wild_child_choose_model(game_id, player_id):
                         pending.append({"player_id": player_id, "action": "wild_child_model"})
         
         elif game.status == GameStatus.DAY:
             # Verificar votos diurnos pendientes
-            for player_id, role_info in game.roles.items():
+            for player_id, role_info in game.players.items():
                 if role_info.is_alive and player_id not in game.day_votes:
                     pending.append({"player_id": player_id, "action": "day_vote"})
         

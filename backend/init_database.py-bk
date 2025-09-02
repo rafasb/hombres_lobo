@@ -16,7 +16,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 
 from app.database import (
     engine, Base, SessionLocal, UserDB, GameDB,
-    get_db_session, initialize_database
+    get_db_session
 )
 from app.models.user import UserAccessRole, UserStatus
 from app.models.game_and_player import GameStatus
@@ -42,6 +42,39 @@ def create_backup():
     else:
         print("⚠️  No se encontraron datos JSON para respaldar")
         return None
+
+def create_database_structure():
+    """Crea la estructura de la base de datos."""
+    print("🔄 Creando estructura de base de datos...")
+    
+    try:
+        # Crear todas las tablas
+        Base.metadata.create_all(bind=engine)
+        print("✅ Tablas creadas correctamente")
+        
+        # Crear índices adicionales para optimización
+        with engine.connect() as conn:
+            # Índices para búsquedas frecuentes
+            try:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_username ON users (username)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_role ON users (role)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_status ON users (status)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_created_at ON users (created_at)"))
+                
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_games_creator_id ON games (creator_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_games_status ON games (status)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_games_created_at ON games (created_at)"))
+                
+                conn.commit()
+                print("✅ Índices de optimización creados")
+                
+            except Exception as e:
+                print(f"⚠️  Algunos índices ya existían: {e}")
+                
+    except Exception as e:
+        print(f"❌ Error creando estructura de base de datos: {e}")
+        raise
 
 def validate_env_credentials():
     """Valida que las credenciales del .env sean válidas."""
@@ -83,14 +116,15 @@ def create_initial_users():
     user_password = os.getenv('PASSWORD')
     
     with get_db_session() as db:
-        # Verificar usuarios existentes
-        existing_admin = db.query(UserDB).filter(UserDB.username == admin_username).first()
-        existing_user = db.query(UserDB).filter(UserDB.username == user_username).first() if user_username else None
+        # Limpiar usuarios existentes
+        existing_users = db.query(UserDB).all()
+        for user in existing_users:
+            db.delete(user)
+        db.commit()
+        print("🗑️  Usuarios existentes eliminados")
         
-        users_created = 0
-        
-        # Crear usuario admin si no existe
-        if admin_username and admin_email and admin_password and not existing_admin:
+        # Crear usuario admin
+        if admin_username and admin_email and admin_password:
             admin_user = UserDB(
                 id=str(uuid.uuid4()),
                 username=admin_username,
@@ -102,13 +136,10 @@ def create_initial_users():
                 updated_at=datetime.now(UTC)
             )
             db.add(admin_user)
-            users_created += 1
             print(f"✅ Usuario admin creado: {admin_username} ({admin_email})")
-        elif existing_admin:
-            print(f"ℹ️  Usuario admin ya existe: {admin_username}")
         
-        # Crear usuario de prueba si no existe
-        if user_username and user_email and user_password and not existing_user:
+        # Crear usuario de prueba
+        if user_username and user_email and user_password:
             test_user = UserDB(
                 id=str(uuid.uuid4()),
                 username=user_username,
@@ -120,51 +151,15 @@ def create_initial_users():
                 updated_at=datetime.now(UTC)
             )
             db.add(test_user)
-            users_created += 1
             print(f"✅ Usuario de prueba creado: {user_username} ({user_email})")
-        elif existing_user:
-            print(f"ℹ️  Usuario de prueba ya existe: {user_username}")
         
-        if users_created > 0:
-            db.commit()
-            print(f"💾 {users_created} usuarios guardados en la base de datos")
+        db.commit()
 
-def optimize_database():
-    """Optimiza la base de datos creando índices adicionales."""
-    print("🔄 Optimizando base de datos...")
-    
-    try:
-        with engine.connect() as conn:
-            # Índices adicionales para optimización
-            optimization_indices = [
-                "CREATE INDEX IF NOT EXISTS idx_users_username ON users (username)",
-                "CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)",
-                "CREATE INDEX IF NOT EXISTS idx_users_role ON users (role)",
-                "CREATE INDEX IF NOT EXISTS idx_users_status ON users (status)",
-                "CREATE INDEX IF NOT EXISTS idx_users_game_id ON users (game_id)",
-                "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users (created_at)",
-                
-                "CREATE INDEX IF NOT EXISTS idx_games_creator_id ON games (creator_id)",
-                "CREATE INDEX IF NOT EXISTS idx_games_status ON games (status)",
-                "CREATE INDEX IF NOT EXISTS idx_games_created_at ON games (created_at)",
-                "CREATE INDEX IF NOT EXISTS idx_games_current_round ON games (current_round)"
-            ]
-            
-            for index_sql in optimization_indices:
-                try:
-                    conn.execute(text(index_sql))
-                except Exception as idx_error:
-                    print(f"⚠️  Índice ya existe o error: {idx_error}")
-            
-            # Optimización SQLite
-            conn.execute(text("ANALYZE"))
-            conn.execute(text("VACUUM"))
-            
-            conn.commit()
-            print("✅ Optimización completada")
-            
-    except Exception as e:
-        print(f"⚠️  Error durante optimización: {e}")
+def cleanup_existing_admin_users():
+    """Elimina usuarios administradores existentes (solo si se va a recrear admin)."""
+    # Esta función ya no es necesaria en el flujo normal
+    pass
+
 
 def create_database_info():
     """Crea archivo de información sobre la base de datos."""
@@ -183,12 +178,7 @@ def create_database_info():
         
         # Estadísticas de partidas
         waiting_games = db.query(GameDB).filter(GameDB.status == GameStatus.WAITING.value).count()
-        playing_games = db.query(GameDB).filter(GameDB.status.in_([
-            GameStatus.STARTED.value, 
-            GameStatus.NIGHT.value, 
-            GameStatus.DAY.value,
-            GameStatus.VOTING.value
-        ])).count()
+        playing_games = db.query(GameDB).filter(GameDB.status == GameStatus.STARTED.value).count()
         finished_games = db.query(GameDB).filter(GameDB.status == GameStatus.FINISHED.value).count()
         
         db_info = {
@@ -222,38 +212,6 @@ def create_database_info():
     print(f"   👥 Usuarios: {user_count} (👑 {admin_count} admins, 👤 {player_count} jugadores)")
     print(f"   🎮 Partidas: {game_count} (⏳ {waiting_games} esperando, ▶️ {playing_games} jugando, ✅ {finished_games} terminadas)")
 
-def verify_database_integrity():
-    """Verifica la integridad de la base de datos."""
-    print("🔄 Verificando integridad de la base de datos...")
-    
-    try:
-        with get_db_session() as db:
-            # Verificar que se pueden cargar usuarios
-            users = db.query(UserDB).limit(5).all()
-            if users:
-                print(f"✅ Usuarios cargados correctamente (muestra: {len(users)})")
-                
-                # Verificar conversión Pydantic
-                for user in users[:2]:  # Solo los primeros 2 para prueba
-                    pydantic_user = user.to_pydantic()
-                    print(f"   - Usuario: {pydantic_user.username} ({pydantic_user.role.value})")
-            
-            # Verificar que se pueden cargar partidas
-            games = db.query(GameDB).limit(5).all()
-            if games:
-                print(f"✅ Partidas cargadas correctamente (muestra: {len(games)})")
-                
-                # Verificar conversión Pydantic
-                for game in games[:2]:  # Solo las primeras 2 para prueba
-                    pydantic_game = game.to_pydantic()
-                    print(f"   - Partida: {pydantic_game.name} ({pydantic_game.status.value})")
-            else:
-                print("ℹ️  No hay partidas en la base de datos")
-                
-    except Exception as e:
-        print(f"❌ Error verificando integridad: {e}")
-        raise
-
 def main():
     """Función principal del script de inicialización."""
     print("🚀 INICIANDO CONFIGURACIÓN DE BASE DE DATOS HOMBRES LOBO")
@@ -267,19 +225,10 @@ def main():
         # 2. Crear backup
         backup_dir = create_backup()
         
-        # 3. Inicializar estructura de BD (incluye migración automática)
-        initialize_database()
+        # 3. Crear estructura de BD
+        create_database_structure()
         
-        # 4. Crear usuarios iniciales
-        create_initial_users()
-        
-        # 5. Optimizar base de datos
-        optimize_database()
-        
-        # 6. Verificar integridad
-        verify_database_integrity()
-        
-        # 7. Crear información de BD
+        # 6. Crear información de BD
         create_database_info()
         
         print("\n" + "=" * 60)
@@ -300,8 +249,6 @@ def main():
         print("   - Permisos de archivos")
         print("   - Configuración del .env")
         print("   - Logs de la aplicación")
-        import traceback
-        traceback.print_exc()
         return False
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ Incluye funciones para que los jugadores realicen sus acciones nocturnas especí
 """
 
 from app.database import save_game, load_game
-from app.models.game_and_roles import Game, GameStatus, GameRole
+from app.models.game_and_player import Game, GameStatus, Roles
 from typing import Optional, List, Dict
 
 
@@ -29,27 +29,27 @@ def warewolf_attack(game_id: str, attacker_id: str, target_id: str) -> Optional[
         return None
     
     # Verificar que el atacante existe y está vivo
-    if attacker_id not in game.roles:
+    if attacker_id not in game.players:
         return None
     
-    attacker_role = game.roles[attacker_id]
+    attacker_role = game.players[attacker_id]
     if not attacker_role.is_alive:
         return None
     
     # Verificar que el atacante es un hombre lobo
-    if attacker_role.role != GameRole.WAREWOLF:
+    if attacker_role.role != Roles.WAREWOLF:
         return None
     
     # Verificar que el objetivo existe y está vivo
-    if target_id not in game.roles:
+    if target_id not in game.players:
         return None
     
-    target_role = game.roles[target_id]
+    target_role = game.players[target_id]
     if not target_role.is_alive:
         return None
     
     # Verificar que el objetivo no es un hombre lobo (no pueden atacarse entre ellos)
-    if target_role.role == GameRole.WAREWOLF:
+    if target_role.role == Roles.WAREWOLF:
         return None
     
     # Verificar que el hombre lobo no ha actuado ya esta noche
@@ -57,8 +57,8 @@ def warewolf_attack(game_id: str, attacker_id: str, target_id: str) -> Optional[
         return None
     
     # Registrar la acción del hombre lobo
-    game.roles[attacker_id].has_acted_tonight = True
-    game.roles[attacker_id].target_player_id = target_id
+    game.players[attacker_id].has_acted_tonight = True
+    game.players[attacker_id].target_player_id = target_id
     
     # Registrar el voto de ataque del hombre lobo
     if 'warewolf_attacks' not in game.night_actions:
@@ -89,8 +89,8 @@ def get_warewolf_attack_consensus(game_id: str) -> Optional[str]:
     
     # Obtener todos los hombres lobo vivos
     warewolves = [
-        player_id for player_id, role_info in game.roles.items()
-        if role_info.role == GameRole.WAREWOLF and role_info.is_alive
+        player_id for player_id, role_info in game.players.items()
+        if role_info.role == Roles.WAREWOLF and role_info.is_alive
     ]
     
     # Obtener votos de ataque
@@ -138,7 +138,7 @@ def get_alive_players(game_id: str) -> List[Dict[str, str]]:
     
     alive_players = []
     for player_id in game.players:
-        if player_id in game.roles and game.roles[player_id].is_alive:
+        if player_id in game.players and game.players[player_id].is_alive:
             user = load_user(player_id)
             if user:
                 alive_players.append({
@@ -166,9 +166,9 @@ def get_non_warewolf_players(game_id: str) -> List[Dict[str, str]]:
     
     valid_targets = []
     for player_id in game.players:
-        if (player_id in game.roles and 
-            game.roles[player_id].is_alive and 
-            game.roles[player_id].role != GameRole.WAREWOLF):
+        if (player_id in game.players and 
+            game.players[player_id].is_alive and 
+            game.players[player_id].role != Roles.WAREWOLF):
             user = load_user(player_id)
             if user:
                 valid_targets.append({
@@ -199,15 +199,15 @@ def can_warewolf_act(game_id: str, player_id: str) -> bool:
         return False
     
     # Verificar que el jugador existe y está vivo
-    if player_id not in game.roles:
+    if player_id not in game.players:
         return False
     
-    player_role = game.roles[player_id]
+    player_role = game.players[player_id]
     if not player_role.is_alive:
         return False
     
     # Verificar que es un hombre lobo
-    if player_role.role != GameRole.WAREWOLF:
+    if player_role.role != Roles.WAREWOLF:
         return False
     
     # Verificar que no ha actuado esta noche
@@ -216,4 +216,14 @@ def can_warewolf_act(game_id: str, player_id: str) -> bool:
     
     return True
 
-
+def get_warewolf_attack_victim(game_id: str) -> Optional[str]:
+    """
+    Obtiene el ID del jugador atacado por los hombres lobo esta noche.
+    
+    Args:
+        game_id: ID de la partida
+    
+    Returns:
+        ID del jugador atacado, None si no hay ataque o consenso
+    """
+    return get_warewolf_attack_consensus(game_id)

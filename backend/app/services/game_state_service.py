@@ -5,11 +5,14 @@ Maneja el estado del juego en memoria integrado con sistema de fases
 from typing import Dict, List, Set
 from datetime import datetime, timedelta
 import asyncio
-from app.models.game_and_roles import Game, GameStatus
+from app.models.game_and_player import Game, GameStatus, PlayerInfo
 from app.services.game_phases_service import GamePhaseController, GamePhase, phase_manager
 
 class GameState:
-    """Estado de un juego en memoria"""
+    """Estado de un juego en memoria. 
+    Contiene información adicional como votos, acciones nocturnas, jugadores conectados, etc.
+    Integrado con el sistema de fases.
+    """
     
     def __init__(self, game_id: str, game_data: Game):
         self.game_id = game_id
@@ -29,21 +32,80 @@ class GameState:
         self.phase_start_time = datetime.now()
         self.phase_duration = timedelta(minutes=5)
         self.phase_timer_task = None
+
+    # Composición helpers: delegados y propiedades convenientes
+    @property
+    def players(self):
+        """Devuelve la lista de PlayerInfo o de entradas originales (compatibilidad)."""
+        return getattr(self.game_data, 'players', []) or []
+
+    @property
+    def player_ids(self) -> List[str]:
+        """Devuelve la lista de player_id extraídos de `players` (soporta PlayerInfo o strings)."""
+        ids: List[str] = []
+        for p in self.players:
+            if isinstance(p, str):
+                ids.append(p)
+            else:
+                pid = getattr(p, 'player_id', None) or (p.get('player_id') if isinstance(p, dict) else None)
+                if pid:
+                    ids.append(pid)
+        return ids
+
+    def get_player_state(self, player_id: str) -> PlayerInfo | None:
+        """Obtiene el PlayerInfo de un jugador específico.
+        
+        Args:
+            player_id: ID del jugador específico
+            
+        Returns:
+            PlayerInfo si se encuentra el jugador, None en caso contrario
+        """
+        try:
+            player_state = self.game_data.get_player_state(player_id)
+            if isinstance(player_state, PlayerInfo):
+                return self.game_data.get_player_state(player_id)
+            return None
+        except Exception:
+            # Fallback: acceder directamente al diccionario players
+            players_dict = getattr(self.game_data, 'players', {})
+            return players_dict.get(player_id) if isinstance(players_dict, dict) else None
     
+    def get_all_player_states(self) -> List[PlayerInfo]:
+        """Obtiene todos los PlayerInfos del juego.
+        
+        Returns:
+            Lista de todos los PlayerInfos en el juego
+        """
+        try:
+            return self.game_data.player_states
+        except Exception:
+            # Fallback: acceder directamente al diccionario players
+            players_dict = getattr(self.game_data, 'players', {})
+            return list(players_dict.values()) if isinstance(players_dict, dict) else []
+
+    # TODO: Cohesionar las fases y estados. Actualmente hay redundancia.
     @property
     def phase(self) -> GameStatus:
-        """Obtener fase actual convertida a GameStatus para compatibilidad"""
-        phase_mapping = {
-            GamePhase.WAITING: GameStatus.WAITING,
-            GamePhase.STARTING: GameStatus.STARTED,
-            GamePhase.NIGHT: GameStatus.NIGHT,
-            GamePhase.DAY: GameStatus.DAY,
-            GamePhase.VOTING: GameStatus.DAY,
-            GamePhase.TRIAL: GameStatus.DAY,
-            GamePhase.EXECUTION: GameStatus.DAY,
-            GamePhase.FINISHED: GameStatus.FINISHED
-        }
-        return phase_mapping.get(self.phase_controller.current_phase, GameStatus.WAITING)
+        """Obtener fase actual: usar directamente el `status` del objeto Game cuando exista.
+        Mantener un fallback mínimo basado en el controlador de fases para compatibilidad.
+        """
+        try:
+            status = getattr(self.game_data, "status", None)
+            if isinstance(status, GameStatus):
+                return status
+
+            # Fallback mínimo: mapear desde GamePhase a GameStatus si `game_data.status` no está presente.
+            phase_mapping = {
+                GamePhase.WAITING: GameStatus.WAITING,
+                GamePhase.STARTING: GameStatus.STARTING,
+                GamePhase.NIGHT: GameStatus.NIGHT,
+                GamePhase.DAY: GameStatus.DAY,
+                GamePhase.FINISHED: GameStatus.FINISHED,
+            }
+            return phase_mapping.get(self.phase_controller.current_phase, GameStatus.WAITING)
+        except Exception:
+            return GameStatus.WAITING
     
     @property
     def current_game_phase(self) -> GamePhase:
@@ -60,15 +122,15 @@ class GameState:
         
     def get_living_players(self) -> List[str]:
         """Obtener jugadores vivos"""
-        if not self.game_data.players:
+        if not self.players:
             return []
-        return [p_id for p_id in self.game_data.players if p_id not in self.eliminated_players]
+        return [pid for pid in self.player_ids if pid not in self.eliminated_players]
     
     def get_dead_players(self) -> List[str]:
         """Obtener jugadores muertos"""
-        if not self.game_data.players:
+        if not self.players:
             return []
-        return [p_id for p_id in self.game_data.players if p_id in self.eliminated_players]
+        return [pid for pid in self.player_ids if pid in self.eliminated_players]
     
     def eliminate_player(self, user_id: str):
         """Eliminar jugador del juego y actualizar su estado"""
@@ -134,7 +196,7 @@ class GameState:
             GameStatus.STARTED: GamePhase.STARTING,
             GameStatus.NIGHT: GamePhase.NIGHT,
             GameStatus.DAY: GamePhase.DAY,
-            GameStatus.PAUSED: GamePhase.DAY,  # Mapear paused a day por ahora
+            GameStatus.PAUSED: GamePhase.PAUSED,  # Mapear paused a day por ahora
             GameStatus.FINISHED: GamePhase.FINISHED
         }
         
@@ -190,13 +252,13 @@ class GameStateManager:
         
         if not game_data:
             # Si no existe en BD, crear uno básico para desarrollo
-            from app.models.game_and_roles import Game
             game_data = Game(
                 id=game_id,
                 name=f"Juego {game_id}",
                 creator_id="temp",
                 max_players=10,
-                players=[],
+                player_ids=[],        # inicializar lista de ids
+                players={},           # inicializar dict de PlayerInfo
                 status=GameStatus.WAITING
             )
         
@@ -247,4 +309,5 @@ class GameStateManager:
                 print(f"Error en cleanup loop: {e}")
 
 # Instancia global del game state manager
+game_state_manager = GameStateManager()
 game_state_manager = GameStateManager()

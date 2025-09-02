@@ -4,7 +4,7 @@ import uuid
 from typing import List, Optional, Generator, Dict
 from datetime import datetime, UTC
 from contextlib import contextmanager
-from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean, text
+from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
@@ -89,7 +89,6 @@ class GameDB(Base):
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
     creator_id = Column(String, nullable=False, index=True)
-    max_players = Column(Integer, nullable=False, default=12)
     player_ids = Column(SQLiteJSON, nullable=False, default=list)
     players = Column(SQLiteJSON, nullable=False, default=dict)
     status = Column(String, nullable=False, default=GameStatus.WAITING.value)
@@ -98,6 +97,7 @@ class GameDB(Base):
     is_first_night = Column(Boolean, nullable=False, default=True)
     night_actions = Column(SQLiteJSON, nullable=False, default=dict)
     day_votes = Column(SQLiteJSON, nullable=False, default=dict)
+    max_players = Column(Integer, nullable=False, default=12)
     
     def to_pydantic(self) -> Game:
         """Convierte el modelo SQLAlchemy a modelo Pydantic."""
@@ -160,7 +160,6 @@ class GameDB(Base):
             id=getattr(self, 'id'),
             name=getattr(self, 'name'),
             creator_id=getattr(self, 'creator_id'),
-            max_players=getattr(self, 'max_players'),
             player_ids=raw_player_ids,
             players=players_dict,
             status=GameStatus(getattr(self, 'status')),
@@ -168,7 +167,8 @@ class GameDB(Base):
             current_round=getattr(self, 'current_round'),
             is_first_night=getattr(self, 'is_first_night'),
             night_actions=getattr(self, 'night_actions') or {},
-            day_votes=getattr(self, 'day_votes') or {}
+            day_votes=getattr(self, 'day_votes') or {},
+            max_players=getattr(self, 'max_players')
         )
     
     @classmethod
@@ -197,7 +197,6 @@ class GameDB(Base):
             id=game.id,
             name=game.name,
             creator_id=game.creator_id,
-            max_players=game.max_players,
             player_ids=game.player_ids or [],
             players=serialized_players,
             status=game.status.value,
@@ -205,100 +204,12 @@ class GameDB(Base):
             current_round=game.current_round,
             is_first_night=game.is_first_night,
             night_actions=game.night_actions or {},
-            day_votes=game.day_votes or {}
+            day_votes=game.day_votes or {},
+            max_players=game.max_players
         )
 
-def check_and_migrate_database():
-    """Verifica y migra la estructura de la base de datos si es necesario."""
-    print("🔄 Verificando estructura de base de datos...")
-    
-    try:
-        with engine.connect() as conn:
-            # Verificar si existe la tabla games
-            result = conn.execute(text("""
-                SELECT name FROM sqlite_master 
-                WHERE type='table' AND name='games'
-            """))
-            
-            if not result.fetchone():
-                print("✅ Tabla games no existe, se creará nueva estructura")
-                return True
-            
-            # Verificar columnas existentes en la tabla games
-            result = conn.execute(text("PRAGMA table_info(games)"))
-            columns = {row[1] for row in result.fetchall()}
-            
-            required_columns = {
-                'id', 'name', 'creator_id', 'max_players', 'player_ids', 
-                'players', 'status', 'created_at', 'current_round', 
-                'is_first_night', 'night_actions', 'day_votes'
-            }
-            
-            missing_columns = required_columns - columns
-            
-            if missing_columns:
-                print(f"⚠️  Faltan columnas en tabla games: {missing_columns}")
-                print("🔄 Migrando estructura de tabla games...")
-                
-                # Crear tabla temporal con nueva estructura
-                conn.execute(text("""
-                    CREATE TABLE games_new (
-                        id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        creator_id TEXT NOT NULL,
-                        max_players INTEGER NOT NULL DEFAULT 12,
-                        player_ids TEXT NOT NULL DEFAULT '[]',
-                        players TEXT NOT NULL DEFAULT '{}',
-                        status TEXT NOT NULL DEFAULT 'waiting',
-                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        current_round INTEGER NOT NULL DEFAULT 0,
-                        is_first_night BOOLEAN NOT NULL DEFAULT 1,
-                        night_actions TEXT NOT NULL DEFAULT '{}',
-                        day_votes TEXT NOT NULL DEFAULT '{}'
-                    )
-                """))
-                
-                # Migrar datos existentes (solo columnas que coincidan)
-                existing_columns = columns.intersection(required_columns)
-                if existing_columns:
-                    columns_str = ', '.join(existing_columns)
-                    conn.execute(text(f"""
-                        INSERT INTO games_new ({columns_str})
-                        SELECT {columns_str} FROM games
-                    """))
-                
-                # Reemplazar tabla antigua
-                conn.execute(text("DROP TABLE games"))
-                conn.execute(text("ALTER TABLE games_new RENAME TO games"))
-                
-                # Crear índices
-                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_games_creator_id ON games (creator_id)"))
-                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_games_status ON games (status)"))
-                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_games_created_at ON games (created_at)"))
-                
-                conn.commit()
-                print("✅ Migración de tabla games completada")
-            else:
-                print("✅ Estructura de tabla games correcta")
-                
-    except Exception as e:
-        print(f"❌ Error durante migración: {e}")
-        raise
-    
-    return True
-
-# Crear todas las tablas después de verificar migración
-def initialize_database():
-    """Inicializa la base de datos con verificación y migración."""
-    print("🔄 Inicializando base de datos...")
-    
-    # Verificar y migrar si es necesario
-    check_and_migrate_database()
-    
-    # Crear estructura completa
-    Base.metadata.create_all(bind=engine)
-    
-    print("✅ Base de datos inicializada correctamente")
+# Crear todas las tablas
+Base.metadata.create_all(bind=engine)
 
 # Dependency para obtener la sesión de base de datos
 @contextmanager
@@ -324,7 +235,7 @@ def migrate_from_json():
     json_dir = os.path.join(os.path.dirname(__file__), 'db_json')
     
     if not os.path.exists(json_dir):
-        print("📝 No se encontraron datos JSON para migrar.")
+        print("No se encontraron datos JSON para migrar.")
         return
     
     with get_db_session() as db:
@@ -356,8 +267,7 @@ def migrate_from_json():
                     db.add(db_user)
                     migrated_users += 1
             
-            if migrated_users > 0:
-                print(f"📦 Migrados {migrated_users} usuarios desde JSON")
+            print(f"Migrados {migrated_users} usuarios desde JSON")
         
         # Migrar partidas
         games_file = os.path.join(json_dir, 'games.json')
@@ -415,23 +325,19 @@ def migrate_from_json():
                     db.add(db_game)
                     migrated_games += 1
             
-            if migrated_games > 0:
-                print(f"📦 Migradas {migrated_games} partidas desde JSON")
+            print(f"Migradas {migrated_games} partidas desde JSON")
         
         db.commit()
 
-# Ejecutar inicialización al cargar el módulo
+# Ejecutar migración al inicializar si es necesario
 try:
-    initialize_database()
-    
-    # Intentar migración desde JSON si la base de datos está vacía
     with get_db_session() as db:
         user_count = db.query(UserDB).count()
         if user_count == 0:
-            print("📦 Base de datos vacía, ejecutando migración desde JSON...")
+            print("Base de datos vacía, ejecutando migración desde JSON...")
             migrate_from_json()
 except Exception as e:
-    print(f"⚠️  Error durante la inicialización automática: {e}")
+    print(f"Error durante la migración: {e}")
 
 # Crear usuario admin por defecto
 admin_username = os.getenv('ADMIN_USERNAME')
@@ -455,9 +361,9 @@ if admin_username and admin_email and admin_password:
                 )
                 db.add(admin_user)
                 db.commit()
-                print(f"👑 Usuario admin creado: {admin_username}")
+                print(f"Usuario admin creado: {admin_username}")
     except Exception as e:
-        print(f"❌ Error creando usuario admin: {e}")
+        print(f"Error creando usuario admin: {e}")
 
 # --- Funciones específicas para usuarios optimizadas ---
 

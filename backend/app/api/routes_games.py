@@ -5,7 +5,7 @@ Requiere autenticación JWT para acceder.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Body
-from app.models.game_and_roles import Game, GameCreate, GameStatus
+from app.models.game_and_player import Game, GameCreate, GameStatus
 from app.models.game_responses import (
     GameCreateResponse,
     GameGetResponse,
@@ -31,7 +31,6 @@ from app.services.game_flow_service import (
     assign_roles,
 )
 from app.core.dependencies import get_current_user, get_current_user_id
-from app.database import game_to_game_response
 import uuid
 
 router = APIRouter(prefix="/games", tags=["games"])
@@ -44,17 +43,16 @@ def create_new_game(game: GameCreate, user=Depends(get_current_user)):
         name=game.name,
         creator_id=game.creator_id,
         max_players=game.max_players,
-        players=[user.id],  # Solo almacenamos el ID del creador
-        roles={},
+        player_ids=[user.id],  # Solo almacenamos el ID del creador
+        players={},
         status=GameStatus.WAITING
     )
     create_game(new_game)
-    game_response = game_to_game_response(new_game)
     
     return GameCreateResponse(
         success=True,
         message=f"Partida '{game.name}' creada exitosamente",
-        game=game_response
+        game=new_game
     )
 
 
@@ -64,24 +62,22 @@ def get_game_by_id(game_id: str, user=Depends(get_current_user)):
     if not game:
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
-    game_response = game_to_game_response(game)
     return GameGetResponse(
         success=True,
         message="Partida obtenida exitosamente",
-        game=game_response
+        game=game
     )
 
 
 @router.get("", response_model=GameListResponse)
 def list_games(user=Depends(get_current_user)):
     games = get_all_games()
-    games_response = [game_to_game_response(game) for game in games]
     
     return GameListResponse(
         success=True,
         message="Lista de partidas obtenida exitosamente",
-        games=games_response,
-        total_games=len(games_response)
+        games=games,
+        total_games=len(games)
     )
 
 
@@ -113,16 +109,15 @@ def assign_roles_endpoint(game_id: str, user=Depends(get_current_user)):
     is_admin = user.role == UserAccessRole.ADMIN
     game = assign_roles(game_id, get_current_user_id(), is_admin)
     if game:
-        game_response = game_to_game_response(game)
         
         # Contar roles asignados
-        assigned_roles = sum(1 for role_info in game.roles.values() if role_info.role != "villager")
+        assigned_roles = sum(1 for role_info in game.players.values() if role_info.role != "villager")
         total_players = len(game.players)
         
         return GameRoleAssignmentResponse(
             success=True,
             message="Roles asignados exitosamente",
-            game=game_response,
+            game=game,
             assigned_roles_count=assigned_roles,
             players_with_roles=total_players
         )
@@ -161,12 +156,11 @@ def update_game(game_id: str, data: dict = Body(...), user=Depends(get_current_u
     """Permite al creador o admin modificar nombre, max_players y roles antes de que comience la partida."""
     name = data.get("name")
     max_players = data.get("max_players")
-    roles = data.get("roles")
+    players = data.get("players")
     is_admin = user.role == UserAccessRole.ADMIN
     
-    updated = update_game_params(game_id, user.id, name, max_players, roles, is_admin)
+    updated = update_game_params(game_id, user.id, name, max_players, is_admin)
     if updated:
-        game_response = game_to_game_response(updated)
         
         # Determinar qué campos se actualizaron
         updated_fields = []
@@ -174,13 +168,13 @@ def update_game(game_id: str, data: dict = Body(...), user=Depends(get_current_u
             updated_fields.append("name")
         if max_players is not None:
             updated_fields.append("max_players")
-        if roles is not None:
-            updated_fields.append("roles")
+        if players is not None:
+            updated_fields.append("players")
         
         return GameUpdateResponse(
             success=True,
             message="Partida actualizada exitosamente",
-            game=game_response,
+            game=updated,
             updated_fields=updated_fields
         )
     
@@ -203,12 +197,11 @@ def update_game_status(
     
     updated = change_game_status(game_id, user.id, status, is_admin)
     if updated:
-        game_response = game_to_game_response(updated)
         
         return GameStatusUpdateResponse(
             success=True,
             message=f"Estado de la partida cambiado de {previous_status} a {status.value}",
-            game=game_response,
+            game=updated,
             previous_status=previous_status,
             new_status=status.value
         )

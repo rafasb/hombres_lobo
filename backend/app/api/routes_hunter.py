@@ -10,7 +10,7 @@ from app.models.player_actions import (
     HunterRevengeResponse,
     PlayerInfo,
 )
-from app.services.player_action_service import (
+from app.services.hunter_action_service import (
     is_hunter,
     can_hunter_revenge,
     hunter_revenge_kill,
@@ -18,8 +18,10 @@ from app.services.player_action_service import (
     check_hunter_death_triggers,
     auto_eliminate_hunter_target,
 )
+from app.services.user_service import UserService
 from app.core.dependencies import get_current_user
 from typing import List, Dict
+from app.models.user import User
 
 router = APIRouter()
 
@@ -57,12 +59,8 @@ def execute_hunter_revenge(
         )
     
     # Buscar información del objetivo eliminado
-    target_username = None
-    for player in updated_game.players:
-        if player.id == revenge_request.target_id:
-            target_username = player.username
-            break
-    
+    target_username = UserService.get_username_by_id(revenge_request.target_id)
+
     if not target_username:
         raise HTTPException(
             status_code=400,
@@ -135,7 +133,7 @@ def check_is_hunter(game_id: str, user=Depends(get_current_user)):
 
 
 @router.get("/games/{game_id}/hunters-needing-revenge", response_model=List[str])
-def get_hunters_needing_revenge(game_id: str, user=Depends(get_current_user)):
+def get_hunters_needing_revenge(game_id: str, user: User =Depends(get_current_user)):
     """
     Obtiene la lista de cazadores que murieron y necesitan activar su venganza.
     Solo accesible por administradores o el narrador del juego.
@@ -154,7 +152,7 @@ def get_hunters_needing_revenge(game_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
     # Verificar que el usuario está en la partida o es admin
-    user_in_game = any(player.id == user.id for player in game.players)
+    user_in_game = any(player == user.id for player in game.players)
     if not user_in_game:
         raise HTTPException(
             status_code=403,
@@ -169,7 +167,7 @@ def get_hunters_needing_revenge(game_id: str, user=Depends(get_current_user)):
 def get_hunter_revenge_result(
     game_id: str, 
     hunter_id: str, 
-    user=Depends(get_current_user)
+    user: User =Depends(get_current_user)
 ):
     """
     Obtiene el resultado de la venganza de un cazador específico.
@@ -188,7 +186,7 @@ def get_hunter_revenge_result(
     if not game:
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
-    user_in_game = any(player.id == user.id for player in game.players)
+    user_in_game = any(player == user.id for player in game.players)
     if not user_in_game:
         raise HTTPException(
             status_code=403,
@@ -227,11 +225,13 @@ def get_my_hunter_status(game_id: str, user=Depends(get_current_user)):
     is_alive = False
     has_used_revenge = False
     
-    if game and user.id in game.roles:
-        role_info = game.roles[user.id]
+    if game and user.id in game.players:
+        role_info = game.players[user.id]
         if role_info.role.value == "hunter":
             is_alive = role_info.is_alive
-            has_used_revenge = role_info.has_used_revenge or False
+            has_used_revenge = role_info.has_acted_tonight or False
+    
+
     
     return {
         "is_hunter": hunter_status,

@@ -75,6 +75,15 @@ class UserService:
         else:
             # Si no se encuentra el usuario, retornar un nombre genérico o None
             return "unknown name"
+        
+    # Metodo para comprobar si un usuario es admin
+    @staticmethod
+    def is_user_admin(user_id: str) -> bool:
+        """Comprueba si un usuario tiene rol de administrador."""
+        user = UserService.get_user(user_id)
+        if user and user.role == UserAccessRole.ADMIN:
+            return True
+        return False
 
 # Funciones existentes mantenidas para compatibilidad durante la refactorización
 def create_user(user: User) -> None:
