@@ -95,6 +95,11 @@ class GameDB(Base):
     current_round = Column(Integer, nullable=False, default=0)
     is_first_night = Column(Boolean, nullable=False, default=True)
     night_actions = Column(SQLiteJSON, nullable=False, default=dict)
+    # Campos actualizados para compatibilidad con Game
+    eliminated_players = Column(SQLiteJSON, nullable=False, default=list)
+    connected_players = Column(SQLiteJSON, nullable=False, default=list)
+    votes = Column(SQLiteJSON, nullable=False, default=dict)
+    # Mantener day_votes por compatibilidad legacy
     day_votes = Column(SQLiteJSON, nullable=False, default=dict)
     
     def to_pydantic(self) -> Game:
@@ -166,7 +171,10 @@ class GameDB(Base):
             current_round=getattr(self, 'current_round'),
             is_first_night=getattr(self, 'is_first_night'),
             night_actions=getattr(self, 'night_actions') or {},
-            day_votes=getattr(self, 'day_votes') or {}
+            # Nuevos campos
+            eliminated_players=getattr(self, 'eliminated_players') or [],
+            connected_players=getattr(self, 'connected_players') or [],
+            votes=getattr(self, 'votes') or getattr(self, 'day_votes') or {}  # Priorizar votes, fallback a day_votes
         )
     
     @classmethod
@@ -203,7 +211,12 @@ class GameDB(Base):
             current_round=game.current_round,
             is_first_night=game.is_first_night,
             night_actions=game.night_actions or {},
-            day_votes=game.day_votes or {}
+            # Nuevos campos
+            eliminated_players=game.eliminated_players or [],
+            connected_players=game.connected_players or [],
+            votes=game.votes or {},
+            # Mantener day_votes por compatibilidad (usar votes como fuente principal)
+            day_votes=game.votes or {}
         )
 
 def check_and_migrate_database():
@@ -229,7 +242,8 @@ def check_and_migrate_database():
             required_columns = {
                 'id', 'name', 'creator_id', 'max_players', 'player_ids', 
                 'players', 'status', 'created_at', 'current_round', 
-                'is_first_night', 'night_actions', 'day_votes'
+                'is_first_night', 'night_actions', 'eliminated_players',
+                'connected_players', 'votes', 'day_votes'
             }
             
             missing_columns = required_columns - columns
@@ -252,6 +266,9 @@ def check_and_migrate_database():
                         current_round INTEGER NOT NULL DEFAULT 0,
                         is_first_night BOOLEAN NOT NULL DEFAULT 1,
                         night_actions TEXT NOT NULL DEFAULT '{}',
+                        eliminated_players TEXT NOT NULL DEFAULT '[]',
+                        connected_players TEXT NOT NULL DEFAULT '[]',
+                        votes TEXT NOT NULL DEFAULT '{}',
                         day_votes TEXT NOT NULL DEFAULT '{}'
                     )
                 """))
@@ -407,7 +424,11 @@ def migrate_from_json():
                         current_round=game_data.get('current_round', 0),
                         is_first_night=game_data.get('is_first_night', True),
                         night_actions=game_data.get('night_actions', {}),
-                        day_votes=game_data.get('day_votes', {}),
+                        # Nuevos campos con fallbacks apropiados
+                        eliminated_players=game_data.get('eliminated_players', []),
+                        connected_players=game_data.get('connected_players', []),
+                        votes=game_data.get('votes', game_data.get('day_votes', {})),  # Priorizar votes
+                        day_votes=game_data.get('day_votes', {}),  # Mantener por compatibilidad
                         max_players=game_data.get('max_players', 12)
                     )
                     db.add(db_game)

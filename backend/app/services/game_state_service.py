@@ -2,88 +2,92 @@
 Game State Service
 Maneja el estado del juego en memoria integrado con sistema de fases
 """
-from typing import Dict, List, Set
+from typing import Dict, List
 from datetime import datetime, timedelta
 import asyncio
 from app.models.game_and_player import Game, GameStatus, PlayerInfo
 from app.services.game_phases_service import GamePhaseController, GamePhase, phase_manager
 
 class GameState:
-    """Estado de un juego en memoria. 
-    Contiene información adicional como votos, acciones nocturnas, jugadores conectados, etc.
-    Integrado con el sistema de fases.
+    """Wrapper de servicios para Game - NO duplica datos.
+    
+    Solo mantiene estado temporal/cache y delega todas las operaciones
+    de datos al modelo Game subyacente.
     """
     
     def __init__(self, game_id: str, game_data: Game):
         self.game_id = game_id
         self.game_data = game_data
-        self.connected_players: Set[str] = set()
         
-        # Integración con sistema de fases
+        # Solo estado temporal que NO se debe persistir
         self.phase_controller: GamePhaseController = phase_manager.get_or_create_controller(game_id)
-        
-        # Estado del juego
-        self.votes: Dict[str, str] = {}  # voter_id -> target_id
-        self.night_actions: Dict[str, dict] = {}  # player_id -> action_data
-        self.eliminated_players: Set[str] = set()
-        self.is_active = True
-        self.is_first_night = True  # Indica si es la primera noche del juego
-        
-        # Legacy compatibility
         self.phase_start_time = datetime.now()
         self.phase_duration = timedelta(minutes=5)
         self.phase_timer_task = None
+        self.is_active = True
+        
+        # Sincronizar connected_players del modelo si no está inicializado
+        if not hasattr(self.game_data, 'connected_players') or not self.game_data.connected_players:
+            self.game_data.connected_players = []
+        
+        # Asegurar que eliminated_players esté sincronizado
+        self._sync_eliminated_players_from_game()
+
+    def _sync_eliminated_players_from_game(self):
+        """Sincroniza eliminated_players desde el estado de los jugadores"""
+        # Sincronizar eliminated_players basándose en is_alive de cada PlayerInfo
+        for player_id, player_info in self.game_data.players.items():
+            if not player_info.is_alive and player_id not in self.game_data.eliminated_players:
+                self.game_data.eliminated_players.append(player_id)
+    
+    def _save_changes(self):
+        """Guarda cambios en la base de datos"""
+        from app.database import save_game
+        save_game(self.game_data)
 
     # Composición helpers: delegados y propiedades convenientes
     @property
     def players(self):
-        """Devuelve la lista de PlayerInfo o de entradas originales (compatibilidad)."""
-        return getattr(self.game_data, 'players', []) or []
+        """Devuelve el diccionario de PlayerInfo del modelo Game."""
+        return self.game_data.players
 
     @property
     def player_ids(self) -> List[str]:
-        """Devuelve la lista de player_id extraídos de `players` (soporta PlayerInfo o strings)."""
-        ids: List[str] = []
-        for p in self.players:
-            if isinstance(p, str):
-                ids.append(p)
-            else:
-                pid = getattr(p, 'player_id', None) or (p.get('player_id') if isinstance(p, dict) else None)
-                if pid:
-                    ids.append(pid)
-        return ids
+        """Devuelve la lista de player_ids del modelo Game."""
+        return self.game_data.player_ids
+        
+    @property
+    def votes(self) -> Dict[str, str]:
+        """Delegar al campo votes del modelo Game."""
+        return self.game_data.votes
+        
+    @property
+    def night_actions(self) -> Dict[str, Dict[str, str]]:
+        """Delegar al campo night_actions del modelo Game."""
+        return self.game_data.night_actions
+        
+    @property
+    def eliminated_players(self) -> List[str]:
+        """Delegar al campo eliminated_players del modelo Game."""
+        return self.game_data.eliminated_players
+        
+    @property
+    def connected_players(self) -> List[str]:
+        """Delegar al campo connected_players del modelo Game."""
+        return self.game_data.connected_players
+        
+    @property
+    def is_first_night(self) -> bool:
+        """Delegar al campo is_first_night del modelo Game."""
+        return self.game_data.is_first_night
 
     def get_player_state(self, player_id: str) -> PlayerInfo | None:
-        """Obtiene el PlayerInfo de un jugador específico.
-        
-        Args:
-            player_id: ID del jugador específico
-            
-        Returns:
-            PlayerInfo si se encuentra el jugador, None en caso contrario
-        """
-        try:
-            player_state = self.game_data.get_player_state(player_id)
-            if isinstance(player_state, PlayerInfo):
-                return self.game_data.get_player_state(player_id)
-            return None
-        except Exception:
-            # Fallback: acceder directamente al diccionario players
-            players_dict = getattr(self.game_data, 'players', {})
-            return players_dict.get(player_id) if isinstance(players_dict, dict) else None
+        """Delegar al método get_player_state del modelo Game"""
+        return self.game_data.get_player_state(player_id)
     
     def get_all_player_states(self) -> List[PlayerInfo]:
-        """Obtiene todos los PlayerInfos del juego.
-        
-        Returns:
-            Lista de todos los PlayerInfos en el juego
-        """
-        try:
-            return self.game_data.player_states
-        except Exception:
-            # Fallback: acceder directamente al diccionario players
-            players_dict = getattr(self.game_data, 'players', {})
-            return list(players_dict.values()) if isinstance(players_dict, dict) else []
+        """Delegar a la propiedad player_states del modelo Game"""
+        return self.game_data.player_states
 
     # TODO: Cohesionar las fases y estados. Actualmente hay redundancia.
     @property
@@ -114,28 +118,27 @@ class GameState:
         return self.phase_controller.current_phase
         
     def add_connected_player(self, user_id: str):
-        """Agregar jugador conectado"""
-        self.connected_players.add(user_id)
+        """Delegar al método add_connected_player del modelo Game"""
+        self.game_data.add_connected_player(user_id)
+        self._save_changes()
         
     def remove_connected_player(self, user_id: str):
-        """Remover jugador conectado"""
-        self.connected_players.discard(user_id)
+        """Delegar al método remove_connected_player del modelo Game"""
+        self.game_data.remove_connected_player(user_id)
+        self._save_changes()
         
     def get_living_players(self) -> List[str]:
-        """Obtener jugadores vivos"""
-        if not self.players:
-            return []
-        return [pid for pid in self.player_ids if pid not in self.eliminated_players]
+        """Delegar al método get_living_players del modelo Game"""
+        return self.game_data.get_living_players()
     
     def get_dead_players(self) -> List[str]:
-        """Obtener jugadores muertos"""
-        if not self.players:
-            return []
-        return [pid for pid in self.player_ids if pid in self.eliminated_players]
+        """Delegar al método get_dead_players del modelo Game"""
+        return self.game_data.get_dead_players()
     
     def eliminate_player(self, user_id: str):
-        """Eliminar jugador del juego y actualizar su estado"""
-        self.eliminated_players.add(user_id)
+        """Delegar al método eliminate_player del modelo Game y persistir cambios"""
+        self.game_data.eliminate_player(user_id)
+        self._save_changes()
         
         # Actualizar estado del usuario automáticamente a través de WebSocket
         try:
@@ -149,51 +152,45 @@ class GameState:
             logger.warning(f"Error actualizando estado de jugador eliminado {user_id}: {e}")
         
     def cast_vote(self, voter_id: str, target_id: str) -> bool:
-        """Registrar voto de jugador"""
-        if voter_id in self.get_living_players():
-            self.votes[voter_id] = target_id
-            return True
-        return False
+        """Delegar al método cast_vote del modelo Game"""
+        result = self.game_data.cast_vote(voter_id, target_id)
+        if result:
+            self._save_changes()
+        return result
     
     def clear_votes(self):
-        """Limpiar todos los votos"""
-        self.votes.clear()
+        """Delegar al método clear_votes del modelo Game"""
+        self.game_data.clear_votes()
+        self._save_changes()
         
     def get_vote_count(self) -> Dict[str, int]:
-        """Obtener conteo de votos"""
-        vote_count = {}
-        for target_id in self.votes.values():
-            vote_count[target_id] = vote_count.get(target_id, 0) + 1
-        return vote_count
+        """Delegar al método get_vote_count del modelo Game"""
+        return self.game_data.get_vote_count()
     
     def get_most_voted(self) -> str | None:
-        """Obtener jugador con más votos"""
-        vote_count = self.get_vote_count()
-        if not vote_count:
-            return None
-        
-        max_votes = max(vote_count.values())
-        most_voted = [player_id for player_id, votes in vote_count.items() if votes == max_votes]
-        
-        # Si hay empate, devolver None
-        if len(most_voted) > 1:
-            return None
-        
-        return most_voted[0]
+        """Delegar al método get_most_voted del modelo Game"""
+        return self.game_data.get_most_voted()
     
     def set_night_action(self, player_id: str, action_data: dict):
-        """Registrar acción nocturna"""
-        self.night_actions[player_id] = action_data
+        """Registrar acción nocturna en el modelo Game"""
+        self.game_data.night_actions[player_id] = action_data
+        self._save_changes()
         
     def clear_night_actions(self):
-        """Limpiar acciones nocturnas"""
-        self.night_actions.clear()
+        """Limpiar acciones nocturnas del modelo Game"""
+        self.game_data.night_actions.clear()
+        self._save_changes()
         
     def change_phase(self, new_phase: GameStatus, duration_minutes: int = 5):
-        """Cambiar fase del juego (legacy compatibility)"""
+        """Cambiar fase del juego y persistir cambios"""
         # Verificar si estamos saliendo de la fase de noche
         if self.phase == GameStatus.NIGHT and new_phase != GameStatus.NIGHT:
-            self.is_first_night = False
+            self.game_data.is_first_night = False
+            self._save_changes()
+        
+        # Actualizar el status del game_data
+        self.game_data.status = new_phase
+        self._save_changes()
         
         # Convertir GameStatus a GamePhase
         status_to_phase = {
@@ -201,7 +198,7 @@ class GameState:
             GameStatus.STARTED: GamePhase.STARTING,
             GameStatus.NIGHT: GamePhase.NIGHT,
             GameStatus.DAY: GamePhase.DAY,
-            GameStatus.PAUSED: GamePhase.PAUSED,  # Mapear paused a day por ahora
+            GameStatus.PAUSED: GamePhase.DAY,  # Mapear paused a day por ahora
             GameStatus.FINISHED: GamePhase.FINISHED
         }
         

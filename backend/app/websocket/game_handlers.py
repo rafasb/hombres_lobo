@@ -473,7 +473,7 @@ class GameHandler:
 
         await connection_manager.broadcast_to_game(game_id, status_message)
 
-    def build_game_status_message(self, game_id: str, game_state: GameState) -> WebSocketMessageGameStatus:
+    def build_game_status_message(self, game_id: str, game_state: GameState) -> WsMessageGameStatus:
         """Construir y devolver el dict con el estado del juego (sin enviarlo).
 
         Útil para enviar el estado sólo al cliente recién conectado.
@@ -508,7 +508,7 @@ class GameHandler:
         }
         status_message = WsMessageGameStatus(
             game_id=game_id,
-            phase=game_state.phase,
+            phase=game_state.phase_controller.current_phase if game_state.phase_controller else GamePhase.WAITING,
             players=players_info,
             connected_players=list(game_state.connected_players),
             living_players=game_state.get_living_players(),

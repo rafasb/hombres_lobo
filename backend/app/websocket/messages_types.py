@@ -88,6 +88,11 @@ class ErrorCode(str, Enum):
     RESTART_GAME_ERROR = "RESTART_GAME_ERROR"
     INSUFFICIENT_PERMISSIONS = "INSUFFICIENT_PERMISSIONS"
     STATUS_ERROR = "STATUS_ERROR"
+    MISSING_FIELD = "MISSING_FIELD"
+    INVALID_CONNECTION = "INVALID_CONNECTION"
+    INVALID_USER = "INVALID_USER"
+    INVALID_STATUS = "INVALID_STATUS"
+    UPDATE_FAILED = "UPDATE_FAILED"
 
 class SystemMessageType(str, Enum):
     INFO = "info"
@@ -184,6 +189,13 @@ class WsSystemMessage(WebSocketMessageV2):
     data: str  # Mensaje del sistema
     message_key: SystemMessageType | None = None  # Para i18n
     params: Dict[str, Any] = {}
+
+class WsUserStatusChangedMessage(WebSocketMessageV2):
+    type: MessageType = MessageType.USER_STATUS_CHANGED
+    user_id: str
+    old_status: str
+    new_status: str
+
 
 # class WebSocketMessage(BaseWebSocketMessage):
 #     """Mensaje base para WebSocket"""
@@ -324,21 +336,21 @@ class UserStatusUpdateMessage(BaseModel):
     status: str
     timestamp: datetime = Field(default_factory=datetime.now)
 
-class UserStatusChangedMessage(BaseModel):
-    """Mensaje para notificar cambio de estado de usuario"""
-    type: MessageType = MessageType.USER_STATUS_CHANGED
-    user_id: str
-    old_status: str
-    new_status: str
-    timestamp: datetime = Field(default_factory=datetime.now)
-    message: str = ""
+# class UserStatusChangedMessage(BaseModel):
+#     """Mensaje para notificar cambio de estado de usuario"""
+#     type: MessageType = MessageType.USER_STATUS_CHANGED
+#     user_id: str
+#     old_status: str
+#     new_status: str
+#     timestamp: datetime = Field(default_factory=datetime.now)
+#     message: str = ""
 
 # Tipos de mensajes para validación
 MESSAGE_MODELS = {
     MessageType.PLAYER_CONNECTED: PlayerConnectionMessage,
     MessageType.PLAYER_DISCONNECTED: PlayerConnectionMessage,
     MessageType.UPDATE_USER_STATUS: UserStatusUpdateMessage,
-    MessageType.USER_STATUS_CHANGED: UserStatusChangedMessage,
+    MessageType.USER_STATUS_CHANGED: WsUserStatusChangedMessage,
     MessageType.PHASE_CHANGED: PhaseChangedMessage,
     MessageType.PHASE_TIMER: PhaseTimerMessage,
     MessageType.FORCE_NEXT_PHASE: ForceNextPhaseMessage,

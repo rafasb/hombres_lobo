@@ -4,9 +4,10 @@ Maneja cambios de estado automáticos y notificaciones en tiempo real
 """
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages_types import (
-    UserStatusChangedMessage, ErrorMessage, SuccessMessage
+    WsUserStatusChangedMessage, WsMessageError,
+    WsMessageSuccess, MessageType, ErrorCode
 )
-from app.services.user_service import update_user_status
+from app.services.user_service import UserService
 from app.models.user import UserStatusUpdate, UserStatus
 import logging
 
@@ -28,55 +29,48 @@ class UserStatusHandler:
         try:
             # Validar campos requeridos
             if "status" not in message_data['data']:
-                await self.send_error(connection_id, "MISSING_FIELD", f"Campo 'status' requerido. El contenido de message_data es: {message_data}")
+                await self.send_error(connection_id, ErrorCode.MISSING_FIELD, f"Campo 'status' requerido. El contenido de message_data es: {message_data}")
                 return
             
             # Obtener información de conexión
             conn_info = connection_manager.get_connection_info(connection_id)
             if not conn_info:
-                await self.send_error(connection_id, "INVALID_CONNECTION", "Conexión no encontrada")
+                await self.send_error(connection_id, ErrorCode.INVALID_CONNECTION, "Conexión no encontrada")
                 return
             
             user_id = conn_info.get("user_id")
             if not user_id:
-                await self.send_error(connection_id, "INVALID_USER", "Usuario no identificado")
+                await self.send_error(connection_id, ErrorCode.INVALID_USER, "Usuario no identificado")
                 return
             
             # Validar estado solicitado
             requested_status = message_data["data"]["status"]
             if requested_status not in self.status_mapping:
-                await self.send_error(connection_id, "INVALID_STATUS", f"Estado inválido: {requested_status}")
+                await self.send_error(connection_id, ErrorCode.INVALID_STATUS, f"Estado inválido: {requested_status}")
                 return
             
             # Validar permisos: solo admins pueden banear usuarios
             if requested_status == "banned":
                 # Obtener información del usuario para verificar si es admin
-                from app.services.user_service import get_user
-                user = get_user(user_id)
+                user = UserService.get_user(user_id)
                 if not user or user.role.value != "admin":
-                    await self.send_error(connection_id, "INSUFFICIENT_PERMISSIONS", "Solo los administradores pueden banear usuarios")
+                    await self.send_error(connection_id, ErrorCode.INSUFFICIENT_PERMISSIONS, "Solo los administradores pueden banear usuarios")
                     return
             
             # Crear objeto de actualización
             status_update = UserStatusUpdate(status=self.status_mapping[requested_status])
             
             # Actualizar estado en la base de datos
-            updated_user, old_status = update_user_status(user_id, status_update)
+            updated_user, old_status = UserService.update_user_status(user_id, status_update)
             
             if not updated_user or old_status is None:
-                await self.send_error(connection_id, "UPDATE_FAILED", "Error al actualizar estado del usuario")
+                await self.send_error(connection_id, ErrorCode.UPDATE_FAILED, "Error al actualizar estado del usuario")
                 return
             
             # Notificar al usuario que solicitó el cambio
-            await connection_manager.send_personal_message(connection_id, SuccessMessage(
-                action="update_user_status",
-                message=f"Estado actualizado de '{old_status.value}' a '{requested_status}'",
-                data={
-                    "user_id": user_id,
-                    "old_status": old_status.value,
-                    "new_status": requested_status,
-                    "updated_at": updated_user.updated_at.isoformat()
-                }
+            await connection_manager.send_personal_message(connection_id, WsMessageSuccess(
+                type=MessageType.SUCCESS,
+                data=f'Estado actualizado de {old_status.value} a {requested_status} para {user_id}'
             ))
             
             # Notificar cambio de estado a otros usuarios conectados
@@ -89,14 +83,14 @@ class UserStatusHandler:
             
         except Exception as e:
             logger.error(f"Error actualizando estado de usuario para {connection_id}: {e}")
-            await self.send_error(connection_id, "INTERNAL_ERROR", "Error interno del servidor")
+            await self.send_error(connection_id, ErrorCode.INTERNAL_ERROR, "Error interno del servidor")
     
     async def auto_update_status_on_connect(self, user_id: str):
         """Actualizar automáticamente el estado a 'connected' cuando se conecta"""
         try:
             # Nuevo comportamiento: al conectar al websocket, marcar como IN_GAME
             status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
-            updated_user, old_status = update_user_status(user_id, status_update)
+            updated_user, old_status = UserService.update_user_status(user_id, status_update)
 
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
@@ -122,7 +116,7 @@ class UserStatusHandler:
             if len(user_connections) <= 1:  # <= 1 porque la conexión actual aún no se ha removido
                 # Nuevo comportamiento: al desconectar del websocket, marcar como CONNECTED
                 status_update = UserStatusUpdate(status=UserStatus.CONNECTED)
-                updated_user, old_status = update_user_status(user_id, status_update)
+                updated_user, old_status = UserService.update_user_status(user_id, status_update)
 
                 if updated_user and old_status:
                     # Notificar cambio de estado a otros usuarios
@@ -157,7 +151,7 @@ class UserStatusHandler:
             
             # Actualizar estado a 'in_game'
             status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
-            updated_user, old_status = update_user_status(user_id, status_update)
+            updated_user, old_status = UserService.update_user_status(user_id, status_update)
             
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
@@ -178,7 +172,7 @@ class UserStatusHandler:
         try:
             # Actualizar estado de 'in_game' de vuelta a 'connected'
             status_update = UserStatusUpdate(status=UserStatus.CONNECTED)
-            updated_user, old_status = update_user_status(user_id, status_update)
+            updated_user, old_status = UserService.update_user_status(user_id, status_update)
             
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
@@ -200,7 +194,7 @@ class UserStatusHandler:
             for user_id in user_ids:
                 # Actualizar estado a 'in_game'
                 status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
-                updated_user, old_status = update_user_status(user_id, status_update)
+                updated_user, old_status = UserService.update_user_status(user_id, status_update)
                 
                 if updated_user and old_status:
                     # Notificar cambio de estado a otros usuarios
@@ -221,7 +215,7 @@ class UserStatusHandler:
         try:
             # Actualizar estado de 'alive_in_game' a 'in_game' (muerto pero observando)
             status_update = UserStatusUpdate(status=UserStatus.IN_GAME)
-            updated_user, old_status = update_user_status(user_id, status_update)
+            updated_user, old_status = UserService.update_user_status(user_id, status_update)
             
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
@@ -241,11 +235,11 @@ class UserStatusHandler:
         """Notificar cambio de estado a todos los usuarios conectados"""
         try:
             # Crear mensaje de notificación
-            status_message = UserStatusChangedMessage(
+            status_message = WsUserStatusChangedMessage(
                 user_id=user_id,
                 old_status=old_status,
                 new_status=new_status,
-                message=f"Usuario {user_id} cambió su estado de '{old_status}' a '{new_status}'"
+                data=f"Usuario {user_id} cambió su estado de '{old_status}' a '{new_status}'"
             )
             
             # Enviar a todas las conexiones activas (excluyendo la especificada)
@@ -261,11 +255,12 @@ class UserStatusHandler:
         except Exception as e:
             logger.error(f"Error notificando cambio de estado: {e}")
     
-    async def send_error(self, connection_id: str, error_code: str, message: str):
+    async def send_error(self, connection_id: str, error_code: ErrorCode, message: str):
         """Enviar mensaje de error"""
-        await connection_manager.send_personal_message(connection_id, ErrorMessage(
+
+        await connection_manager.send_personal_message(connection_id, WsMessageError(
             error_code=error_code,
-            message=message
+            data=message
         ))
 
 # Instancia global del handler
