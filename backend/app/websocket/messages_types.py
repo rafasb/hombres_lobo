@@ -330,11 +330,11 @@ class UserConnectionStatusMessage(BaseWebSocketMessage):
     isInGame: bool
     timestamp: datetime = Field(default_factory=datetime.now)
 
-class UserStatusUpdateMessage(BaseModel):
-    """Mensaje para solicitar cambio de estado de usuario"""
-    type: MessageType = MessageType.UPDATE_USER_STATUS
-    status: str
-    timestamp: datetime = Field(default_factory=datetime.now)
+# class UserStatusUpdateMessage(BaseModel):
+#     """Mensaje para solicitar cambio de estado de usuario"""
+#     type: MessageType = MessageType.UPDATE_USER_STATUS
+#     status: str
+#     timestamp: datetime = Field(default_factory=datetime.now)
 
 # class UserStatusChangedMessage(BaseModel):
 #     """Mensaje para notificar cambio de estado de usuario"""
@@ -349,7 +349,7 @@ class UserStatusUpdateMessage(BaseModel):
 MESSAGE_MODELS = {
     MessageType.PLAYER_CONNECTED: PlayerConnectionMessage,
     MessageType.PLAYER_DISCONNECTED: PlayerConnectionMessage,
-    MessageType.UPDATE_USER_STATUS: UserStatusUpdateMessage,
+    # MessageType.UPDATE_USER_STATUS: UserStatusUpdateMessage,
     MessageType.USER_STATUS_CHANGED: WsUserStatusChangedMessage,
     MessageType.PHASE_CHANGED: PhaseChangedMessage,
     MessageType.PHASE_TIMER: PhaseTimerMessage,

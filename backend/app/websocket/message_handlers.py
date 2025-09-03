@@ -183,32 +183,34 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
 
         
         # Loop principal de mensajes
-        while True:
-            try:
-                # Recibir mensaje
-                data = await websocket.receive_text()
-                # Log raw incoming message
-                logger.info(f"RAW RECV <- connection_id={connection_id} raw={data}")
-                message_data = json.loads(data)
+        ## ANULADA LA POSIBILIDAD DE RECIBIR MENSAJES POR WEBSOCKET. 
+        ## TODOS LOS MENSAJES SE RECIBEN POR PETICIONES REST A LA API.
+        # while True:
+        #     try:
+        #         # Recibir mensaje
+        #         data = await websocket.receive_text()
+        #         # Log raw incoming message
+        #         logger.info(f"RAW RECV <- connection_id={connection_id} raw={data}")
+        #         message_data = json.loads(data)
                 
-                # Procesar mensaje
-                await message_handler.handle_message(connection_id, message_data)
+        #         # Procesar mensaje
+        #         await message_handler.handle_message(connection_id, message_data)
                 
-            except WebSocketDisconnect:
-                break
-            except json.JSONDecodeError:
-                await message_handler.send_error(
-                    connection_id,
-                    ErrorCode.INVALID_MESSAGE,
-                    "Formato JSON inválido"
-                )
-            except Exception as e:
-                logger.error(f"Error en websocket loop: {e}")
-                await message_handler.send_error(
-                    connection_id,
-                    ErrorCode.INTERNAL_ERROR,
-                    "Error interno del servidor"
-                )
+        #     except WebSocketDisconnect:
+        #         break
+        #     except json.JSONDecodeError:
+        #         await message_handler.send_error(
+        #             connection_id,
+        #             ErrorCode.INVALID_MESSAGE,
+        #             "Formato JSON inválido"
+        #         )
+        #     except Exception as e:
+        #         logger.error(f"Error en websocket loop: {e}")
+        #         await message_handler.send_error(
+        #             connection_id,
+        #             ErrorCode.INTERNAL_ERROR,
+        #             "Error interno del servidor"
+        #         )
                 
     except WebSocketDisconnect:
         pass
