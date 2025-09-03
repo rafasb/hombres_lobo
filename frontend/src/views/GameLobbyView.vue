@@ -97,7 +97,7 @@
                     <small class="text-muted">Jugadores</small>
                     <span class="fw-medium">
                       <i class="bi bi-people me-1"></i>
-                      {{ game.players.length }} / {{ game.max_players }}
+                      {{ game.player_ids.length }} / {{ game.max_players }}
                     </span>
                   </div>
                 </div>
@@ -133,7 +133,7 @@
               <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                   <i class="bi bi-people-fill me-2"></i>
-                          Jugadores ({{ game.players.length }})
+                          Jugadores ({{ game.player_ids.length }})
                 </h5>
                         <small>
                           <i class="bi bi-controller me-1"></i>
@@ -249,7 +249,7 @@
 
               <!-- Información adicional para el creador -->
               <div v-if="isCreator && game.status === 'waiting'" class="mt-4 text-center">
-                <div v-if="game.players.length < 4" class="alert alert-warning">
+                <div v-if="game.player_ids.length < 4" class="alert alert-warning">
                   <i class="bi bi-exclamation-triangle me-2"></i>
                   <strong>Atención:</strong> Se necesitan al menos 4 jugadores para iniciar la partida
                 </div>
@@ -385,7 +385,9 @@ const localUserId = computed(() => userStore.user?.id ?? auth.user?.id)
 const joinGame = async () => {
   await originalJoinGame()
   if (game.value) {
-    initializePlayersStatus(game.value.players)
+    // Convertir player_ids a formato compatible con initializePlayersStatus
+    const playersArray = game.value.player_ids.map(id => ({ id, username: 'loading...' }))
+    initializePlayersStatus(playersArray)
   }
 }
 
@@ -420,7 +422,9 @@ onMounted(async () => {
   
   // Si se cargó correctamente, inicializar estado de jugadores
   if (game.value) {
-    initializePlayersStatus(game.value.players)
+    // Convertir player_ids a formato compatible con initializePlayersStatus
+    const playersArray = game.value.player_ids.map(id => ({ id, username: 'loading...' }))
+    initializePlayersStatus(playersArray)
   }
   
   // Notificar que el usuario se unió al lobby después de un pequeño retraso

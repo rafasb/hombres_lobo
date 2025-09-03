@@ -21,14 +21,14 @@ export function useGameLobby(gameId: string) {
 
   const isPlayerInGame = computed(() => {
     if (!auth.user || !game.value) return false
-    return game.value.players.some((p: any) => (typeof p === 'string' ? p === auth.user!.id : p.id === auth.user!.id))
+    return game.value.player_ids.includes(auth.user.id)
   })
 
-  const canStartGame = computed(() => isCreator.value && !!game.value && game.value.players.length >= 4 && game.value.status === 'waiting')
+  const canStartGame = computed(() => isCreator.value && !!game.value && game.value.player_ids.length >= 4 && game.value.status === 'waiting')
   const canJoinGame = computed(() => {
     if (!auth.user || !game.value) return false
     if (game.value.status !== 'waiting') return false
-    if (game.value.players.length >= game.value.max_players) return false
+    if (game.value.player_ids.length >= game.value.max_players) return false
     return !isPlayerInGame.value
   })
   const canLeaveGame = computed(() => {
@@ -72,11 +72,14 @@ export function useGameLobby(gameId: string) {
         const { users, error } = await fetchUsers(game.value.id || gameId)
         if (!error && users) {
           creatorUser.value = users.find(u => u.id === game.value!.creator_id) || null
-          playerUsers.value = (game.value.players as any[]).map((player: any) => users.find(u => u.id === (typeof player === 'string' ? player : player.id))).filter(Boolean) as User[]
+          playerUsers.value = game.value.player_ids.map(playerId => users.find(u => u.id === playerId)).filter(Boolean) as User[]
 
           try {
             gameStore.setGameId(game.value.id)
-            const mappedPlayers = (game.value.players as any[]).map(p => (typeof p === 'string' ? { id: p, username: users.find(u => u.id === p)?.username ?? 'unknown' } : { id: p.id, username: users.find(u => u.id === p.id)?.username ?? p.username ?? 'unknown' }))
+            const mappedPlayers = game.value.player_ids.map(playerId => {
+              const user = users.find(u => u.id === playerId)
+              return { id: playerId, username: user?.username ?? 'unknown' }
+            })
             gameStore.setPlayers(mappedPlayers)
           } catch (e) {
             console.warn('No se pudo sincronizar gameStore:', e)

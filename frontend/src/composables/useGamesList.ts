@@ -123,19 +123,19 @@ export function useGamesList() {
   const canJoinGame = (game: Game): boolean => {
     if (!auth.user) return false
     if (game.status !== 'waiting') return false
-    if (game.players.length >= game.max_players) return false
-    return !game.players.some(player => player.id === auth.user!.id)
+    if (getCurrentPlayersCount(game) >= game.max_players) return false
+    return !game.player_ids.includes(auth.user!.id)
   }
 
   const canLeaveGame = (game: Game): boolean => {
     if (!auth.user) return false
     if (game.status !== 'waiting') return false
-    return game.players.some(player => player.id === auth.user!.id)
+    return game.player_ids.includes(auth.user!.id)
   }
 
   const canViewGame = (game: Game): boolean => {
     if (!auth.user) return false
-    return game.players.some(player => player.id === auth.user!.id)
+    return game.player_ids.includes(auth.user!.id)
   }
 
   const canDeleteGame = (game: Game): boolean => {
@@ -145,16 +145,26 @@ export function useGamesList() {
 
   // Métodos de utilidad
   const getCreatorName = (game: Game): string => {
-    const creator = game.players.find(player => player.id === game.creator_id)
-    return creator?.username || 'Desconocido'
+    // Nota: Necesitaremos obtener el nombre del usuario desde otro lugar
+    // ya que PlayerInfo solo tiene player_id, no username
+    // Por ahora retornamos el ID del creador
+    return game.creator_id || 'Desconocido'
+  }
+
+  const getCurrentPlayersCount = (game: Game): number => {
+    return game.player_ids.length
   }
 
   const getStatusText = (status: string): string => {
     const statusMap: { [key: string]: string } = {
       'waiting': 'Esperando',
+      'starting': 'Iniciando',
       'started': 'Iniciada',
       'night': 'Noche',
       'day': 'Día',
+      'voting': 'Votación',
+      'trial': 'Juicio',
+      'execution': 'Ejecución',
       'paused': 'Pausada',
       'finished': 'Finalizada'
     }
@@ -224,6 +234,7 @@ export function useGamesList() {
     canViewGame,
     canDeleteGame,
     getCreatorName,
+    getCurrentPlayersCount,
     getStatusText,
     getGameCardClass,
     formatDate,

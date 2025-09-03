@@ -133,9 +133,10 @@ export class WebSocketPollingManager extends BaseWebSocketManager {
       try {
         const gameData = await gameService.getGameById(this.gameId)
         
-        const playersStatus = gameData.players.map((player: any) => ({
-          playerId: player.id,
-          username: player.username,
+        // Convertir Record<string, PlayerInfo> a array para compatibilidad
+        const playersStatus = gameData.player_ids.map((playerId: string) => ({
+          playerId,
+          username: 'loading...', // Se podría obtener del userService si se necesita
           isConnected: Math.random() > 0.3,
           lastSeen: new Date()
         }))

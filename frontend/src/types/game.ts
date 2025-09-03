@@ -5,10 +5,52 @@
 /**
  * Estados posibles de una partida
  */
-export type GameStatus = 'waiting' | 'started' | 'night' | 'day' | 'paused' | 'finished'
+export type GameStatus = 'waiting' | 'starting' | 'started' | 'night' | 'day' | 'voting' | 'trial' | 'execution' | 'paused' | 'finished'
 
 /**
- * Interfaz para un jugador en una partida
+ * Roles disponibles en el juego
+ */
+export type Roles = 'villager' | 'seer' | 'sheriff' | 'hunter' | 'witch' | 'wild_child' | 'cupid' | 'warewolf'
+
+/**
+ * Información completa del jugador con su rol y estado
+ */
+export interface PlayerInfo {
+  // Campos comunes a todos los roles
+  role: Roles
+  player_id: string
+  is_alive: boolean
+  lover_partner_id?: string
+
+  // Campos generales para habilidades nocturnas / tracking
+  has_acted_tonight?: boolean
+  target_player_id?: string
+
+  // Niño salvaje (Wild Child)
+  model_player_id?: string
+  has_transformed?: boolean
+
+  // Bruja (Witch)
+  has_healing_potion?: boolean
+  has_poison_potion?: boolean
+
+  // Alguacil (Sheriff)
+  has_double_vote?: boolean
+  can_break_ties?: boolean
+  successor_id?: string
+
+  // Cazador (Hunter)
+  can_revenge_kill?: boolean
+
+  // Cupido
+  has_cupid_action?: boolean
+
+  // Permitir campos adicionales para compatibilidad
+  [key: string]: any
+}
+
+/**
+ * Interfaz para un jugador en una partida (datos básicos de usuario)
  */
 export interface GamePlayer {
   id: string
@@ -24,10 +66,14 @@ export interface Game {
   name: string
   max_players: number
   creator_id: string
-  players: GamePlayer[] // Array de objetos jugador
+  player_ids: string[] // IDs de jugadores (antes de empezar la partida)
+  players: Record<string, PlayerInfo> // Información de roles por player_id
   status: GameStatus
   created_at?: string
-  current_round?: number
+  current_round: number
+  is_first_night: boolean // Indica si es la primera noche
+  night_actions: Record<string, Record<string, string>> // Acciones nocturnas por tipo y jugador
+  day_votes: Record<string, string> // Votos diurnos: voter_id -> target_id
 }
 
 /**

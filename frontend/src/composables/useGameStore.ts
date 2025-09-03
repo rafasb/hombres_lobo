@@ -28,7 +28,11 @@ export function useGame() {
       store.setGameId(resp.game_id)
       // Cargar jugadores actuales
       const game = await gameService.getGameById(resp.game_id)
-      if (game && game.players) store.setPlayers(game.players)
+      if (game && game.player_ids) {
+        // Convertir player_ids a GamePlayer[] para compatibilidad con store
+        const gamePlayers = game.player_ids.map(id => ({ id, username: 'loading...' }))
+        store.setPlayers(gamePlayers)
+      }
       return resp
     } catch (e: any) {
       store.setError(e?.message || 'Error joining game')
@@ -62,9 +66,11 @@ export function useGame() {
     store.setError(null)
     try {
       const game = await gameService.getGameById(id)
-      if (game && game.players) {
-        store.setPlayers(game.players)
-        return game.players
+      if (game && game.player_ids) {
+        // Convertir player_ids a GamePlayer[] para compatibilidad con store
+        const gamePlayers = game.player_ids.map(playerId => ({ id: playerId, username: 'loading...' }))
+        store.setPlayers(gamePlayers)
+        return gamePlayers
       }
       return [] as GamePlayer[]
     } catch (e: any) {
@@ -80,9 +86,14 @@ export function useGame() {
     store.setLoadingPlayers(true)
     store.setError(null)
     try {
-      const alive = await gameService.getAlivePlayers(store.gameId)
-      store.setPlayers(alive)
-      return alive
+      const alivePlayers = await gameService.getAlivePlayers(store.gameId)
+      // Convertir Record<string, PlayerInfo> a GamePlayer[] para compatibilidad con store
+      const gamePlayers = Object.entries(alivePlayers).map(([playerId]) => ({
+        id: playerId,
+        username: 'loading...' // Se podría obtener del userService si se necesita
+      }))
+      store.setPlayers(gamePlayers)
+      return gamePlayers
     } catch (e: any) {
       store.setError(e?.message || 'Error refreshing alive players')
       return [] as GamePlayer[]
