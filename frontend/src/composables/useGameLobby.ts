@@ -26,7 +26,12 @@ export function useGameLobby(gameId: string) {
     return game.value.player_ids.includes(auth.user.id)
   })
 
-  const canStartGame = computed(() => isCreator.value && !!game.value && game.value.player_ids.length >= 4 && game.value.status === 'waiting')
+  const canStartGame = computed(() => {
+    return isCreator.value && 
+           !!game.value && 
+           game.value.player_ids.length >= 4 && 
+           game.value.status === 'waiting'
+  })
   const canJoinGame = computed(() => {
     // Verifica si el usuario actual puede unirse a la partida.
     if (!auth.user || !game.value) return false
@@ -77,13 +82,13 @@ export function useGameLobby(gameId: string) {
         const { users, error } = await fetchUsers(game.value.id || gameId)
         if (!error && users) {
           creatorUser.value = users.find(u => u.id === game.value!.creator_id) || null
-          playerUsers.value = game.value.player_ids.map(playerId => users.find(u => u.id === playerId)).filter(Boolean) as User[]
+          playerUsers.value = users.filter(u => game.value!.player_ids.includes(u.id))
 
           try {
             gameStore.setGameId(game.value.id)
             const mappedPlayers = game.value.player_ids.map(playerId => {
               const user = users.find(u => u.id === playerId)
-              return { id: playerId, username: user?.username ?? 'unknown' }
+              return { id: playerId, username: user?.username ?? `Player ${playerId.slice(-4)}` }
             })
             gameStore.setPlayers(mappedPlayers)
           } catch (e) {
@@ -92,6 +97,17 @@ export function useGameLobby(gameId: string) {
         } else {
           creatorUser.value = null
           playerUsers.value = []
+          // Si no podemos obtener usuarios, crear usuarios mínimos para el store
+          try {
+            gameStore.setGameId(game.value.id)
+            const mappedPlayers = game.value.player_ids.map(playerId => ({
+              id: playerId,
+              username: `Player ${playerId.slice(-4)}`
+            }))
+            gameStore.setPlayers(mappedPlayers)
+          } catch (e) {
+            console.warn('No se pudo sincronizar gameStore:', e)
+          }
         }
       } else {
         creatorUser.value = null
@@ -155,13 +171,20 @@ export function useGameLobby(gameId: string) {
     const confirmStart = confirm('¿Estás seguro de que quieres iniciar la partida? Una vez iniciada, no se podrán añadir más jugadores.')
     if (!confirmStart) return
     loading.value = true
+    gameStore.setLoadingAction(true)
+    gameStore.setError(null)
     try {
-      showNotification('Función de iniciar partida pendiente de implementar', 'error')
+      const response = await gameService.assignRoles(gameId)
+      showNotification('Partida iniciada exitosamente. Roles asignados.', 'success')
+      // Actualizar los datos del juego con la respuesta
+      game.value = response.game
+      await loadGame()
     } catch (err) {
       showNotification('Error al iniciar la partida', 'error')
       console.error('Error starting game:', err)
     } finally {
       loading.value = false
+      gameStore.setLoadingAction(false)
     }
   }
 

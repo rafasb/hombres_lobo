@@ -19,37 +19,51 @@ export async function adminFetchUsers(search = ''): Promise<{ users?: User[]; er
 }
 
 /**
- * Obtener información de los usuarios que participan en una partida (para usuarios no admin)
- * Usa el endpoint `/games/{game_id}` y devuelve una lista de usuarios mapeada a la interfaz `User`.
- * Nota: el endpoint de juego puede devolver sólo datos parciales de jugador; aquí hacemos un mapeo
- * de "mejor esfuerzo" para devolver `User[]` con campos por defecto cuando no estén presentes.
+ * Obtener información de los usuarios que participan en una partida
+ * Usa el endpoint `/games/{game_id}` para obtener la partida y luego hace requests
+ * individuales para obtener información de usuarios usando `/users/{user_id}`.
+ * Como fallback, crea objetos User con información mínima si no se puede obtener
+ * los datos completos del usuario.
  */
 export async function fetchUsers(gameId: string): Promise<{ users?: User[]; error?: string }> {
   try {
     const response = await api.get(`/games/${gameId}`)
     const game = response.data.game || response.data
-    const players = game.players || []
-
-    interface PlayerFromGame {
-      id: string
-      username: string
-      role?: 'admin' | 'player'
-      status?: string
+    
+    if (!game.player_ids || !Array.isArray(game.player_ids)) {
+      return { users: [] }
     }
 
-    const users: User[] = (players as PlayerFromGame[]).map((p) => {
-      const status = (p.status as User['status']) || 'disconnected'
-      const role = (p.role as User['role']) || 'player'
-      return {
-        id: p.id,
-        username: p.username,
-        role,
-        email: '', // not provided by /games endpoint
-        status,
-        in_game: status === 'in_game',
-        game_id: game.id || game.game_id || gameId
+    const users: User[] = []
+    
+    // Intentar obtener información de cada usuario
+    for (const playerId of game.player_ids) {
+      try {
+        const userResponse = await api.get(`/users/${playerId}`)
+        const userData = userResponse.data.user || userResponse.data
+        users.push({
+          id: userData.id,
+          username: userData.username,
+          email: userData.email || '',
+          role: userData.role || 'player',
+          status: userData.status || 'disconnected',
+          in_game: userData.status === 'in_game',
+          game_id: userData.game_id || gameId
+        })
+      } catch (userError) {
+        // Si no se puede obtener la información del usuario, crear un objeto mínimo
+        console.warn(`Could not fetch user data for ${playerId}:`, userError)
+        users.push({
+          id: playerId,
+          username: `Player ${playerId.slice(-4)}`, // Mostrar últimos 4 caracteres del ID
+          email: '',
+          role: 'player',
+          status: 'disconnected',
+          in_game: false,
+          game_id: gameId
+        })
       }
-    })
+    }
 
     return { users }
   } catch (error: unknown) {

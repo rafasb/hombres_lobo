@@ -69,11 +69,13 @@ export interface Game {
   player_ids: string[] // IDs de jugadores (antes de empezar la partida)
   players: Record<string, PlayerInfo> // Información de roles por player_id
   status: GameStatus
-  created_at?: string
+  created_at: string // Required in API
   current_round: number
   is_first_night: boolean // Indica si es la primera noche
   night_actions: Record<string, Record<string, string>> // Acciones nocturnas por tipo y jugador
-  day_votes: Record<string, string> // Votos diurnos: voter_id -> target_id
+  eliminated_players: string[] // Jugadores eliminados - según API
+  connected_players: string[] // Jugadores conectados - según API  
+  votes: Record<string, string> // Votos actuales: voter_id -> target_id (según API, no day_votes)
 }
 
 /**
@@ -127,11 +129,12 @@ export interface UpdateGameResponse {
 }
 
 /**
- * Recuento de votos para un objetivo
+ * Recuento de votos para un objetivo según la API
  */
 export interface VoteCount {
-  target_id: string
-  votes: number
+  player_id: string
+  username: string
+  vote_count: number
 }
 
 /**

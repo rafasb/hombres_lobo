@@ -119,9 +119,10 @@ export const gameService = {
   /**
    * Obtiene los jugadores vivos en la partida
    */
-  async getAlivePlayers(gameId: string): Promise<Game['players']> {
+  async getAlivePlayers(gameId: string): Promise<{ id: string; username: string }[]> {
     const response = await api.get(`/games/${gameId}/alive-players`)
-    return response.data.players || response.data
+    // La nueva API devuelve un array directamente con PlayerInfo básico
+    return response.data
   },
 
   /**
@@ -129,7 +130,8 @@ export const gameService = {
    */
   async getVotingTargets(gameId: string): Promise<{ id: string; username: string }[]> {
     const response = await api.get(`/games/${gameId}/voting-targets`)
-    return response.data.targets || response.data
+    // La nueva API devuelve un array directamente con PlayerInfo básico
+    return response.data
   },
 
   /**
@@ -137,7 +139,8 @@ export const gameService = {
    */
   async getVoteCounts(gameId: string): Promise<import('../types').VoteCount[]> {
     const response = await api.get(`/games/${gameId}/vote-counts`)
-    return response.data.vote_counts || response.data
+    // La nueva API devuelve un array directamente con VoteCount
+    return response.data
   },
 
   /**
@@ -151,6 +154,10 @@ export const gameService = {
         'Content-Type': 'application/json'
       }
     })
-    return response.data
+    // La nueva API devuelve una estructura con success, message, vote_counts, etc.
+    return {
+      success: response.data.success,
+      error: response.data.success ? undefined : response.data.message
+    }
   }
 }
