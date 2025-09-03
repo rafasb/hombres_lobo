@@ -7,6 +7,7 @@ import { fetchUsers, updateUserStatus } from '../services/userService'
 import { useGameStore } from '../stores/gameStore'
 
 export function useGameLobby(gameId: string) {
+  // Composable para la gestión del lobby de la partida.
   const router = useRouter()
   const auth = useAuthStore()
   const gameStore = useGameStore()
@@ -20,12 +21,14 @@ export function useGameLobby(gameId: string) {
   const isCreator = computed(() => !!(auth.user && game.value && game.value.creator_id === auth.user.id))
 
   const isPlayerInGame = computed(() => {
+    // Verifica si el usuario actual es un jugador en la partida.
     if (!auth.user || !game.value) return false
     return game.value.player_ids.includes(auth.user.id)
   })
 
   const canStartGame = computed(() => isCreator.value && !!game.value && game.value.player_ids.length >= 4 && game.value.status === 'waiting')
   const canJoinGame = computed(() => {
+    // Verifica si el usuario actual puede unirse a la partida.
     if (!auth.user || !game.value) return false
     if (game.value.status !== 'waiting') return false
     if (game.value.player_ids.length >= game.value.max_players) return false
@@ -38,6 +41,7 @@ export function useGameLobby(gameId: string) {
   })
 
   const gameStatusText = computed(() => {
+    // Devuelve el texto del estado de la partida.
     if (!game.value) return ''
     const statusMap: Record<string, string> = {
       waiting: 'Esperando jugadores',
@@ -57,6 +61,7 @@ export function useGameLobby(gameId: string) {
   })
 
   const loadGame = async () => {
+    // Carga los datos de la partida y los usuarios.
     loading.value = true
     gameStore.setLoadingPlayers(true)
     gameStore.setError(null)

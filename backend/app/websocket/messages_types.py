@@ -161,7 +161,6 @@ class WsMessageGameStatus(WebSocketMessageV2):
     connected_players: List[str]  # IDs de jugadores conectados
     living_players: List[str]    # IDs de jugadores vivos
     dead_players: List[str]      # IDs de jugadores muertos
-    current_round: int | None = None
     is_first_night: bool | None = None
     time_remaining: int | None = None  # Segundos restantes en la fase actual
     

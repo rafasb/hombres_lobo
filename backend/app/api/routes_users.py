@@ -19,7 +19,7 @@ from app.models.user_responses import (
     UserUpdateResponse,
     UserStatusUpdateResponse
 )
-from app.services.user_service import get_user, get_all_users, update_user, update_user_status
+from app.services.user_service import UserService
 from app.core.dependencies import get_current_user, admin_required
 
 router = APIRouter(prefix="/users",tags=["users"])
@@ -40,7 +40,7 @@ def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
     if current_user.role != UserAccessRole.ADMIN and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Solo puedes acceder a tu propio perfil")
     
-    user_obj = get_user(user_id)
+    user_obj = UserService.get_user(user_id)
     if not user_obj:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
@@ -54,7 +54,7 @@ def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
 def list_users(admin=Depends(admin_required)):
     """Obtiene la lista completa de todos los usuarios registrados (solo administradores)."""
     """Solo los administradores pueden ver la lista completa de usuarios."""
-    users = get_all_users()
+    users = UserService.get_all_users()
     
     return UsersListResponse(
         success=True,
@@ -69,7 +69,7 @@ def update_my_profile(
     user=Depends(get_current_user)
 ):
     """Actualiza los datos del perfil del usuario autenticado actual."""
-    updated = update_user(user, update)
+    updated = UserService.update_user(user, update)
     
     # Determinar qué campos se actualizaron basándose en los datos del request
     updated_fields = []
@@ -120,7 +120,7 @@ def update_user_status_endpoint(
         )
     
     # Verificar que el usuario existe
-    target_user = get_user(user_id)
+    target_user = UserService.get_user(user_id)
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
@@ -133,7 +133,7 @@ def update_user_status_endpoint(
         status_update.game_id = None
 
     # Actualizar el estado
-    updated_user, old_status = update_user_status(user_id, status_update)
+    updated_user, old_status = UserService.update_user_status(user_id, status_update)
 
     if not updated_user or old_status is None:
         raise HTTPException(status_code=500, detail="Error al actualizar el estado del usuario")

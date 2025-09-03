@@ -17,7 +17,10 @@ from app.models.game_responses import (
     GameStatusUpdateResponse,
     GameDeleteResponse
 )
-from app.models.user import UserAccessRole, User
+from app.models.user import UserAccessRole, User, UserStatus, UserStatusUpdate
+from app.services.user_service import (
+    UserService
+)
 from app.services.game_service import (
     create_game,
     get_game,
@@ -32,6 +35,7 @@ from app.services.game_flow_service import (
 )
 from app.core.dependencies import get_current_user, get_current_user_id
 import uuid
+import logging
 
 router = APIRouter(prefix="/games", tags=["games"])
 
@@ -62,6 +66,19 @@ def get_game_by_id(game_id: str, user=Depends(get_current_user)):
     if not game:
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
+    try:
+        # intentar actualizar el estado del usuario a 'in_game'
+        status_update = UserStatusUpdate(status=UserStatus.IN_GAME, game_id=game_id)
+        print(f"🔄 Actualizando estado del usuario {user.id} a 'in_game' para la partida {game_id}")
+        print(f"--> status_update: {status_update}")
+        updated_user, old_status = UserService.update_user_status(user_id=user.id, status_update=status_update)
+        logging.info(f"Estado del usuario {user.id} actualizado a 'in_game'")
+        if updated_user is not None:
+            print(f"Estado anterior: {old_status}, Estado nuevo: {updated_user.status}")
+            print(f'Partida actual: {user.game_id} partida original {game_id}')
+            print(f'updated_user: {updated_user} | status_update: {status_update}')
+    except Exception as e:
+        logging.warning(f"No se pudo actualizar el estado del usuario {user.id} a 'in_game': {e}")
     return GameGetResponse(
         success=True,
         message="Partida obtenida exitosamente",

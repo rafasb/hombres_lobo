@@ -6,7 +6,7 @@ Usa autenticación real con credenciales del .env para tests de integración.
 
 import pytest
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app.main import app
 from app.models.game_and_player import Game, GameStatus, GameCreate, PlayerInfo, Roles

@@ -61,7 +61,6 @@ class UserDB(Base):
             hashed_password=getattr(self, 'hashed_password'),
             role=UserAccessRole(getattr(self, 'role')),
             status=UserStatus(getattr(self, 'status')),
-            in_game=getattr(self, 'in_game'),
             game_id=getattr(self, 'game_id'),
             created_at=getattr(self, 'created_at').replace(tzinfo=UTC),
             updated_at=getattr(self, 'updated_at').replace(tzinfo=UTC)
@@ -77,7 +76,6 @@ class UserDB(Base):
             hashed_password=user.hashed_password,
             role=user.role.value,
             status=user.status.value,
-            in_game=user.in_game,
             game_id=user.game_id,
             created_at=user.created_at,
             updated_at=user.updated_at
@@ -463,6 +461,7 @@ if admin_username and admin_email and admin_password:
 
 def save_user(user: User) -> None:
     """Guarda un usuario en la base de datos."""
+    print(f"💾 Guardando usuario: {user}")
     with get_db_session() as db:
         db_user = db.query(UserDB).filter(UserDB.id == user.id).first()
         if db_user:

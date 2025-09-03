@@ -76,6 +76,7 @@ export async function toggleUserRole(userId: string, newRole: UserRole): Promise
 }
 
 export async function updateUserStatus(userId: string, statusUpdate: { status: string, game_id?: string }) {
+  // Actualiza el estado del usuario
   try {
     const response = await api.put(`/users/${userId}/status`, statusUpdate)
     return response.data

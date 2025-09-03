@@ -34,7 +34,7 @@ class User(UserBase):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     game_id: str | None = None  # ID de la partida activa, si aplica
-    in_game: bool = False  # Indica si el usuario está en una partida activa
+    # in_game: bool = False  # Indica si el usuario está en una partida activa
     # Otros campos opcionales: fecha de registro, avatar, etc.
 
     model_config = ConfigDict(

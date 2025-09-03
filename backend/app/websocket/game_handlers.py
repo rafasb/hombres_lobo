@@ -13,7 +13,7 @@ from app.services.game_state_service import game_state_manager, GameState
 from app.services.game_phases_service import GamePhase
 from app.services.voting_service import voting_service, VoteType
 from app.services.game_service import join_game, get_game
-from app.services.user_service import get_user, UserService
+from app.services.user_service import UserService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class GameHandler:
             if not user_in_game:
                 try:
                     # Obtener información del usuario
-                    user = get_user(user_id)
+                    user = UserService.get_user(user_id)
                     if user:
                         # Intentar añadir el usuario al juego en la base de datos
                         result = join_game(game_id, user_id)
@@ -452,7 +452,7 @@ class GameHandler:
                         "name": user.username,
                         "is_alive": player_id not in game_state.eliminated_players,
                         "is_connected": player_id in game_state.connected_players,
-                        "role": game_state.game_data.players.get(player_id).role if game_state.game_data.players.get(player_id) else None
+                        "role": game_state.game_data.players[player_id].role if player_id in game_state.game_data.players else None
                     })
         
         status_message = {
@@ -482,8 +482,7 @@ class GameHandler:
 
         players_info = []
         if game_state.game_data and game_state.game_data.players:
-            for player_state in game_state.game_data.players:
-                player_id = player_state.player_id
+            for player_id in game_state.game_data.players:
                 user = load_user(player_id)
                 if user:
                     players_info.append({
@@ -491,7 +490,7 @@ class GameHandler:
                         "name": user.username,
                         "is_alive": player_id not in game_state.eliminated_players,
                         "is_connected": player_id in game_state.connected_players,
-                        "role": player_state.info.role if player_state.info else None
+                        "role": game_state.game_data.players[player_id].role if player_id in game_state.game_data.players else None
                     })
 
         status_message = {
@@ -514,7 +513,6 @@ class GameHandler:
             connected_players=list(game_state.connected_players),
             living_players=game_state.get_living_players(),
             dead_players=game_state.get_dead_players(),
-            current_round=game_state.current_round,
             is_first_night=game_state.is_first_night,
             time_remaining=game_state.get_phase_time_remaining()
         )

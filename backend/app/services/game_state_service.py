@@ -27,6 +27,7 @@ class GameState:
         self.night_actions: Dict[str, dict] = {}  # player_id -> action_data
         self.eliminated_players: Set[str] = set()
         self.is_active = True
+        self.is_first_night = True  # Indica si es la primera noche del juego
         
         # Legacy compatibility
         self.phase_start_time = datetime.now()
@@ -190,6 +191,10 @@ class GameState:
         
     def change_phase(self, new_phase: GameStatus, duration_minutes: int = 5):
         """Cambiar fase del juego (legacy compatibility)"""
+        # Verificar si estamos saliendo de la fase de noche
+        if self.phase == GameStatus.NIGHT and new_phase != GameStatus.NIGHT:
+            self.is_first_night = False
+        
         # Convertir GameStatus a GamePhase
         status_to_phase = {
             GameStatus.WAITING: GamePhase.WAITING,
@@ -309,5 +314,4 @@ class GameStateManager:
                 print(f"Error en cleanup loop: {e}")
 
 # Instancia global del game state manager
-game_state_manager = GameStateManager()
 game_state_manager = GameStateManager()

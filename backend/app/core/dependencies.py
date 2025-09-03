@@ -4,8 +4,9 @@ Dependencias reutilizables para rutas (por ejemplo, obtener usuario actual auten
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.core.security import verify_access_token
-from app.services.user_service import get_user
+from app.services.user_service import UserService
 from app.models.user import UserAccessRole, User
+from app.services.game_service import get_game
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -18,7 +19,7 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)):
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     user_id = get_current_user_id(token)
-    user = get_user(user_id)
+    user = UserService.get_user(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
     return user
@@ -30,8 +31,7 @@ def admin_required(user=Depends(get_current_user)):
 
 def creator_or_admin_required(game_id: str, user : User = Depends(get_current_user)):
     """Verifica que el usuario sea el creador de la partida o admin."""
-    from app.services.game_service import get_game
-    
+
     # Si es admin, tiene acceso total
     if user.role == UserAccessRole.ADMIN:
         return user
