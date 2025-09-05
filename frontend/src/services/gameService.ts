@@ -6,7 +6,8 @@ import type {
   DeleteGameResponse,
   AssignRolesResponse,
   UpdateGameStatusResponse,
-  UpdateGameResponse
+  UpdateGameResponse,
+  GameSummary
 } from '../types'
 
 // base URL is provided by `src/services/api.ts` axios instance
@@ -159,5 +160,14 @@ export const gameService = {
       success: response.data.success,
       error: response.data.success ? undefined : response.data.message
     }
+  },
+
+  // Nuevo método para obtener lista optimizada de partidas
+  async getGamesV2(): Promise<GameSummary[]> {
+    const response = await api.get<{
+      success: boolean
+      games: GameSummary[]
+    }>('/games')
+    return response.data.games
   }
 }

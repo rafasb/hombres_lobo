@@ -16,7 +16,8 @@
       <div class="mb-3">
         <div class="d-flex justify-content-between mb-2">
           <span class="text-muted">Jugadores:</span>
-          <span class="fw-semibold">{{ game.players.length }}/{{ game.max_players }}</span>
+          <!-- Usar current_players para GameSummary o players.length para Game completo -->
+          <span class="fw-semibold">{{ getPlayersCount(game) }}/{{ game.max_players }}</span>
         </div>
 
         <div class="d-flex justify-content-between mb-2">
@@ -24,12 +25,14 @@
           <span class="fw-semibold text-truncate" style="max-width: 120px;">{{ getCreatorName(game) }}</span>
         </div>
 
-        <div class="d-flex justify-content-between mb-2">
+        <!-- Mostrar fecha de creación solo si está disponible -->
+        <div v-if="game.created_at" class="d-flex justify-content-between mb-2">
           <span class="text-muted">Creada:</span>
-          <span class="fw-semibold">{{ formatDate(game.created_at || '') }}</span>
+          <span class="fw-semibold">{{ formatDate(game.created_at) }}</span>
         </div>
 
-        <div class="d-flex justify-content-between mb-2" v-if="game.status !== 'waiting'">
+        <!-- Mostrar ronda solo si está disponible y no es waiting -->
+        <div v-if="game.current_round && game.status !== 'waiting'" class="d-flex justify-content-between mb-2">
           <span class="text-muted">Ronda:</span>
           <span class="fw-semibold">{{ game.current_round }}</span>
         </div>
@@ -77,16 +80,19 @@
 
 <script setup lang="ts">
 import { getBootstrapCardClass as _getBootstrapCardClass, getStatusBadgeClass as _getStatusBadgeClass, getStatusText as _getStatusText } from '../composables/useStatusHelpers'
-import type { Game } from '../types'
+import type { Game, GameSummary } from '../types'
+
+// Union type para aceptar tanto Game completo como GameSummary
+type GameCardData = Game | GameSummary
 
 interface Props {
-  game: Game
+  game: GameCardData
   loading?: boolean
-  canJoinGame: (game: Game) => boolean
-  canLeaveGame: (game: Game) => boolean
-  canViewGame: (game: Game) => boolean
-  canDeleteGame: (game: Game) => boolean
-  getCreatorName: (game: Game) => string
+  canJoinGame: (game: GameCardData) => boolean
+  canLeaveGame: (game: GameCardData) => boolean
+  canViewGame: (game: GameCardData) => boolean
+  canDeleteGame: (game: GameCardData) => boolean
+  getCreatorName: (game: GameCardData) => string
   formatDate: (dateString: string) => string
 }
 
@@ -97,6 +103,22 @@ defineEmits<{
   (e: 'view', gameId: string): void
   (e: 'delete', gameId: string): void
 }>()
+
+// Helper para obtener el número de jugadores según el tipo de objeto
+const getPlayersCount = (game: GameCardData): number => {
+  // Si es GameSummary, usa current_players
+  if ('current_players' in game) {
+    return game.current_players
+  }
+  // Si es Game completo, usa players.length o player_ids.length
+  if ('players' in game && typeof game.players === 'object') {
+    return Object.keys(game.players).length
+  }
+  if ('player_ids' in game && Array.isArray(game.player_ids)) {
+    return game.player_ids.length
+  }
+  return 0
+}
 
 // Expose helpers and props to template
 const getBootstrapCardClass = _getBootstrapCardClass

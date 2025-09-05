@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.core.security import verify_access_token
 from app.services.user_service import UserService
 from app.models.user import UserAccessRole, User
+from app.models.game_and_player import Game
 from app.services.game_service import get_game
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
@@ -24,12 +25,12 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
     return user
 
-def admin_required(user=Depends(get_current_user)):
+def admin_required(user: User = Depends(get_current_user)):
     if user.role != UserAccessRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso solo para administradores")
     return user
 
-def creator_or_admin_required(game_id: str, user : User = Depends(get_current_user)):
+def creator_or_admin_required(game_id: str, user: User = Depends(get_current_user)):
     """Verifica que el usuario sea el creador de la partida o admin."""
 
     # Si es admin, tiene acceso total
@@ -55,3 +56,8 @@ def self_or_admin_required(user_id: str, user : User = Depends(get_current_user)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo puedes acceder a tu propio perfil")
     
     return user
+
+# Función para obtener el nombre del creador de una partida
+def get_creator_name(game: Game) -> str:
+    user = UserService.get_user(game.creator_id)
+    return user.username if user else "Desconocido"

@@ -7,7 +7,7 @@ Estos endpoints no requieren autenticación previa.
 from fastapi import APIRouter, HTTPException, Form, status
 from app.models.user import User, UserAccessRole, UserStatus
 from app.models.user_responses import LoginResponse, UserProfileResponse
-from app.services.user_service import UserService
+from app.services.user_service import UserService, UserStatusUpdate
 from app.core.security import hash_password, verify_password, create_access_token
 import uuid
 
@@ -42,7 +42,9 @@ def login_user(username: str = Form(...), password: str = Form(...)):
     
     # Generar token JWT
     token = create_access_token({"sub": user.id, "username": user.username, "role": user.role})
-    
+
+    UserService.update_user_status(user.id, UserStatusUpdate(status=UserStatus.CONNECTED))
+
     return LoginResponse(
         success=True,
         message=f"Login exitoso para {username}",

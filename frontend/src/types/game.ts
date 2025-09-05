@@ -78,6 +78,19 @@ export interface Game {
   votes: Record<string, string> // Votos actuales: voter_id -> target_id (según API, no day_votes)
 }
 
+/** Respuesta del servicio para listar partidas */
+export interface GameSummary {
+  id: string
+  name: string
+  creator_name: string
+  creator_id: string
+  created_at: string | null
+  current_round: number | null
+  current_players: number
+  max_players: number
+  status: string
+}
+
 /**
  * Respuesta del servicio al unirse a una partida
  */

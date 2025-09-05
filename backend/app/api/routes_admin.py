@@ -40,7 +40,7 @@ def admin_delete_user(user_id: str, admin=Depends(admin_required)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
-    # Eliminar físicamente el usuario del archivo JSON
+    # Eliminar físicamente el usuario
     if UserService.delete_user(user_id):
         return {"detail": "Usuario eliminado"}
     else:

@@ -45,12 +45,27 @@ class GameListResponse(BaseModel):
     games: List[Game]
     total_games: int
 
-
-class GameCreateResponse(BaseModel):
-    """Respuesta para la creación de una partida."""
+class GameListResponseV2(BaseModel):
+    """Respuesta para el listado de partidas con versión 2."""
+    class GameSummary(BaseModel):
+        id: str
+        name: str
+        creator_name: str
+        creator_id: str
+        created_at: str | None = None
+        current_round: int | None = None
+        current_players: int
+        max_players: int
+        status: str
     success: bool
-    message: str
-    game: Game
+    games: List[GameSummary]
+
+
+# class GameCreateResponse(BaseModel):
+#     """Respuesta para la creación de una partida."""
+#     success: bool
+#     message: str
+#     game: Game
 
 
 class GameUpdateResponse(BaseModel):

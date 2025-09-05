@@ -16,6 +16,7 @@ export type {
 // Exportar tipos de juego
 export type {
   Game,
+  GameSummary,
   GamePlayer,
   GameStatus,
   JoinGameResponse,
