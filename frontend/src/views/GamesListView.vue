@@ -119,12 +119,12 @@
 import CreateGameModal from '../components/CreateGameModal.vue'
 import PageWithNav from '../components/PageWithNav.vue'
 import GameCard from '../components/GameCard.vue'
-import type { Game, AuthUser } from '../types'
+import type { GameSummary, AuthUser } from '../types'
 import { computed, toRefs } from 'vue'
 
 // Props para recibir los datos y métodos del composable
 interface Props {
-  games: Game[]
+  games: GameSummary[]
   loading: boolean
   showCreateModal: boolean
   notification: any
@@ -133,11 +133,11 @@ interface Props {
   hasGames: boolean
   // Ahora recibe directamente el objeto AuthUser (o null si no hay sesión)
   auth: AuthUser | null
-  canJoinGame: (game: Game) => boolean
-  canLeaveGame: (game: Game) => boolean
-  canViewGame: (game: Game) => boolean
-  canDeleteGame: (game: Game) => boolean
-  getCreatorName: (game: Game) => string
+  canJoinGame: (game: GameSummary) => boolean
+  canLeaveGame: (game: GameSummary) => boolean
+  canViewGame: (game: GameSummary) => boolean
+  canDeleteGame: (game: GameSummary) => boolean
+  getCreatorName: (game: GameSummary) => string
   formatDate: (dateString: string) => string
 }
 

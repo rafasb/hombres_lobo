@@ -13,6 +13,7 @@
     :canViewGame="canViewGame"
     :canDeleteGame="canDeleteGame"
     :getCreatorName="getCreatorName"
+    :getCurrentPlayersCount="getCurrentPlayersCount"
     :getStatusText="getStatusText"
     :getGameCardClass="getGameCardClass"
     :formatDate="formatDate"
@@ -55,6 +56,7 @@ const {
   canViewGame,
   canDeleteGame,
   getCreatorName,
+  getCurrentPlayersCount,
   getStatusText,
   getGameCardClass,
   formatDate,

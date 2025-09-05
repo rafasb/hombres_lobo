@@ -89,6 +89,7 @@ export interface GameSummary {
   current_players: number
   max_players: number
   status: string
+  player_ids: string[] // Opcional, para validaciones de permisos
 }
 
 /**

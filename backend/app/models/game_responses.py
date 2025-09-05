@@ -50,6 +50,7 @@ class GameListResponse(BaseModel):
         current_players: int
         max_players: int
         status: str
+        player_ids: List[str] | None = None  # Opcional, para futuras mejoras
     success: bool
     games: List[GameSummary]
 

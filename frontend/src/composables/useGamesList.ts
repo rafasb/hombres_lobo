@@ -120,33 +120,36 @@ export function useGamesList() {
     router.push(`/partida/${gameId}`)
   }
 
-  // Métodos de validación - adaptar para GameSummary
+  // Métodos de validación - ahora con validaciones precisas usando player_ids
   const canJoinGame = (game: GameSummary): boolean => {
     if (!auth.user) return false
     if (game.status !== 'waiting') return false
     if (game.current_players >= game.max_players) return false
-    // Nota: Para esta validación necesitaríamos player_ids, por lo que podríamos
-    // necesitar hacer una llamada adicional al endpoint de detalle de partida
-    // o agregar esta información al summary si es crítica
-    return true // Por ahora asumimos que puede unirse si hay espacio
+    // Verificar que el usuario no esté ya en la partida
+    if (game.player_ids && game.player_ids.includes(auth.user.id)) return false
+    return true
   }
 
   const canLeaveGame = (game: GameSummary): boolean => {
     if (!auth.user) return false
     if (game.status !== 'waiting') return false
-    // Similar al caso anterior, necesitaríamos player_ids para validación completa
+    // Verificar que el usuario esté en la partida y no sea el creador
+    if (!game.player_ids || !game.player_ids.includes(auth.user.id)) return false
+    if (game.creator_id === auth.user.id) return false
     return true
   }
 
   const canViewGame = (game: GameSummary): boolean => {
     if (!auth.user) return false
-    // Para esta validación completa necesitaríamos player_ids
-    return true
+    // Verificar que el usuario esté en la partida o sea administrador
+    if (auth.isAdmin) return true
+    if (game.player_ids && game.player_ids.includes(auth.user.id)) return true
+    return false
   }
 
   const canDeleteGame = (game: GameSummary): boolean => {
     if (!auth.user) return false
-    // Ahora podemos usar creator_id directamente de GameSummary
+    // Usar creator_id directamente de GameSummary para verificar permisos
     return auth.isAdmin || game.creator_id === auth.user.id
   }
 

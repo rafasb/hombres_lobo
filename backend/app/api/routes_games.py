@@ -103,7 +103,8 @@ def list_games_v2(user=Depends(get_current_user)):
             current_round=game.current_round,
             current_players=len(game.players),
             max_players=game.max_players,
-            status=game.status.value
+            status=game.status.value,
+            player_ids=game.player_ids  # Incluir player_ids si es necesario
         )
         game_summaries.append(summary)
     
