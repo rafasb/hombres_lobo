@@ -4,10 +4,8 @@ Maneja eventos específicos del juego: iniciar, unirse, fases, etc.
 """
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages_types import (
-    MessageType, GameStartedMessage, PhaseChangedMessage, 
-    WsMessagePlayerId, WebSocketMessageGameStatus, WsMessageError,
-    WsMessageSuccess, ErrorCode, WsPhaseChangedMessage,
-    WsTimerMessage, WsVotingStartedMessage, WsMessageGameStatus
+    MessageType, WsMessageError,ErrorCode, WsPhaseChangedMessage,
+    WsTimerMessage, WsVotingStartedMessage, WsMessageGameStatus,
 )
 from app.services.game_state_service import game_state_manager, GameState
 from app.services.game_phases_service import GamePhase
@@ -45,11 +43,20 @@ class GameHandler:
             game_state.phase_controller.add_phase_timer_callback(
                 lambda phase, time_remaining: self._on_phase_timer(game_id, phase, time_remaining)
             )
-            
+
+            players_info = game_state.player_states
+
             # Notificar inicio automático de juego
-            start_message = WebSocketMessageGameStatus(
+            start_message = WsMessageGameStatus(
                 type=MessageType.GAME_STARTED,
-                data=game_state.game_data
+                game_id=game_id,
+                phase=game_state.phase_controller.current_phase if game_state.phase_controller else GamePhase.WAITING,
+                players=players_info,  # Se puede llenar si es necesario
+                connected_players=list(game_state.connected_players),
+                living_players=game_state.get_living_players(),
+                dead_players=game_state.get_dead_players(),
+                is_first_night=game_state.is_first_night,
+                time_remaining=game_state.get_phase_time_remaining()
             )
             
             await connection_manager.broadcast_to_game(
@@ -209,7 +216,7 @@ class GameHandler:
                     })
 
         status_message = {
-            "type": MessageType.GET_GAME_STATUS.value,
+            "type": MessageType.GAME_STATUS.value,
             "message": f"Estado del juego: {game_state.phase.value}",
             "data": {
                 "game_id": game_id,

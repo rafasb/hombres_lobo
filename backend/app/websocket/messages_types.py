@@ -24,7 +24,7 @@ class MessageType(str, Enum):
     IN_GAME = "in_game"         # Notifica que un usuario está en una partida.
     PLAYER_LEFT_GAME = "player_left_game"  # Notifica que un usuario se desvincula de una partida
     RESTART_GAME = "restart_game"
-    GET_GAME_STATUS = "get_game_status"
+    GAME_STATUS = "game_status"
     
     # Fases del juego
     PHASE_CHANGED = "phase_changed"
@@ -181,7 +181,7 @@ class WsVoteMessage(WebSocketMessageV2):
 
 class WsMessageGameStatus(WebSocketMessageV2):
     """Mensaje de estado de juego websocket version 2"""
-    type: MessageType = MessageType.GET_GAME_STATUS
+    type: MessageType = MessageType.GAME_STATUS
     data: str | None = None # Mensaje de estado
     game_id: str
     phase: GamePhase
@@ -283,5 +283,5 @@ MESSAGE_MODELS = {
     MessageType.GAME_CONNECTION_STATE: WsGameConnectionStateMessage,
     MessageType.PLAYERS_STATUS_UPDATE: WsPlayersStatusUpdateMessage,
     MessageType.USER_CONNECTION_STATUS: WsUserConnectionStatusMessage,
-    MessageType.GET_GAME_STATUS: WsMessageGameStatus,
+    MessageType.GAME_STATUS: WsMessageGameStatus,
 }

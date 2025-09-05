@@ -50,6 +50,12 @@ class GameState:
     def players(self):
         """Devuelve el diccionario de PlayerInfo del modelo Game."""
         return self.game_data.players
+    
+    # Retorna un array de la información de los jugadores
+    @property
+    def player_states(self) -> List[PlayerInfo]:
+        """Devuelve la lista de PlayerInfo del modelo Game."""
+        return list(self.game_data.players.values())
 
     @property
     def player_ids(self) -> List[str]:
