@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Dict, List
 from datetime import datetime
 from enum import Enum
-from app.models.game_and_player import Game, PlayerInfo
+from app.models.game_and_player import PlayerInfo
 from app.services.voting_service import VoteType
 from app.services.game_state_service import GamePhase
 
@@ -25,8 +25,6 @@ class MessageType(str, Enum):
     PLAYER_LEFT_GAME = "player_left_game"  # Notifica que un usuario se desvincula de una partida
     RESTART_GAME = "restart_game"
     GET_GAME_STATUS = "get_game_status"
-    
-    # Comandos de votación
     
     # Fases del juego
     PHASE_CHANGED = "phase_changed"
@@ -54,7 +52,7 @@ class MessageType(str, Enum):
     SUCCESS = "success"
     SYSTEM_MESSAGE = "system_message"
     
-    # Nuevos tipos para compatibilidad con frontend
+    # Estados de conexión
     GAME_CONNECTION_STATE = "game_connection_state"
     PLAYERS_STATUS_UPDATE = "players_status_update"
     USER_CONNECTION_STATUS = "user_connection_status"
@@ -103,7 +101,6 @@ class SystemMessageType(str, Enum):
     VOTING_STARTED = "voting_started"
     VOTING_ENDED = "voting_ended"
     PLAYER_ELIMINATED = "player_eliminated"
-    
 
 class BaseWebSocketMessage(BaseModel):
     """Clase base para todos los mensajes WebSocket"""
@@ -119,23 +116,42 @@ class WebSocketMessageV2(BaseWebSocketMessage):
     data: Any
     model_config = ConfigDict(extra="allow", from_attributes=True)  # Permitir campos adicionales
 
+# Mensajes específicos que heredan de WebSocketMessageV2
 class WsMessagePlayerId(WebSocketMessageV2):
     """Mensaje de identidad de jugador websocket version 2
     Requiere especificar el tipo de mensaje y el ID del jugador en data"""
     data: str
 
 class WsMessageError(WebSocketMessageV2):
-    """Mensaje de error websocket version 2.
-    De momento solo un string en data"""
+    """Mensaje de error websocket version 2"""
     type: MessageType = MessageType.ERROR
     error_code: ErrorCode = ErrorCode.INTERNAL_ERROR
     data: str = "Error interno del servidor"
 
 class WsMessageSuccess(WebSocketMessageV2):
-    """Mensaje de éxito websocket version 2.
-    De momento solo un string en data"""
+    """Mensaje de éxito websocket version 2"""
     type: MessageType = MessageType.SUCCESS
     data: str
+
+class WsPlayerConnectionMessage(WebSocketMessageV2):
+    """Mensaje de conexión/desconexión de jugador"""
+    user_id: str
+    username: str
+    data: str = ""  # Mensaje adicional
+
+class WsPhaseChangedMessage(WebSocketMessageV2):
+    """Mensaje de cambio de fase websocket version 2"""
+    type: MessageType = MessageType.PHASE_CHANGED
+    data: str  # Nombre de la fase
+    duration: int  # Duración en segundos
+
+class WsTimerMessage(WebSocketMessageV2):
+    """Mensaje de timer websocket version 2"""
+    type: MessageType = MessageType.PHASE_TIMER
+    phase: str
+    data: int  # Tiempo restante en segundos
+    game_id: str | None = None
+    user_id: str | None = None
 
 class WsVotingStartedMessage(WebSocketMessageV2):
     """Mensaje de inicio de votación websocket version 2"""
@@ -155,9 +171,13 @@ class WsVotingEndedMessage(WebSocketMessageV2):
     eliminated_player: str | None = None
     is_tie: bool = False
 
-class WebSocketMessageGameStatus(WebSocketMessageV2):
-    """Mensaje de estado completo de juego websocket version 2"""
-    data: Game
+class WsVoteMessage(WebSocketMessageV2):
+    """Mensaje de voto websocket version 2"""
+    type: MessageType = MessageType.VOTE_CAST
+    voter_id: str
+    target_id: str
+    vote_type: str  # day_vote, sheriff_vote, etc
+    data: str = ""  # Mensaje opcional
 
 class WsMessageGameStatus(WebSocketMessageV2):
     """Mensaje de estado de juego websocket version 2"""
@@ -171,20 +191,6 @@ class WsMessageGameStatus(WebSocketMessageV2):
     dead_players: List[str]      # IDs de jugadores muertos
     is_first_night: bool | None = None
     time_remaining: int | None = None  # Segundos restantes en la fase actual
-    
-class WsPhaseChangedMessage(WebSocketMessageV2):
-    """Mensaje de cambio de fase websocket version 2"""
-    type: MessageType = MessageType.PHASE_CHANGED
-    data: str  # Nombre de la fase
-    duration: int  # Duración en segundos
-
-class WsTimerMessage(WebSocketMessageV2):
-    """Mensaje de timer websocket version 2"""
-    type: MessageType = MessageType.PHASE_TIMER
-    phase: str
-    data: int  # Tiempo restante en segundos
-    game_id: str | None = None
-    user_id: str | None = None
 
 class WsSystemMessage(WebSocketMessageV2):
     """Mensaje del sistema websocket version 2"""
@@ -193,125 +199,48 @@ class WsSystemMessage(WebSocketMessageV2):
     message_key: SystemMessageType | None = None  # Para i18n
     params: Dict[str, Any] = {}
 
-class WsUserStatusChangedMessage(WebSocketMessageV2):
-    type: MessageType = MessageType.USER_STATUS_CHANGED
-    user_id: str
-    old_status: str
-    new_status: str
-
-
-# class WebSocketMessage(BaseWebSocketMessage):
-#     """Mensaje base para WebSocket"""
-#     type: MessageType           # Tipo de mensaje
-#     game_id: str | None = None  # ID del juego, si aplica
-#     user_id: str | None = None  # ID del usuario, si aplica
-#     timestamp: datetime = Field(default_factory=datetime.now)
-#     data: Dict[str, Any] = {}
-
-
-
-class PlayerConnectionMessage(BaseWebSocketMessage):
-    """Mensaje de conexión/desconexión de jugador"""
-    type: MessageType
-    user_id: str
-    username: str
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-class PhaseChangedMessage(BaseWebSocketMessage):
-    """Mensaje de cambio de fase"""
-    type: MessageType = MessageType.PHASE_CHANGED
-    phase: str  # night, day, voting, trial, execution
-    duration: int  # segundos
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-class PhaseTimerMessage(BaseWebSocketMessage):
-    """Mensaje de timer de fase"""
-    type: MessageType = MessageType.PHASE_TIMER
-    phase: str
-    time_remaining: int  # segundos
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-# class ForceNextPhaseMessage(BaseWebSocketMessage):
-#     """Mensaje para forzar cambio a la siguiente fase"""
-#     type: MessageType = MessageType.FORCE_NEXT_PHASE
-#     timestamp: datetime = Field(default_factory=datetime.now)
-
-class VoteMessage(BaseWebSocketMessage):
-    """Mensaje de voto"""
-    type: MessageType = MessageType.VOTE_CAST
-    voter_id: str
-    target_id: str
-    vote_type: str  # day_vote, sheriff_vote, etc
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-class VotingResultsMessage(BaseWebSocketMessage):
-    """Resultados de votación"""
-    type: MessageType = MessageType.VOTING_RESULTS
-    vote_type: str
-    results: Dict[str, int]  # target_id -> vote_count
-    eliminated_player: str | None = None
-    is_tie: bool = False
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-class SystemMessage(BaseWebSocketMessage):
-    """Mensaje del sistema"""
-    type: MessageType = MessageType.SYSTEM_MESSAGE
-    message: str
-    message_key: str | None = None  # Para i18n
-    params: Dict[str, Any] = {}
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-class RoleActionMessage(BaseWebSocketMessage):
-    """Mensaje de acción de rol"""
+class WsRoleActionMessage(WebSocketMessageV2):
+    """Mensaje de acción de rol websocket version 2"""
     type: MessageType = MessageType.ROLE_ACTION
     actor_id: str
     action: str  # see, heal, poison, shoot, etc
     target_id: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.now)
+    data: str = ""  # Mensaje adicional
 
-class PlayerEliminatedMessage(BaseWebSocketMessage):
-    """Mensaje de jugador eliminado"""
+class WsPlayerEliminatedMessage(WebSocketMessageV2):
+    """Mensaje de jugador eliminado websocket version 2"""
     type: MessageType = MessageType.PLAYER_ELIMINATED
     player_id: str
     player_name: str
     role: str | None = None
     elimination_type: str  # vote, night_kill, poison, etc
-    timestamp: datetime = Field(default_factory=datetime.now)
+    data: str = ""
 
-class GameStartedMessage(WebSocketMessageV2):
-    """Mensaje de juego iniciado"""
+class WsGameStartedMessage(WebSocketMessageV2):
+    """Mensaje de juego iniciado websocket version 2"""
     type: MessageType = MessageType.GAME_STARTED
     players: List[Dict[str, str]]  # List of {"id": user_id, "name": username}
     roles_assigned: bool = True
-    timestamp: datetime = Field(default_factory=datetime.now)
     data: str = "Game has started"
 
-class GameEndedMessage(BaseWebSocketMessage):
-    """Mensaje de juego terminado"""
+class WsGameEndedMessage(WebSocketMessageV2):
+    """Mensaje de juego terminado websocket version 2"""
     type: MessageType = MessageType.GAME_ENDED
     winning_team: str  # wolves, villagers, lovers, etc
     winners: List[str]  # user_ids
     final_roles: Dict[str, str]  # user_id -> role
-    timestamp: datetime = Field(default_factory=datetime.now)
+    data: str = "Game has ended"
 
-class ErrorMessage(BaseWebSocketMessage):
-    """Mensaje de error"""
-    type: MessageType = MessageType.ERROR
-    error_code: str
-    message: str
-    details: Dict[str, Any] = {}
-    timestamp: datetime = Field(default_factory=datetime.now)
+class WsUserStatusChangedMessage(WebSocketMessageV2):
+    """Mensaje de cambio de estado de usuario websocket version 2"""
+    type: MessageType = MessageType.USER_STATUS_CHANGED
+    user_id: str
+    old_status: str
+    new_status: str
+    data: str = ""
 
-class SuccessMessage(BaseWebSocketMessage):
-    """Mensaje de éxito"""
-    type: MessageType = MessageType.SUCCESS
-    action: str
-    message: str
-    data: Dict[str, Any] = {}
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-class GameConnectionStateMessage(BaseWebSocketMessage):
-    """Mensaje de estado de conexión del juego"""
+class WsGameConnectionStateMessage(WebSocketMessageV2):
+    """Mensaje de estado de conexión del juego websocket version 2"""
     type: MessageType = MessageType.GAME_CONNECTION_STATE
     isUserConnected: bool
     isUserInGame: bool
@@ -319,58 +248,40 @@ class GameConnectionStateMessage(BaseWebSocketMessage):
     totalPlayersCount: int
     playersStatus: List[Dict[str, Any]]
     lastUpdate: datetime = Field(default_factory=datetime.now)
+    data: str = ""
 
-class PlayersStatusUpdateMessage(BaseWebSocketMessage):
-    """Mensaje de actualización de estado de jugadores"""
+class WsPlayersStatusUpdateMessage(WebSocketMessageV2):
+    """Mensaje de actualización de estado de jugadores websocket version 2"""
     type: MessageType = MessageType.PLAYERS_STATUS_UPDATE
     playersStatus: List[Dict[str, Any]]
-    timestamp: datetime = Field(default_factory=datetime.now)
+    data: str = ""
 
-class UserConnectionStatusMessage(BaseWebSocketMessage):
-    """Mensaje de estado de conexión de usuario"""
+class WsUserConnectionStatusMessage(WebSocketMessageV2):
+    """Mensaje de estado de conexión de usuario websocket version 2"""
     type: MessageType = MessageType.USER_CONNECTION_STATUS
     isConnected: bool
     isInGame: bool
-    timestamp: datetime = Field(default_factory=datetime.now)
+    data: str = ""
 
-# class UserStatusUpdateMessage(BaseModel):
-#     """Mensaje para solicitar cambio de estado de usuario"""
-#     type: MessageType = MessageType.UPDATE_USER_STATUS
-#     status: str
-#     timestamp: datetime = Field(default_factory=datetime.now)
-
-# class UserStatusChangedMessage(BaseModel):
-#     """Mensaje para notificar cambio de estado de usuario"""
-#     type: MessageType = MessageType.USER_STATUS_CHANGED
-#     user_id: str
-#     old_status: str
-#     new_status: str
-#     timestamp: datetime = Field(default_factory=datetime.now)
-#     message: str = ""
-
-# Tipos de mensajes para validación
+# Tipos de mensajes para validación (actualizados)
 MESSAGE_MODELS = {
-    MessageType.PLAYER_CONNECTED: PlayerConnectionMessage,
-    MessageType.PLAYER_DISCONNECTED: PlayerConnectionMessage,
-    # MessageType.UPDATE_USER_STATUS: UserStatusUpdateMessage,
+    MessageType.PLAYER_CONNECTED: WsPlayerConnectionMessage,
+    MessageType.PLAYER_DISCONNECTED: WsPlayerConnectionMessage,
     MessageType.USER_STATUS_CHANGED: WsUserStatusChangedMessage,
-    MessageType.PHASE_CHANGED: PhaseChangedMessage,
-    MessageType.PHASE_TIMER: PhaseTimerMessage,
-    # MessageType.FORCE_NEXT_PHASE: ForceNextPhaseMessage,
-    MessageType.VOTE_CAST: VoteMessage,
-    MessageType.VOTING_RESULTS: VotingResultsMessage,
-    MessageType.SYSTEM_MESSAGE: SystemMessage,
-    MessageType.ROLE_ACTION: RoleActionMessage,
-    MessageType.PLAYER_ELIMINATED: PlayerEliminatedMessage,
-    MessageType.GAME_STARTED: GameStartedMessage,
-    MessageType.GAME_ENDED: GameEndedMessage,
-    MessageType.ERROR: ErrorMessage,
-    MessageType.SUCCESS: SuccessMessage,
-    MessageType.GAME_CONNECTION_STATE: GameConnectionStateMessage,
-    MessageType.PLAYERS_STATUS_UPDATE: PlayersStatusUpdateMessage,
-    MessageType.USER_CONNECTION_STATUS: UserConnectionStatusMessage,
-    MessageType.GET_GAME_STATUS: WsMessageGameStatus,
-    MessageType.VOTING_STARTED: WsVotingStartedMessage,
     MessageType.PHASE_CHANGED: WsPhaseChangedMessage,
     MessageType.PHASE_TIMER: WsTimerMessage,
+    MessageType.VOTE_CAST: WsVoteMessage,
+    MessageType.VOTING_STARTED: WsVotingStartedMessage,
+    MessageType.VOTING_ENDED: WsVotingEndedMessage,
+    MessageType.SYSTEM_MESSAGE: WsSystemMessage,
+    MessageType.ROLE_ACTION: WsRoleActionMessage,
+    MessageType.PLAYER_ELIMINATED: WsPlayerEliminatedMessage,
+    MessageType.GAME_STARTED: WsGameStartedMessage,
+    MessageType.GAME_ENDED: WsGameEndedMessage,
+    MessageType.ERROR: WsMessageError,
+    MessageType.SUCCESS: WsMessageSuccess,
+    MessageType.GAME_CONNECTION_STATE: WsGameConnectionStateMessage,
+    MessageType.PLAYERS_STATUS_UPDATE: WsPlayersStatusUpdateMessage,
+    MessageType.USER_CONNECTION_STATUS: WsUserConnectionStatusMessage,
+    MessageType.GET_GAME_STATUS: WsMessageGameStatus,
 }

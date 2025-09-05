@@ -5,8 +5,8 @@ Maneja eventos de conexión, desconexión y mensajes básicos (heartbeat)
 from fastapi import WebSocket, WebSocketDisconnect
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages_types import (
-    MessageType, ErrorCode, WsMessageError, WsMessageSuccess, SystemMessage,
-    WebSocketMessageV2, WsMessagePlayerId, WsSystemMessage, SystemMessageType
+    MessageType, ErrorCode, WsMessageError, WsMessageSuccess,
+    WebSocketMessageV2, WsSystemMessage, SystemMessageType
 )
 from app.websocket.user_status_handlers import user_status_handler
 from app.core.security import verify_access_token
