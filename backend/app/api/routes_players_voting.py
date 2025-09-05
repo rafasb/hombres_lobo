@@ -119,7 +119,7 @@ def get_current_vote_counts(game_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
     # Verificar que el usuario está en la partida
-    user_in_game = any(player.id == user.id for player in game.players)
+    user_in_game = any(player == user.id for player in game.players)
     if not user_in_game:
         raise HTTPException(
             status_code=403,
@@ -172,7 +172,7 @@ def get_voting_summary_endpoint(game_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
     # Verificar que el usuario está en la partida
-    user_in_game = any(player.id == user.id for player in game.players)
+    user_in_game = any(player == user.id for player in game.players)
     if not user_in_game:
         raise HTTPException(
             status_code=403,

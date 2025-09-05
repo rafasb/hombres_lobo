@@ -18,21 +18,15 @@ class MessageType(str, Enum):
     
     # Estados de usuario
     USER_STATUS_CHANGED = "user_status_changed"
-    UPDATE_USER_STATUS = "update_user_status"
     USER_STATUS_UPDATE = "user_status_update"
     
     # Comandos de juego
-    JOIN_GAME = "join_game"     # Notifica que un usuario se une a una partida.
     IN_GAME = "in_game"         # Notifica que un usuario está en una partida.
     PLAYER_LEFT_GAME = "player_left_game"  # Notifica que un usuario se desvincula de una partida
-    START_GAME = "start_game"
     RESTART_GAME = "restart_game"
     GET_GAME_STATUS = "get_game_status"
-    FORCE_NEXT_PHASE = "force_next_phase"
     
     # Comandos de votación
-    CAST_VOTE = "cast_vote"
-    GET_VOTING_STATUS = "get_voting_status"
     
     # Fases del juego
     PHASE_CHANGED = "phase_changed"
@@ -152,6 +146,15 @@ class WsVotingStartedMessage(WebSocketMessageV2):
     eligible_voters: List[str]  # IDs de jugadores que pueden votar
     vote_targets: List[str]     # IDs de jugadores por los que se puede votar
 
+class WsVotingEndedMessage(WebSocketMessageV2):
+    """Mensaje de fin de votación websocket version 2"""
+    type: MessageType = MessageType.VOTING_ENDED
+    data: VoteType
+    game_id: str
+    results: Dict[str, int]  # target_id -> vote_count
+    eliminated_player: str | None = None
+    is_tie: bool = False
+
 class WebSocketMessageGameStatus(WebSocketMessageV2):
     """Mensaje de estado completo de juego websocket version 2"""
     data: Game
@@ -228,10 +231,10 @@ class PhaseTimerMessage(BaseWebSocketMessage):
     time_remaining: int  # segundos
     timestamp: datetime = Field(default_factory=datetime.now)
 
-class ForceNextPhaseMessage(BaseWebSocketMessage):
-    """Mensaje para forzar cambio a la siguiente fase"""
-    type: MessageType = MessageType.FORCE_NEXT_PHASE
-    timestamp: datetime = Field(default_factory=datetime.now)
+# class ForceNextPhaseMessage(BaseWebSocketMessage):
+#     """Mensaje para forzar cambio a la siguiente fase"""
+#     type: MessageType = MessageType.FORCE_NEXT_PHASE
+#     timestamp: datetime = Field(default_factory=datetime.now)
 
 class VoteMessage(BaseWebSocketMessage):
     """Mensaje de voto"""
@@ -353,7 +356,7 @@ MESSAGE_MODELS = {
     MessageType.USER_STATUS_CHANGED: WsUserStatusChangedMessage,
     MessageType.PHASE_CHANGED: PhaseChangedMessage,
     MessageType.PHASE_TIMER: PhaseTimerMessage,
-    MessageType.FORCE_NEXT_PHASE: ForceNextPhaseMessage,
+    # MessageType.FORCE_NEXT_PHASE: ForceNextPhaseMessage,
     MessageType.VOTE_CAST: VoteMessage,
     MessageType.VOTING_RESULTS: VotingResultsMessage,
     MessageType.SYSTEM_MESSAGE: SystemMessage,

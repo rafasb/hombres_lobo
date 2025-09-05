@@ -24,67 +24,6 @@ class UserStatusHandler:
             "in_game": UserStatus.IN_GAME,
         }
     
-    async def handle_update_user_status(self, connection_id: str, message_data: dict):
-        """Manejar solicitud de cambio de estado"""
-        try:
-            # Validar campos requeridos
-            if "status" not in message_data['data']:
-                await self.send_error(connection_id, ErrorCode.MISSING_FIELD, f"Campo 'status' requerido. El contenido de message_data es: {message_data}")
-                return
-            
-            # Obtener información de conexión
-            conn_info = connection_manager.get_connection_info(connection_id)
-            if not conn_info:
-                await self.send_error(connection_id, ErrorCode.INVALID_CONNECTION, "Conexión no encontrada")
-                return
-            
-            user_id = conn_info.get("user_id")
-            if not user_id:
-                await self.send_error(connection_id, ErrorCode.INVALID_USER, "Usuario no identificado")
-                return
-            
-            # Validar estado solicitado
-            requested_status = message_data["data"]["status"]
-            if requested_status not in self.status_mapping:
-                await self.send_error(connection_id, ErrorCode.INVALID_STATUS, f"Estado inválido: {requested_status}")
-                return
-            
-            # Validar permisos: solo admins pueden banear usuarios
-            if requested_status == "banned":
-                # Obtener información del usuario para verificar si es admin
-                user = UserService.get_user(user_id)
-                if not user or user.role.value != "admin":
-                    await self.send_error(connection_id, ErrorCode.INSUFFICIENT_PERMISSIONS, "Solo los administradores pueden banear usuarios")
-                    return
-            
-            # Crear objeto de actualización
-            status_update = UserStatusUpdate(status=self.status_mapping[requested_status])
-            
-            # Actualizar estado en la base de datos
-            updated_user, old_status = UserService.update_user_status(user_id, status_update)
-            
-            if not updated_user or old_status is None:
-                await self.send_error(connection_id, ErrorCode.UPDATE_FAILED, "Error al actualizar estado del usuario")
-                return
-            
-            # Notificar al usuario que solicitó el cambio
-            await connection_manager.send_personal_message(connection_id, WsMessageSuccess(
-                type=MessageType.SUCCESS,
-                data=f'Estado actualizado de {old_status.value} a {requested_status} para {user_id}'
-            ))
-            
-            # Notificar cambio de estado a otros usuarios conectados
-            await self.broadcast_status_change(
-                user_id, 
-                old_status.value, 
-                requested_status,
-                exclude_connection=connection_id
-            )
-            
-        except Exception as e:
-            logger.error(f"Error actualizando estado de usuario para {connection_id}: {e}")
-            await self.send_error(connection_id, ErrorCode.INTERNAL_ERROR, "Error interno del servidor")
-    
     async def auto_update_status_on_connect(self, user_id: str):
         """Actualizar automáticamente el estado a 'connected' cuando se conecta"""
         try:

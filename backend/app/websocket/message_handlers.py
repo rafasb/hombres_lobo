@@ -1,6 +1,6 @@
 """
 Handlers principales para mensajes WebSocket
-Maneja eventos de conexión, desconexión y mensajes básicos
+Maneja eventos de conexión, desconexión y mensajes básicos (heartbeat)
 """
 from fastapi import WebSocket, WebSocketDisconnect
 from app.websocket.connection_manager import connection_manager
@@ -8,8 +8,6 @@ from app.websocket.messages_types import (
     MessageType, ErrorCode, WsMessageError, WsMessageSuccess, SystemMessage,
     WebSocketMessageV2, WsMessagePlayerId, WsSystemMessage, SystemMessageType
 )
-from app.websocket.game_handlers import game_handler
-from app.websocket.voting_handlers import voting_handler
 from app.websocket.user_status_handlers import user_status_handler
 from app.core.security import verify_access_token
 import json
@@ -24,17 +22,6 @@ class MessageHandler:
     def __init__(self):
         self.handlers = {
             MessageType.HEARTBEAT: self.handle_heartbeat,
-            # User status handlers
-            MessageType.UPDATE_USER_STATUS: user_status_handler.handle_update_user_status,
-            # Game handlers
-            MessageType.JOIN_GAME: game_handler.handle_join_game,
-            MessageType.START_GAME: game_handler.handle_start_game,
-            MessageType.RESTART_GAME: game_handler.handle_restart_game,
-            MessageType.GET_GAME_STATUS: game_handler.handle_get_game_status,
-            MessageType.FORCE_NEXT_PHASE: game_handler.handle_force_next_phase,
-            # Voting handlers
-            MessageType.CAST_VOTE: voting_handler.handle_cast_vote,
-            MessageType.GET_VOTING_STATUS: voting_handler.handle_get_voting_status,
         }
     
     async def handle_message(self, connection_id: str, message_data: dict):
@@ -73,20 +60,7 @@ class MessageHandler:
             timestamp=datetime.now()
         )
         await connection_manager.send_personal_message(connection_id, heartbeat_response)
-        
-    async def handle_join_game(self, connection_id: str, message_data: dict):
-        """Delegar a game handler"""
-        await game_handler.handle_join_game(connection_id, message_data)
-        await user_status_handler.auto_update_status_on_join(connection_id, message_data)
-    
-    async def handle_start_game(self, connection_id: str, message_data: dict):
-        """Delegar a game handler"""
-        await game_handler.handle_start_game(connection_id, message_data)
-    
-    async def handle_get_game_status(self, connection_id: str, message_data: dict):
-        """Delegar a game handler"""
-        await game_handler.handle_get_game_status(connection_id, message_data)
-    
+            
     async def send_error(self, connection_id: str, error_code: ErrorCode, message: str, details: dict | None = None):
         """Enviar mensaje de error a conexión específica"""
         error_message = WsMessageError(
@@ -183,34 +157,34 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
 
         
         # Loop principal de mensajes
-        ## ANULADA LA POSIBILIDAD DE RECIBIR MENSAJES POR WEBSOCKET. 
-        ## TODOS LOS MENSAJES SE RECIBEN POR PETICIONES REST A LA API.
-        # while True:
-        #     try:
-        #         # Recibir mensaje
-        #         data = await websocket.receive_text()
-        #         # Log raw incoming message
-        #         logger.info(f"RAW RECV <- connection_id={connection_id} raw={data}")
-        #         message_data = json.loads(data)
+        # Los únicos mensajes que se pueden recibir son de HEARTBEAT
+
+        while True:
+            try:
+                # Recibir mensaje
+                data = await websocket.receive_text()
+                # Log raw incoming message
+                logger.info(f"RAW RECV <- connection_id={connection_id} raw={data}")
+                message_data = json.loads(data)
                 
-        #         # Procesar mensaje
-        #         await message_handler.handle_message(connection_id, message_data)
+                # Procesar mensaje
+                await message_handler.handle_message(connection_id, message_data)
                 
-        #     except WebSocketDisconnect:
-        #         break
-        #     except json.JSONDecodeError:
-        #         await message_handler.send_error(
-        #             connection_id,
-        #             ErrorCode.INVALID_MESSAGE,
-        #             "Formato JSON inválido"
-        #         )
-        #     except Exception as e:
-        #         logger.error(f"Error en websocket loop: {e}")
-        #         await message_handler.send_error(
-        #             connection_id,
-        #             ErrorCode.INTERNAL_ERROR,
-        #             "Error interno del servidor"
-        #         )
+            except WebSocketDisconnect:
+                break
+            except json.JSONDecodeError:
+                await message_handler.send_error(
+                    connection_id,
+                    ErrorCode.INVALID_MESSAGE,
+                    "Formato JSON inválido"
+                )
+            except Exception as e:
+                logger.error(f"Error en websocket loop: {e}")
+                await message_handler.send_error(
+                    connection_id,
+                    ErrorCode.INTERNAL_ERROR,
+                    "Error interno del servidor"
+                )
                 
     except WebSocketDisconnect:
         pass

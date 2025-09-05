@@ -3,12 +3,20 @@
 
 from fastapi import APIRouter, HTTPException, Depends
 from app.core.dependencies import get_current_user
-from app.services import player_action_service, game_service
+from app.services.witch_action_service import (
+    is_witch,
+    can_witch_heal,
+    can_witch_poison,
+    get_witch_poison_targets,
+    initialize_witch_potions,
+)
+from app.services.warewolf_action_service import get_warewolf_attack_victim
 from app.models.player_actions import (
     WitchHealRequest, WitchHealResponse,
     WitchPoisonRequest, WitchPoisonResponse,
     WitchNightInfoResponse
 )
+from app.services.user_service import UserService
 
 router = APIRouter(prefix="/witch", tags=["witch"])
 
@@ -16,7 +24,7 @@ router = APIRouter(prefix="/witch", tags=["witch"])
 @router.get("/night-info/{game_id}", response_model=WitchNightInfoResponse)
 async def get_witch_night_info(
     game_id: str,
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
 ):
     """
     Obtiene información nocturna para la bruja: quién fue atacado y qué pociones tiene disponibles.
@@ -24,28 +32,21 @@ async def get_witch_night_info(
     witch_id = current_user.id
     
     # Verificar que el jugador es la bruja
-    if not player_action_service.is_witch(game_id, witch_id):
+    if not is_witch(game_id, witch_id):
         raise HTTPException(
             status_code=403,
             detail="Solo la bruja puede acceder a esta información"
         )
     
-    night_info = player_action_service.get_witch_night_info(game_id, witch_id)
+    night_info = await get_witch_night_info(game_id, witch_id)
     
     if not night_info:
         raise HTTPException(
             status_code=404,
             detail="No se pudo obtener información de la partida"
         )
-    
-    return WitchNightInfoResponse(
-        success=True,
-        message="Información nocturna obtenida correctamente",
-        attacked_player_id=night_info.get("attacked_player_id"),
-        attacked_username=night_info.get("attacked_username"),
-        can_heal=night_info.get("can_heal", False),
-        can_poison=night_info.get("can_poison", False)
-    )
+    else:
+        return night_info
 
 
 @router.post("/heal", response_model=WitchHealResponse)
@@ -60,14 +61,14 @@ async def witch_heal_victim(
     witch_id = current_user.id
     
     # Verificar que el jugador es la bruja y puede curar
-    if not player_action_service.can_witch_heal(game_id, witch_id):
+    if not can_witch_heal(game_id, witch_id):
         raise HTTPException(
             status_code=403,
             detail="No puedes usar la poción de curación en este momento"
         )
     
     # Verificar que el objetivo es realmente la víctima del ataque
-    attack_victim = player_action_service.get_warewolf_attack_victim(game_id)
+    attack_victim = get_warewolf_attack_victim(game_id)
     if not attack_victim or attack_victim != request.target_id:
         raise HTTPException(
             status_code=400,
@@ -75,16 +76,13 @@ async def witch_heal_victim(
         )
     
     # Obtener información del jugador curado
-    game = game_service.get_game(game_id)
+
     healed_username = None
-    if game:
-        for player in game.players:
-            if player.id == request.target_id:
-                healed_username = player.username
-                break
     
+    healed_username = UserService.get_username_by_id(request.target_id)
+
     # Realizar la curación
-    updated_game = player_action_service.witch_heal_victim(
+    updated_game = witch_heal_victim(
         game_id, witch_id, request.target_id
     )
     
@@ -114,23 +112,18 @@ async def witch_poison_player(
     witch_id = current_user.id
     
     # Verificar que el jugador es la bruja y puede envenenar
-    if not player_action_service.can_witch_poison(game_id, witch_id):
+    if not can_witch_poison(game_id, witch_id):
         raise HTTPException(
             status_code=403,
             detail="No puedes usar la poción de veneno en este momento"
         )
     
     # Obtener información del jugador envenenado
-    game = game_service.get_game(game_id)
     poisoned_username = None
-    if game:
-        for player in game.players:
-            if player.id == request.target_id:
-                poisoned_username = player.username
-                break
     
+    poisoned_username = UserService.get_username_by_id(request.target_id)
     # Realizar el envenenamiento
-    updated_game = player_action_service.witch_poison_player(
+    updated_game = witch_poison_player(
         game_id, witch_id, request.target_id
     )
     
@@ -158,7 +151,7 @@ async def check_can_heal(
     """
     witch_id = current_user.id
     
-    can_heal = player_action_service.can_witch_heal(game_id, witch_id)
+    can_heal = can_witch_heal(game_id, witch_id)
     
     return {
         "success": True,
@@ -177,7 +170,7 @@ async def check_can_poison(
     """
     witch_id = current_user.id
     
-    can_poison = player_action_service.can_witch_poison(game_id, witch_id)
+    can_poison = can_witch_poison(game_id, witch_id)
     
     return {
         "success": True,
@@ -197,13 +190,13 @@ async def get_poison_targets(
     witch_id = current_user.id
     
     # Verificar que el jugador es la bruja
-    if not player_action_service.is_witch(game_id, witch_id):
+    if not is_witch(game_id, witch_id):
         raise HTTPException(
             status_code=403,
             detail="Solo la bruja puede acceder a esta información"
         )
     
-    targets = player_action_service.get_witch_poison_targets(game_id, witch_id)
+    targets = get_witch_poison_targets(game_id, witch_id)
     
     return {
         "success": True,
@@ -223,13 +216,13 @@ async def get_attack_victim(
     witch_id = current_user.id
     
     # Verificar que el jugador es la bruja
-    if not player_action_service.is_witch(game_id, witch_id):
+    if not is_witch(game_id, witch_id):
         raise HTTPException(
             status_code=403,
             detail="Solo la bruja puede acceder a esta información"
         )
     
-    victim_id = player_action_service.get_warewolf_attack_victim(game_id)
+    victim_id = get_warewolf_attack_victim(game_id)
     
     return {
         "success": True,
@@ -248,7 +241,7 @@ async def initialize_potions(
     """
     witch_id = current_user.id
     
-    success = player_action_service.initialize_witch_potions(game_id, witch_id)
+    success = initialize_witch_potions(game_id, witch_id)
     
     if not success:
         raise HTTPException(
