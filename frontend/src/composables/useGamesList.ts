@@ -3,7 +3,7 @@ import { useUserStatusOnView } from './useUserStatus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { gameService } from '../services/gameService'
-import type { Game, GameSummary } from '../types'
+import type { GameSummary } from '../types'
 
 export function useGamesList() {
   // Actualizar estado del usuario a 'connected' al entrar en la vista, salvo si está 'banned'
