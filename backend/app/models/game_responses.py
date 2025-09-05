@@ -39,13 +39,6 @@ class GameDeleteResponse(BaseModel):
 
 
 class GameListResponse(BaseModel):
-    """Respuesta para el listado de partidas."""
-    success: bool
-    message: str
-    games: List[Game]
-    total_games: int
-
-class GameListResponseV2(BaseModel):
     """Respuesta para el listado de partidas con versión 2."""
     class GameSummary(BaseModel):
         id: str

@@ -8,14 +8,13 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from app.models.game_and_player import Game, GameCreate, GameStatus
 from app.models.game_responses import (
     GameGetResponse,
-    GameListResponse,
     GameJoinResponse,
     GameLeaveResponse,
     GameRoleAssignmentResponse,
     GameUpdateResponse,
     GameStatusUpdateResponse,
     GameDeleteResponse,
-    GameListResponseV2,
+    GameListResponse,
 )
 from app.models.user import UserAccessRole, User, UserStatus, UserStatusUpdate
 from app.services.user_service import (
@@ -86,19 +85,8 @@ def get_game_by_id(game_id: str, user=Depends(get_current_user)):
     )
 
 
-# @router.get("", response_model=GameListResponse)
-# def list_games(user=Depends(get_current_user)):
-#     games = get_all_games()
-    
-#     return GameListResponse(
-#         success=True,
-#         message="Lista de partidas obtenida exitosamente",
-#         games=games,
-#         total_games=len(games)
-#     )
-
 # Nueva versión del endpoint de listado de partidas
-@router.get("", response_model=GameListResponseV2)
+@router.get("", response_model=GameListResponse)
 def list_games_v2(user=Depends(get_current_user)):
     games = get_all_games()
     
@@ -106,7 +94,7 @@ def list_games_v2(user=Depends(get_current_user)):
     game_summaries = []
     for game in games:
         creator_name = UserService.get_username_by_id(game.creator_id) or "Desconocido"
-        summary = GameListResponseV2.GameSummary(
+        summary = GameListResponse.GameSummary(
             id=game.id,
             name=game.name,
             creator_name=creator_name,
@@ -119,7 +107,7 @@ def list_games_v2(user=Depends(get_current_user)):
         )
         game_summaries.append(summary)
     
-    return GameListResponseV2(
+    return GameListResponse(
         success=True,
         games=game_summaries
     )
