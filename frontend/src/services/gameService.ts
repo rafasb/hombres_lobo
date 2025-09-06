@@ -26,7 +26,7 @@ export const gameService = {
    * Obtiene una partida específica por ID
    */
   async getGameById(gameId: string): Promise<Game> {
-  const response = await api.get(`/games/${gameId}`)
+  const response = await api.get(`/game/${gameId}`)
     // La nueva API devuelve una estructura con success, message y game
     return response.data.game
   },
@@ -52,7 +52,7 @@ export const gameService = {
    * Unirse a una partida
    */
   async joinGame(gameId: string): Promise<JoinGameResponse> {
-  const response = await api.post(`/games/${gameId}/join`)
+  const response = await api.post(`/game/${gameId}/join`)
     // La nueva API devuelve una estructura con success, message, game_id, current_players y max_players
     const { game_id, current_players, max_players } = response.data
     return { game_id, current_players, max_players }
@@ -62,7 +62,7 @@ export const gameService = {
    * Abandonar una partida
    */
   async leaveGame(gameId: string): Promise<LeaveGameResponse> {
-  const response = await api.post(`/games/${gameId}/leave`)
+  const response = await api.post(`/game/${gameId}/leave`)
     // La nueva API devuelve una estructura con success, message, game_id y remaining_players
     const { game_id, remaining_players } = response.data
     return { game_id, remaining_players }
@@ -72,7 +72,7 @@ export const gameService = {
    * Eliminar una partida (solo administradores)
    */
   async deleteGame(gameId: string): Promise<DeleteGameResponse> {
-  const response = await api.delete(`/games/${gameId}`)
+  const response = await api.delete(`/game/${gameId}`)
     // La nueva API devuelve una estructura con success, message y deleted_game_id
     return { deleted_game_id: response.data.deleted_game_id }
   },
@@ -81,7 +81,7 @@ export const gameService = {
    * Asignar roles a los jugadores y comenzar la partida
    */
   async assignRoles(gameId: string): Promise<AssignRolesResponse> {
-  const response = await api.post(`/games/${gameId}/assign-roles`)
+  const response = await api.post(`/game/${gameId}/assign-roles`)
     // La nueva API devuelve una estructura con success, message, game, assigned_roles_count y players_with_roles
     const { game, assigned_roles_count, players_with_roles } = response.data
     return { game, assigned_roles_count, players_with_roles }
@@ -91,7 +91,7 @@ export const gameService = {
    * Actualizar el estado de una partida
    */
   async updateGameStatus(gameId: string, status: string): Promise<UpdateGameStatusResponse> {
-    const response = await api.put(`/games/${gameId}/status`, { status }, {
+    const response = await api.put(`/game/${gameId}/status`, { status }, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -105,7 +105,7 @@ export const gameService = {
    * Actualizar propiedades de una partida
    */
   async updateGame(gameId: string, data: Record<string, unknown>): Promise<UpdateGameResponse> {
-    const response = await api.put(`/games/${gameId}`, data, {
+    const response = await api.put(`/game/${gameId}`, data, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -121,7 +121,7 @@ export const gameService = {
    * Obtiene los jugadores vivos en la partida
    */
   async getAlivePlayers(gameId: string): Promise<{ id: string; username: string }[]> {
-    const response = await api.get(`/games/${gameId}/alive-players`)
+    const response = await api.get(`/game/${gameId}/alive-players`)
     // La nueva API devuelve un array directamente con PlayerInfo básico
     return response.data
   },
@@ -130,7 +130,7 @@ export const gameService = {
    * Obtiene los objetivos disponibles para votación
    */
   async getVotingTargets(gameId: string): Promise<{ id: string; username: string }[]> {
-    const response = await api.get(`/games/${gameId}/voting-targets`)
+    const response = await api.get(`/game/${gameId}/voting-targets`)
     // La nueva API devuelve un array directamente con PlayerInfo básico
     return response.data
   },
@@ -139,7 +139,7 @@ export const gameService = {
    * Obtiene el recuento actual de votos
    */
   async getVoteCounts(gameId: string): Promise<import('../types').VoteCount[]> {
-    const response = await api.get(`/games/${gameId}/vote-counts`)
+    const response = await api.get(`/game/${gameId}/vote-counts`)
     // La nueva API devuelve un array directamente con VoteCount
     return response.data
   },
@@ -148,7 +148,7 @@ export const gameService = {
    * Emitir un voto durante la fase diurna
    */
   async castDayVote(gameId: string, targetId: string): Promise<import('../types').CastVoteResponse> {
-    const response = await api.post(`/games/${gameId}/day-vote`, {
+    const response = await api.post(`/game/${gameId}/day-vote`, {
       target_id: targetId
     }, {
       headers: {

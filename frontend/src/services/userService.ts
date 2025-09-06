@@ -27,7 +27,7 @@ export async function adminFetchUsers(search = ''): Promise<{ users?: User[]; er
  */
 export async function fetchUsers(gameId: string): Promise<{ users?: User[]; error?: string }> {
   try {
-    const response = await api.get(`/games/${gameId}`)
+    const response = await api.get(`/game/${gameId}`)
     const game = response.data.game || response.data
     
     if (!game.player_ids || !Array.isArray(game.player_ids)) {
