@@ -53,6 +53,7 @@ class GameListResponse(BaseModel):
         player_ids: List[str] | None = None  # Opcional, para futuras mejoras
     success: bool
     games: List[GameSummary]
+    total_games: int
 
 
 # class GameCreateResponse(BaseModel):

@@ -94,6 +94,9 @@ def list_games_v2(user=Depends(get_current_user)):
     game_summaries = []
     for game in games:
         creator_name = UserService.get_username_by_id(game.creator_id) or "Desconocido"
+        # Determinar el número actual de jugadores
+        current_players_count = len(game.player_ids) if game.player_ids is not None else 0
+
         summary = GameListResponse.GameSummary(
             id=game.id,
             name=game.name,
@@ -101,7 +104,7 @@ def list_games_v2(user=Depends(get_current_user)):
             creator_id=game.creator_id,
             created_at=game.created_at.isoformat() if game.created_at else None,
             current_round=game.current_round,
-            current_players=len(game.players),
+            current_players=current_players_count,
             max_players=game.max_players,
             status=game.status.value,
             player_ids=game.player_ids  # Incluir player_ids si es necesario
@@ -110,7 +113,8 @@ def list_games_v2(user=Depends(get_current_user)):
     
     return GameListResponse(
         success=True,
-        games=game_summaries
+        games=game_summaries,
+        total_games=len(game_summaries)
     )
 
 
@@ -126,7 +130,8 @@ def join_game_endpoint(game_id: str, user: User = Depends(get_current_user)):
                 success=True,
                 message="Te has unido a la partida exitosamente",
                 game_id=game_id,
-                current_players=len(updated_game.players),
+                # current players should reflect player_ids when in WAITING
+                current_players=len(updated_game.player_ids) if updated_game.player_ids is not None else 0,
                 max_players=updated_game.max_players
             )
     
@@ -169,8 +174,9 @@ def leave_game_endpoint(game_id: str, user=Depends(get_current_user)):
     if leave_game(game_id, user.id):
         # Obtener la partida actualizada para ver cuántos jugadores quedan
         updated_game = get_game(game_id)
-        remaining_players = len(updated_game.players) if updated_game else 0
-        
+        # remaining players should reflect player_ids for WAITING state
+        remaining_players = len(updated_game.player_ids) if updated_game and updated_game.player_ids is not None else 0
+
         return GameLeaveResponse(
             success=True,
             message="Has abandonado la partida",
