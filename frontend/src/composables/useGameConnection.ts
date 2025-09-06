@@ -1,8 +1,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useWebSocketPolling } from '../websocket/WebSocketPollingManager'
+import { useWebSocket } from '../websocket/WebSocketManager'
 import { useAuthStore, logoutEventBus } from '../stores/authStore'
 import type { PlayerStatus, PlayerDTO } from '../types'
-import type { WebSocketPollingManager } from '../websocket/WebSocketPollingManager'
+import type { WebSocketManager } from '../websocket/WebSocketManager'
 
 export interface GameConnectionState {
   isUserConnected: boolean
@@ -15,9 +15,9 @@ export interface GameConnectionState {
 
 export function useGameConnection(gameId: string) {
   const auth = useAuthStore()
-  const { createConnection, connectionStatus } = useWebSocketPolling(gameId)
+  const { createConnection, connectionStatus } = useWebSocket(gameId)
   
-  let wsManager: WebSocketPollingManager | null = null
+  let wsManager: WebSocketManager | null = null
   let unsubscribeFunctions: (() => void)[] = []
 
   const VALID_PLAYER_STATUSES = ['banned', 'connected', 'disconnected', 'in_game'] as const
@@ -94,13 +94,15 @@ export function useGameConnection(gameId: string) {
         throw new Error('No hay token de autenticación')
       }
 
-  console.log('Initializing WebSocket connection for game:', gameId)
-  wsManager = createConnection({ token: auth.token, simulate: false })
+      console.log('Initializing WebSocket connection for game:', gameId)
+      wsManager = createConnection(auth.token)
 
-  await wsManager.connect()
-  console.log('WebSocket connection established')
-  // Enviar mensaje join_game tras conectar, según la recomendación del backend
-  wsManager.send({ type: 'join_game' })
+      await wsManager.connect()
+      console.log('WebSocket connection established')
+      
+      // NOTA: Ya no enviamos mensajes join_game vía WebSocket
+      // Según la nueva arquitectura, esto debe ser una API call
+      // El backend enviará automáticamente los mensajes necesarios cuando detecte la conexión
 
       // Suscribirse a mensajes de estado del juego - adaptador para el backend
   const handleSystemMessage = (message: unknown) => {
@@ -173,7 +175,8 @@ export function useGameConnection(gameId: string) {
   const handleHeartbeat = (data: unknown) => {
         const payload = data as { response?: string } | undefined
         if (payload?.response === 'pong') return
-        wsManager?.send({ type: 'heartbeat' })
+        // NOTA: La respuesta a heartbeat se maneja automáticamente en BaseWebSocketManager
+        // Ya no es necesario enviar respuesta manual
       }
 
   const unsubHeartbeat = wsManager.subscribe('heartbeat', handleHeartbeat)
@@ -211,25 +214,20 @@ export function useGameConnection(gameId: string) {
 
   // Solicitar el estado actual del juego
   const requestGameState = () => {
-    // Cambiar 'get_game_state' por 'get_game_status' para coincidir con el backend
-    wsManager?.send({
-      type: 'get_game_status'
-    })
+    // NOTA: Según la nueva arquitectura, no enviamos mensajes de comando vía WebSocket
+    // El estado del juego se debe solicitar vía API call, no WebSocket
+    console.log('Game state should be requested via API call, not WebSocket')
   }
 
   // Enviar mensaje de actualización de estado
   const updateUserStatus = (status: string) => {
     if (wsManager && connectionStatus.value.isConnected) {
-      // Crear mensaje personalizado para cambio de estado. Incluir gameId cuando el usuario
-      // pasa a 'in_game' para que el backend tenga contexto de la partida.
-      const data: Record<string, unknown> = { status }
-      if (status === 'in_game' && gameId) {
-        data['game_id'] = gameId
-      }
-      wsManager.send({
-        type: 'update_user_status',
-        data
-      })
+      // NOTA: Según la nueva arquitectura, los cambios de estado del usuario
+      // deben hacerse vía API call, no WebSocket message
+      console.log('User status update should be done via API call:', status)
+      
+      // TODO: Reemplazar con API call al endpoint correspondiente
+      // API call: PUT /users/{userId}/status { status: 'in_game' }
     }
   }
 

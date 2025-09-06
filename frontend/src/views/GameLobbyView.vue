@@ -312,18 +312,20 @@ import { useGameLobby } from '../composables/useGameLobby'
 import { useGameConnection } from '../composables/useGameConnection'
 import { useNavigation } from '../composables/useNavigation'
 import { useAuthStore } from '../stores/authStore'
-import { usePlayerStore } from '../stores/player'
-import { useUserStore } from '../stores/user'
+import { useStoreInitialization } from '../composables/useStoreInitialization'
 import PageWithNav from '../components/PageWithNav.vue'
 import ConnectionStatus from '../components/ConnectionStatus.vue'
 
 const route = useRoute()
 const gameId = route.params.id as string
 const auth = useAuthStore()
-// Read-only reactive sources from Pinia stores (prefer these for rendering)
-const playerStore = usePlayerStore()
-const userStore = useUserStore()
 const { handleNavigation } = useNavigation()
+
+// Inicializar stores con suscripciones WebSocket específicas del juego
+const { playerStore, userStore, gameStore, initializeGameStores } = useStoreInitialization()
+
+// Inicializar suscripciones WebSocket del juego
+initializeGameStores()
 
 const {
   // Estado
@@ -348,12 +350,28 @@ const {
   formatDate
 } = useGameLobby(gameId)
 
-// Computed helpers to show players in_game instead of only connected
+// Computed reactivos basados en los stores de Pinia
 const inGameCount = computed(() => {
+  // Usar gameStore para contadores
+  if (gameStore.connectedPlayersCount > 0) {
+    // Aproximar jugadores in_game desde livingPlayers si no hay info directa
+    return gameStore.livingPlayers.length
+  }
+  
+  // Fallback al gameConnectionState
   return gameConnectionState.value.playersStatus.filter(p => p.status === 'in_game').length
 })
 
 const playerDotClass = (playerId: string) => {
+  // Intentar usar datos del playerStore primero
+  const player = playerStore.players.find(p => p.id === playerId)
+  if (player && player.status) {
+    if (player.status === 'in_game') return 'bg-success'
+    if (player.status === 'connected') return 'bg-warning'
+    return 'bg-secondary'
+  }
+  
+  // Fallback al método original
   const st = getPlayerConnectionStatus(playerId)
   if (!st) return 'bg-secondary'
   if (st.status === 'in_game') return 'bg-success'
@@ -362,6 +380,15 @@ const playerDotClass = (playerId: string) => {
 }
 
 const playerStatusText = (playerId: string) => {
+  // Intentar usar datos del playerStore primero
+  const player = playerStore.players.find(p => p.id === playerId)
+  if (player && player.status) {
+    if (player.status === 'in_game') return 'En partida'
+    if (player.status === 'connected') return 'Conectado'
+    return 'Desconectado'
+  }
+  
+  // Fallback al método original
   const st = getPlayerConnectionStatus(playerId)
   if (!st) return 'Desconocido'
   if (st.status === 'in_game') return 'En partida'
@@ -369,17 +396,25 @@ const playerStatusText = (playerId: string) => {
   return 'Desconectado'
 }
 
-// Derived players list: prefer the player store (populated by WS), fallback to
-// the composable's playerUsers (initial HTTP load). Read-only for now.
+// Lista de jugadores reactiva: priorizar playerStore, con fallback
 const playersList = computed<GamePlayer[]>(() => {
-  if (playerStore.players && playerStore.players.length > 0) return playerStore.players
-  // `playerUsers` is a ref/computed from the composable and should match GamePlayer[]
+  // Si playerStore tiene datos, usarlos (son más actualizados vía WebSocket)
+  if (playerStore.players && playerStore.players.length > 0) {
+    return playerStore.players.map(p => ({
+      id: p.id,
+      username: p.username || p.name || 'Unknown',
+      status: p.status || 'disconnected'
+    })) as GamePlayer[]
+  }
+  
+  // Fallback a datos del composable (carga inicial HTTP)
   return (playerUsers as unknown) as GamePlayer[]
 })
 
-// Prefer the lightweight `user` store for current user identity/status. If not
-// populated, fallback to the auth store user (existing behavior).
-const localUserId = computed(() => userStore.user?.id ?? auth.user?.id)
+// ID del usuario local: priorizar userStore
+const localUserId = computed(() => {
+  return userStore.user?.id ?? auth.user?.id
+})
 
 // Funciones wrapper para actualizar estado de jugadores
 const joinGame = async () => {

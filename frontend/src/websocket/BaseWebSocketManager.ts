@@ -1,12 +1,22 @@
 import { ref } from 'vue'
 import type {
-  WebSocketMessage,
+  GameWebSocketMessage,
   WebSocketMessageType,
   ConnectionStatus,
   MessageHandler,
-  MessageHandlersMap
+  MessageHandlersMap,
+  WebSocketMessageMap
 } from '../types'
 
+/**
+ * Base class for WebSocket managers.
+ * 
+ * Key principles:
+ * 1. Frontend only RECEIVES messages from backend via WebSocket
+ * 2. Frontend only RESPONDS to heartbeat messages (no other outgoing messages)
+ * 3. All user interactions should generate API calls, not WebSocket messages
+ * 4. Message types are synchronized with backend's messages_types.py
+ */
 export abstract class BaseWebSocketManager {
   protected messageHandlers: MessageHandlersMap = new Map()
 
@@ -18,13 +28,19 @@ export abstract class BaseWebSocketManager {
     error: null
   })
 
-  protected heartbeatTimer: number | null = null
+  protected heartbeatResponseTimer: number | null = null
 
   public readonly maxReconnectAttempts = 5
-  public readonly heartbeatInterval = 30000
+  public readonly heartbeatResponseDelay = 1000 // Delay before responding to heartbeat
 
-  // Subscribe genérico reutilizable
-  subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler<any>): () => void {
+  /**
+   * Subscribe to specific message types with proper typing
+   * Returns an unsubscribe function
+   */
+  subscribe<K extends WebSocketMessageType>(
+    messageType: K, 
+    handler: MessageHandler<WebSocketMessageMap[K]>
+  ): () => void {
     const key = messageType as WebSocketMessageType
     if (!this.messageHandlers.has(key)) {
       this.messageHandlers.set(key, [])
@@ -43,53 +59,79 @@ export abstract class BaseWebSocketManager {
     }
   }
 
-  // Centraliza el dispatch a handlers registrados
-  protected dispatchMessage(message: WebSocketMessage): void {
-    if (!message || typeof (message as any).type !== 'string') {
+  /**
+   * Dispatch incoming messages to registered handlers
+   * Validates message structure and handles heartbeat responses automatically
+   */
+  protected dispatchMessage(message: GameWebSocketMessage): void {
+    if (!message || typeof message.type !== 'string') {
       console.warn('[BaseWebSocketManager] Mensaje inválido recibido:', message)
       return
     }
 
-    if ((message as any).type === 'error') {
+    // Log errors for debugging
+    if (message.type === 'error') {
       console.warn('[BaseWebSocketManager] Mensaje de error recibido:', message)
     }
 
-    const handlers = this.messageHandlers.get((message as any).type as WebSocketMessageType)
+    // Auto-respond to heartbeat messages
+    if (message.type === 'heartbeat') {
+      this.handleHeartbeat()
+    }
+
+    // Dispatch to registered handlers
+    const handlers = this.messageHandlers.get(message.type)
     if (handlers) {
       handlers.forEach(handler => {
         try {
-          const payload = (message as any).data !== undefined ? (message as any).data : message
-          if (payload === undefined) {
-            console.warn(`[BaseWebSocketManager] Handler for ${(message as any).type} will receive undefined payload`)
-          }
+          // Pass the data payload to the handler, with fallback to undefined for messages without data
+          const payload = message.data !== undefined ? message.data : undefined
           handler(payload)
         } catch (error) {
-          console.error(`Error in message handler for ${(message as any).type}:`, error)
+          console.error(`Error in message handler for ${message.type}:`, error)
         }
       })
     }
   }
 
-  // Heartbeat reutilizable; requiere que la subclase implemente `send`
-  protected startHeartbeat(): void {
-    this.stopHeartbeat()
-    this.heartbeatTimer = setInterval(() => {
+  /**
+   * Handle heartbeat messages by responding after a short delay
+   * This is the ONLY message the frontend should send via WebSocket
+   */
+  private handleHeartbeat(): void {
+    // Clear any existing heartbeat response timer
+    if (this.heartbeatResponseTimer) {
+      clearTimeout(this.heartbeatResponseTimer)
+    }
+
+    // Respond to heartbeat after a short delay
+    this.heartbeatResponseTimer = setTimeout(() => {
       try {
-        // Intentar enviar heartbeat; la subclase decide cómo enviarlo y si está conectada
-        this.send({ type: 'heartbeat' })
-      } catch {
-        // ignorar errores de send en heartbeat
+        this.sendHeartbeatResponse()
+      } catch (error) {
+        console.warn('[BaseWebSocketManager] Error sending heartbeat response:', error)
       }
-    }, this.heartbeatInterval)
+    }, this.heartbeatResponseDelay)
   }
 
-  protected stopHeartbeat(): void {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer)
-      this.heartbeatTimer = null
+  protected stopHeartbeatResponse(): void {
+    if (this.heartbeatResponseTimer) {
+      clearTimeout(this.heartbeatResponseTimer)
+      this.heartbeatResponseTimer = null
     }
   }
 
-  // La subclase debe implementar cómo se envía un mensaje (WebSocket directo o simulación)
-  abstract send(message: WebSocketMessage): boolean
+  /**
+   * Send heartbeat response - the ONLY message type the frontend should send
+   * Subclasses must implement this method
+   */
+  protected abstract sendHeartbeatResponse(): void
+
+  /**
+   * Generic method for cleanup when disconnecting
+   */
+  protected cleanup(): void {
+    this.stopHeartbeatResponse()
+    this.messageHandlers.clear()
+  }
 }

@@ -3,7 +3,6 @@ import { gameService } from '../services/gameService'
 import { useWebSocket } from './WebSocketManager'
 import { BaseWebSocketManager } from './BaseWebSocketManager'
 import type {
-  WebSocketMessage,
   WebSocketMessageType,
   MessageHandler
 } from '../types'
@@ -105,18 +104,14 @@ export class WebSocketPollingManager extends BaseWebSocketManager {
     this.status.value.isConnected = false
   }
 
-  send(message: WebSocketMessage): boolean {
-    if (this.realManager) {
-      return this.realManager.send(message)
+  // Note: WebSocketPollingManager no debe enviar mensajes según la nueva arquitectura
+  // Solo se permite respuesta a heartbeat, que se maneja automáticamente en BaseWebSocketManager
+  protected sendHeartbeatResponse(): void {
+    if (this.realManager && typeof this.realManager.sendHeartbeatResponse === 'function') {
+      this.realManager.sendHeartbeatResponse()
+    } else {
+      console.log('Heartbeat response (simulated)')
     }
-
-    console.log('WebSocket message (simulated):', message)
-
-    setTimeout(() => {
-      this.simulateMessage(message)
-    }, 100)
-
-    return true
   }
 
   subscribe<K extends WebSocketMessageType>(messageType: K, handler: MessageHandler<any>): () => void {
@@ -133,12 +128,11 @@ export class WebSocketPollingManager extends BaseWebSocketManager {
       try {
         const gameData = await gameService.getGameById(this.gameId)
         
-        // Convertir Record<string, PlayerInfo> a array para compatibilidad
+        // Convertir a formato PlayerDTO correcto
         const playersStatus = gameData.player_ids.map((playerId: string) => ({
-          playerId,
+          id: playerId,  // PlayerDTO requiere 'id', no 'playerId'
           username: 'loading...', // Se podría obtener del userService si se necesita
-          isConnected: Math.random() > 0.3,
-          lastSeen: new Date()
+          status: Math.random() > 0.3 ? 'connected' : 'disconnected'
         }))
 
         this.dispatchMessage({
@@ -146,7 +140,7 @@ export class WebSocketPollingManager extends BaseWebSocketManager {
           data: {
             isUserConnected: true,
             isUserInGame: true,
-            connectedPlayersCount: playersStatus.filter((p: any) => p.isConnected).length,
+            connectedPlayersCount: playersStatus.filter(p => p.status === 'connected').length,
             totalPlayersCount: playersStatus.length,
             playersStatus: playersStatus,
             lastUpdate: new Date()
@@ -155,7 +149,7 @@ export class WebSocketPollingManager extends BaseWebSocketManager {
 
         this.dispatchMessage({
           type: 'players_status_update',
-          data: playersStatus
+          data: { playersStatus: playersStatus }  // Envuelto en objeto correcto
         })
 
       } catch (error) {
@@ -163,38 +157,6 @@ export class WebSocketPollingManager extends BaseWebSocketManager {
         this.handleConnectionError()
       }
     }, this.pollingInterval)
-  }
-
-  private simulateMessage(message: WebSocketMessage): void {
-    switch (message.type) {
-      case 'get_game_status':
-        setTimeout(() => {
-          this.dispatchMessage({
-            type: 'game_connection_state',
-            data: {
-              isUserConnected: true,
-              isUserInGame: true,
-              connectedPlayersCount: 3,
-              totalPlayersCount: 4,
-              playersStatus: [],
-              lastUpdate: new Date()
-            }
-          })
-        }, 200)
-        break
-
-      case 'join_game':
-        console.log('User joined game:', message.data)
-        this.dispatchMessage({
-          type: 'user_connection_status',
-          data: { isConnected: true, isInGame: true }
-        })
-        break
-
-      case 'player_left_game':
-        console.log('Player left game:', message.data)
-        break
-    }
   }
 
   private handleConnectionError(): void {
@@ -206,24 +168,22 @@ export class WebSocketPollingManager extends BaseWebSocketManager {
     }
   }
 
-  // Override heartbeat to respect `isActive` for polling/simulation
+  // Override heartbeat methods - no usamos heartbeat proactivo en la nueva arquitectura
   protected startHeartbeat(): void {
-    this.stopHeartbeat()
-    this.heartbeatTimer = setInterval(() => {
-      if (this.isActive || this.realManager) {
-        try {
-          this.send({ type: 'heartbeat' })
-        } catch {
-          // ignore
-        }
-      }
-    }, this.heartbeatInterval)
+    // No hacer nada - el heartbeat se maneja automáticamente en BaseWebSocketManager
+    // Solo delegar al realManager si existe
+    if (this.realManager && typeof this.realManager.startHeartbeat === 'function') {
+      // Solo si el realManager tiene este método (pero no debería usarlo)
+      console.log('Heartbeat handled by real manager')
+    }
   }
 
   protected stopHeartbeat(): void {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer)
-      this.heartbeatTimer = null
+    // No hacer nada - limpieza automática en BaseWebSocketManager
+    // Solo delegar al realManager si existe
+    if (this.realManager && typeof this.realManager.stopHeartbeat === 'function') {
+      // Solo si el realManager tiene este método
+      console.log('Heartbeat cleanup handled by real manager')
     }
   }
 }

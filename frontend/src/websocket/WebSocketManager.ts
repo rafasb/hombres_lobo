@@ -1,10 +1,17 @@
 import { computed, onUnmounted } from 'vue'
 import { BaseWebSocketManager } from './BaseWebSocketManager'
 import type {
-  WebSocketMessage,
   GameWebSocketMessage
 } from '../types'
 
+/**
+ * WebSocket Manager implementation that extends BaseWebSocketManager
+ * 
+ * Key behaviors:
+ * - Only receives messages from backend
+ * - Only sends heartbeat responses when requested by backend
+ * - All other user interactions should use API calls, not WebSocket messages
+ */
 export class WebSocketManager extends BaseWebSocketManager {
   private ws: WebSocket | null = null
   private reconnectTimer: number | null = null
@@ -38,14 +45,13 @@ export class WebSocketManager extends BaseWebSocketManager {
             reconnectAttempts: 0,
             error: null
           }
-          this.startHeartbeat()
           resolve()
         }
 
         this.ws.onclose = (event) => {
           console.log('WebSocket closed:', event)
           this.status.value.isConnected = false
-          this.stopHeartbeat()
+          this.stopHeartbeatResponse()
 
           if (!event.wasClean && this.status.value.reconnectAttempts < this.maxReconnectAttempts) {
             this.attemptReconnect()
@@ -62,8 +68,8 @@ export class WebSocketManager extends BaseWebSocketManager {
           try {
             const parsed = JSON.parse(event.data)
             if (parsed && typeof parsed.type === 'string') {
-              const message = parsed as GameWebSocketMessage | WebSocketMessage
-              this.dispatchMessage(message as any)
+              const message = parsed as GameWebSocketMessage
+              this.dispatchMessage(message)
             } else {
               console.warn('Received WebSocket message without type:', parsed)
             }
@@ -86,7 +92,8 @@ export class WebSocketManager extends BaseWebSocketManager {
       this.reconnectTimer = null
     }
 
-    this.stopHeartbeat()
+    this.stopHeartbeatResponse()
+    this.cleanup()
 
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect')
@@ -96,21 +103,23 @@ export class WebSocketManager extends BaseWebSocketManager {
     this.status.value.isConnected = false
   }
 
-  send(message: WebSocketMessage): boolean {
+  /**
+   * Send heartbeat response - the ONLY message the frontend should send
+   */
+  protected sendHeartbeatResponse(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket not connected, cannot send message:', message)
-      return false
+      console.warn('WebSocket not connected, cannot send heartbeat response')
+      return
     }
 
     try {
       this.ws.send(JSON.stringify({
-        ...message,
+        type: 'heartbeat',
+        data: { response: 'pong' },
         timestamp: new Date().toISOString()
       }))
-      return true
     } catch (error) {
-      console.error('Error sending WebSocket message:', error)
-      return false
+      console.error('Error sending heartbeat response:', error)
     }
   }
 
@@ -137,22 +146,6 @@ export class WebSocketManager extends BaseWebSocketManager {
         }
       })
     }, this.reconnectDelay)
-  }
-
-  protected startHeartbeat(): void {
-    this.heartbeatTimer = setInterval(() => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        // Usar 'heartbeat' como en el backend en lugar de 'ping'
-        this.send({ type: 'heartbeat' })
-      }
-    }, this.heartbeatInterval)
-  }
-
-  protected stopHeartbeat(): void {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer)
-      this.heartbeatTimer = null
-    }
   }
 }
 

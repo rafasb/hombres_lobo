@@ -122,6 +122,7 @@ export type WebSocketMessageType =
   | 'join_game'          // Frontend command (not in backend enum)
   | 'start_game'         // Frontend command (not in backend enum)
   | 'restart_game'
+  | 'game_status'
   | 'get_game_status'
   | 'force_next_phase'   // Frontend command (not in backend enum)
   // Fases del juego
@@ -174,6 +175,16 @@ export interface WebSocketMessageMap {
   join_game: undefined
   start_game: undefined
   restart_game: undefined
+  game_status: { 
+    game_id: string; 
+    phase: string; 
+    players: Array<{ id: string; username: string; status?: string; role?: string }>;
+    connected_players: string[];
+    living_players: string[];
+    dead_players: string[];
+    is_first_night?: boolean;
+    time_remaining?: number;
+  }
   get_game_status: { 
     game_id: string; 
     phase: string; 
