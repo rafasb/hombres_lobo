@@ -4,7 +4,7 @@ import Register from './components/Register.vue'
 import Profile from './components/Profile.vue'
 import AdminView from './views/AdminView.vue'
 import GamesListView from './views/GamesListView.vue'
-import GameLobby from './components/GameLobby.vue'
+import GameLobbyView from './views/GameLobbyView.vue'
 import { useAuthStore } from './stores/authStore'
 
 const routes = [
@@ -13,7 +13,7 @@ const routes = [
   { path: '/perfil', component: Profile },
   { path: '/admin', component: AdminView },
   { path: '/partidas', component: GamesListView },
-  { path: '/partida/:id', component: GameLobby },
+  { path: '/partida/:id', component: GameLobbyView },
   { path: '/', redirect: '/partidas' },
 ]
 
