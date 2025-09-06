@@ -31,10 +31,6 @@
                 <GameCard
                   :game="game"
                   :loading="loading"
-                  :canJoinGame="canJoinGame"
-                  :canLeaveGame="canLeaveGame"
-                  :canViewGame="canViewGame"
-                  :canDeleteGame="canDeleteGame"
                   :getCreatorName="getCreatorName"
                   :formatDate="formatDate"
                   @join="joinGame"
@@ -116,49 +112,15 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, computed } from 'vue'
 import CreateGameModal from '../components/CreateGameModal.vue'
 import PageWithNav from '../components/PageWithNav.vue'
 import GameCard from '../components/GameCard.vue'
-import type { GameSummary, AuthUser } from '../types'
-import { computed, toRefs } from 'vue'
+import { useGamesList } from '../composables/useGamesList'
+import { useNavigation } from '../composables/useNavigation'
 
-// Props para recibir los datos y métodos del composable
-interface Props {
-  games: GameSummary[]
-  loading: boolean
-  showCreateModal: boolean
-  notification: any
-  newGame: any
-  playerOptions: number[]
-  hasGames: boolean
-  // Ahora recibe directamente el objeto AuthUser (o null si no hay sesión)
-  auth: AuthUser | null
-  canJoinGame: (game: GameSummary) => boolean
-  canLeaveGame: (game: GameSummary) => boolean
-  canViewGame: (game: GameSummary) => boolean
-  canDeleteGame: (game: GameSummary) => boolean
-  getCreatorName: (game: GameSummary) => string
-  formatDate: (dateString: string) => string
-}
-
-interface Emits {
-  (e: 'createGame'): void
-  (e: 'joinGame', gameId: string): void
-  (e: 'leaveGame', gameId: string): void
-  (e: 'deleteGame', gameId: string): void
-  (e: 'viewGame', gameId: string): void
-  (e: 'closeCreateModal'): void
-  (e: 'openCreateModal'): void
-  (e: 'navigate', view: string): void
-  (e: 'updateNewGame', value: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-// Keep prop reactivity: use toRefs so children react to parent ref changes
+// Usar los composables directamente
 const {
-  auth,
   games,
   loading,
   showCreateModal,
@@ -166,31 +128,30 @@ const {
   newGame,
   playerOptions,
   hasGames,
+  auth,
+  loadGames,
+  createGame,
+  joinGame,
+  leaveGame,
+  deleteGame,
+  viewGame,
   getCreatorName,
   formatDate,
-  canJoinGame,
-  canLeaveGame,
-  canViewGame,
-  canDeleteGame
-} = toRefs(props as any)
+  closeCreateModal,
+  openCreateModal,
+  updateNewGame
+} = useGamesList()
+
+const { handleNavigation } = useNavigation()
 
 const showAdmin = computed(() => {
-  const a: any = auth?.value ?? auth
-  return a?.role === 'admin'
+  return auth.user?.role === 'admin'
 })
 
-// Métodos que emiten eventos al padre
-const createGame = () => emit('createGame')
-const joinGame = (gameId: string) => emit('joinGame', gameId)
-const leaveGame = (gameId: string) => emit('leaveGame', gameId)
-const deleteGame = (gameId: string) => emit('deleteGame', gameId)
-const viewGame = (gameId: string) => emit('viewGame', gameId)
-const closeCreateModal = () => emit('closeCreateModal')
-const openCreateModal = () => emit('openCreateModal')
-const handleNavigation = (view: string) => emit('navigate', view)
-const updateNewGame = (value: any) => emit('updateNewGame', value)
-
-// Helpers imported from composable: getBootstrapCardClass, getStatusBadgeClass, getStatusText
+// Cargar partidas al montar el componente
+onMounted(() => {
+  loadGames()
+})
 </script>
 
 <style scoped>

@@ -3,7 +3,7 @@ import { useUserStatusOnView } from './useUserStatus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { gameService } from '../services/gameService'
-import type { GameSummary } from '../types'
+import type { GameSummary, Game } from '../types'
 
 export function useGamesList() {
   // Actualizar estado del usuario a 'connected' al entrar en la vista, salvo si está 'banned'
@@ -120,7 +120,7 @@ export function useGamesList() {
     router.push(`/partida/${gameId}`)
   }
 
-  // Métodos de validación - ahora con validaciones precisas usando player_ids
+  // Métodos de validación - ahora como computed para reactividad automática
   const canJoinGame = (game: GameSummary): boolean => {
     if (!auth.user) return false
     if (game.status !== 'waiting') return false
@@ -154,8 +154,14 @@ export function useGamesList() {
   }
 
   // Métodos de utilidad - simplificados con el nuevo endpoint
-  const getCreatorName = (game: GameSummary): string => {
-    return game.creator_name
+  const getCreatorName = (game: GameSummary | Game): string => {
+    // Si es GameSummary, usa creator_name
+    if ('creator_name' in game) {
+      return game.creator_name
+    }
+    // Si es Game completo, necesitaríamos buscar en los players
+    // Por ahora, devolvemos un fallback
+    return 'Desconocido'
   }
 
   const getCurrentPlayersCount = (game: GameSummary): number => {
