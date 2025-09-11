@@ -50,18 +50,29 @@ class MessageHandler:
             await self.send_error(connection_id, ErrorCode.INTERNAL_ERROR, "Error interno del servidor")
     
     async def handle_heartbeat(self, connection_id: str, message_data: dict):
-        """Manejar heartbeat/ping"""
-        # Responder con pong usando WebSocketMessageV2
-        heartbeat_response = WebSocketMessageV2(
-            type=MessageType.HEARTBEAT,
-            data={
-                "response": "pong",
-                "timestamp": message_data.get("timestamp")
-            },
-            timestamp=datetime.now()
-        )
-        await connection_manager.send_personal_message(connection_id, heartbeat_response)
-            
+        """Manejar heartbeat/ping del cliente"""
+        print(f"💓 [HEARTBEAT] Recibido heartbeat de cliente {connection_id[:8]}...")
+        logger.debug(f"Heartbeat recibido de cliente {connection_id}")
+        
+        # Registrar respuesta de heartbeat (esto confirma que el cliente está vivo)
+        connection_manager.record_heartbeat_response(connection_id)
+        
+        # Verificar si incluye timestamp del cliente para logs de debug
+        client_timestamp = message_data.get("timestamp")
+        if client_timestamp:
+            print(f"💓 [HEARTBEAT] Cliente timestamp: {client_timestamp}")
+            logger.debug(f"Cliente {connection_id} timestamp: {client_timestamp}")
+        
+        # Obtener información del usuario para logs
+        user_id = connection_manager.connection_users.get(connection_id, "unknown")
+        print(f"💓 [HEARTBEAT] ✅ Cliente {user_id} ({connection_id[:8]}...) confirmado como vivo")
+        logger.debug(f"Cliente {user_id} confirmado como vivo mediante heartbeat")
+        
+        # NO enviar respuesta - el cliente solo está respondiendo al ping del servidor
+        # El flujo correcto es: Server ping → Client pong (aquí) → Server registra que está vivo
+        # Si enviáramos respuesta aquí, crearíamos un bucle infinito
+
+       
     async def send_error(self, connection_id: str, error_code: ErrorCode, message: str, details: dict | None = None):
         """Enviar mensaje de error a conexión específica"""
         error_message = WsMessageError(
@@ -196,6 +207,11 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
                 await message_handler.handle_message(connection_id, message_data)
                 
             except WebSocketDisconnect:
+                # Manejar desconexión
+                logger.info(f"WebSocket desconectado para conexión {connection_id}")
+                print(f"WebSocket desconectado para conexión {connection_id}")
+                if user_id:
+                    await user_status_handler.auto_update_status_on_disconnect(user_id)
                 break
             except json.JSONDecodeError:
                 await message_handler.send_error(
@@ -211,8 +227,12 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
                     "Error interno del servidor"
                 )
                 
-    except WebSocketDisconnect:
-        pass
+    except WebSocketDisconnect: 
+        try:
+            await user_status_handler.auto_update_status_on_disconnect(user_id)
+        except Exception as e:
+            logger.warning(f"Error actualizando estado a desconectado: {e}")
+
     except Exception as e:
         logger.error(f"Error en websocket endpoint: {e}")
         try:

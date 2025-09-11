@@ -32,11 +32,6 @@ from app.services.game_flow_service import (
 )
 from app.core.dependencies import get_current_user, get_current_user_id
 
-from app.websocket.connection_manager import connection_manager
-from app.websocket.messages_types import (
-    WsMessageGameStatus, MessageType
-)
-
 router = APIRouter(prefix="/game", tags=["game"])
 
 

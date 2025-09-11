@@ -23,7 +23,7 @@ class PublicPlayerInfo(BaseModel):
     player_id: str
     username: str
     is_alive: bool
-    is_connected: bool
+    # is_connected: bool
     user_status: UserStatus  # connected, disconnected, in_game
     
 

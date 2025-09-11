@@ -50,22 +50,29 @@ class ConnectionManager:
         # Heartbeat para mantener conexiones vivas
         self.heartbeat_task = None
         self.logger = logging.getLogger("websocket.connection_manager")
+        # Nuevos contadores para estadísticas de heartbeat
+        self.heartbeat_stats = {
+            "sent": 0,
+            "responses_received": 0,
+            "failed_connections": 0,
+            "last_heartbeat_time": None
+        }
         print("ConnectionManager inicializado")
+
 
     def _normalize_message(self, connection_id , message: WebSocketMessage) -> str:
         # Normalizar mensaje: asumimos WebSocketMessage (pydantic). Si falla, usar fallback sencillo.
         # connection_id es solo para logging, puede ser un broadcast.
         try:
-            message_dict = message.model_dump()
+            # Usar model_dump_json() que maneja automáticamente la serialización de datetime
+            message_text = message.model_dump_json()
         except Exception:
-            message_dict = {"message": str(message)}
-
-        # Asegurar campo type mínimo
-        if "type" not in message_dict:
-            message_dict["type"] = str(MessageType.SYSTEM_MESSAGE)
-            print(f"Warning: mensaje sin tipo desde {connection_id}: {message_dict}")
-
-        message_text = json.dumps(message_dict, default=str)
+            # Fallback para mensajes que no son pydantic
+            try:
+                message_dict = {"message": str(message), "type": str(MessageType.SYSTEM_MESSAGE)}
+                message_text = json.dumps(message_dict, default=str)
+            except Exception:
+                message_text = json.dumps({"message": "Error serializing message", "type": str(MessageType.ERROR)})
 
         connection_id_safe = connection_id if connection_id else "N/A"
 
@@ -309,7 +316,9 @@ class ConnectionManager:
 
     async def _heartbeat_loop(self):
         """Loop de heartbeat para mantener conexiones vivas"""
-        print("Iniciando heartbeat loop")
+        print("🫀 [HEARTBEAT] Iniciando heartbeat loop")
+        self.logger.info("Heartbeat loop iniciado")
+
         while True:
             try:
                 await asyncio.sleep(30)  # Heartbeat cada 30 segundos
@@ -317,36 +326,108 @@ class ConnectionManager:
                 current_time = datetime.now()
                 disconnected_connections = []
                 
+                # Log inicio de ronda de heartbeat
+                active_count = len(self.active_connections)
+                print(f"🫀 [HEARTBEAT] Iniciando ronda de heartbeat - {active_count} conexiones activas")
+                self.logger.info(f"Iniciando ronda de heartbeat para {active_count} conexiones")
+                
+                disconnected_connections = []
+                heartbeat_sent_count = 0
+
                 for connection_id, websocket in self.active_connections.items():
                     try:
+                        # Obtener información del usuario para logs más informativos
+                        user_id = self.connection_users.get(connection_id, "unknown")
+                        conn_info = self.connection_info.get(connection_id, {})
+                        game_id = conn_info.get("game_id", "no_game")
+
                         # Verificar el estado del WebSocket antes de enviar
                         if websocket.client_state.name == "CONNECTED":
                             # Enviar ping
-                            data = WebSocketMessage(
+                            heartbeat_message = WebSocketMessage(
                                 type=MessageType.HEARTBEAT,
-                                data={}).model_dump()
-                            await websocket.send_text(json.dumps(data))
+                                data={
+                                    "timestamp": current_time.isoformat(),
+                                    "connection_id": connection_id
+                                })
                             
+                            # Usar el json_encoder de Pydantic para manejar datetime
+                            message_data = heartbeat_message.model_dump_json()
+                            await websocket.send_text(message_data)
+                            heartbeat_sent_count += 1
+                            self.heartbeat_stats["sent"] += 1
+
+                            # Log exitoso
+                            print(f"🫀 [HEARTBEAT] ✅ Enviado a user_id={user_id}, connection_id={connection_id[:8]}..., game_id={game_id}")
+                            self.logger.debug(f"Heartbeat enviado a user_id={user_id}, connection_id={connection_id}")
+
                             # Actualizar último heartbeat
                             if connection_id in self.connection_info:
                                 self.connection_info[connection_id]["last_heartbeat"] = current_time
                         else:
                             # WebSocket no está conectado, marcarlo para desconexión
+                            # WebSocket no está conectado
+                            print(f"🫀 [HEARTBEAT] ❌ WebSocket desconectado: user_id={user_id}, connection_id={connection_id[:8]}..., estado={websocket.client_state.name}")
+                            self.logger.warning(f"WebSocket {connection_id} no conectado, estado: {websocket.client_state.name}")
                             disconnected_connections.append(connection_id)
                             
                     except Exception as e:
-                        print(f"Heartbeat failed para {connection_id}: {e}")
+                        user_id = self.connection_users.get(connection_id, "unknown")
+                        print(f"🫀 [HEARTBEAT] 💥 Error enviando heartbeat a user_id={user_id}, connection_id={connection_id[:8]}...: {e}")
+                        self.logger.error(f"Heartbeat failed para connection_id={connection_id}, user_id={user_id}: {e}")
                         disconnected_connections.append(connection_id)
+                        self.heartbeat_stats["failed_connections"] += 1
+
                 
                 # Limpiar conexiones muertas
+                cleaned_count = 0
                 for connection_id in disconnected_connections:
-                    await self.disconnect(connection_id)
+                    user_id = await self.disconnect(connection_id)
+                    cleaned_count += 1
+                    print(f"🫀 [HEARTBEAT] 🧹 Conexión limpiada: user_id={user_id}, connection_id={connection_id[:8]}...")
+
+                # Log resumen de la ronda
+                remaining_connections = len(self.active_connections)
+                print(f"🫀 [HEARTBEAT] 📊 Ronda completada: {heartbeat_sent_count} enviados, {cleaned_count} desconectados, {remaining_connections} activas")
+                self.logger.info(f"Ronda heartbeat completada: {heartbeat_sent_count} enviados, {cleaned_count} limpiadas, {remaining_connections} restantes")
+                
+                # Log estadísticas cada 10 rondas (5 minutos)
+                if self.heartbeat_stats["sent"] % 10 == 0 and self.heartbeat_stats["sent"] > 0:
+                    self._log_heartbeat_statistics()
+
+
                     
             except asyncio.CancelledError:
+                print("🫀 [HEARTBEAT] ⏹️ Heartbeat loop cancelado")
+                self.logger.info("Heartbeat loop cancelado")
                 break
             except Exception as e:
-                print(f"Error en heartbeat loop: {e}")
+                print(f"🫀 [HEARTBEAT] 💥 Error crítico en heartbeat loop: {e}")
+                self.logger.error(f"Error crítico en heartbeat loop: {e}")
         
+    def _log_heartbeat_statistics(self):
+        """Log estadísticas periódicas de heartbeat"""
+        stats = self.heartbeat_stats
+        success_rate = 0
+        if stats["sent"] > 0:
+            success_rate = ((stats["sent"] - stats["failed_connections"]) / stats["sent"]) * 100
+        
+        print(f"🫀 [HEARTBEAT] 📈 ESTADÍSTICAS - Enviados: {stats['sent']}, Respuestas: {stats['responses_received']}, Fallos: {stats['failed_connections']}, Éxito: {success_rate:.1f}%")
+        self.logger.info(f"Estadísticas heartbeat - Enviados: {stats['sent']}, Respuestas: {stats['responses_received']}, Fallos: {stats['failed_connections']}, Tasa éxito: {success_rate:.1f}%")
+
+    def record_heartbeat_response(self, connection_id: str):
+        """Registrar respuesta de heartbeat recibida"""
+        self.heartbeat_stats["responses_received"] += 1
+        user_id = self.connection_users.get(connection_id, "unknown")
+        conn_info = self.connection_info.get(connection_id, {})
+        game_id = conn_info.get("game_id", "no_game")
+        
+        print(f"🫀 [HEARTBEAT] 💓 Respuesta recibida de user_id={user_id}, connection_id={connection_id[:8]}..., game_id={game_id}")
+        self.logger.debug(f"Heartbeat response recibida de user_id={user_id}, connection_id={connection_id}")
+        
+        # Actualizar timestamp de respuesta
+        if connection_id in self.connection_info:
+            self.connection_info[connection_id]["last_heartbeat_response"] = datetime.now()
 
 # Instancia global del connection manager
 connection_manager = ConnectionManager()

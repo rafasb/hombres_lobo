@@ -67,7 +67,7 @@
                   <div class="bg-light p-2 rounded small">
                     <strong>Player ID:</strong> {{ currentPlayer.player_id }}<br>
                     <strong>Alive:</strong> {{ currentPlayer.is_alive ? '✅ Vivo' : '💀 Muerto' }}<br>
-                    <strong>Connected:</strong> {{ currentPlayer.is_connected ? '🟢 Conectado' : '🔴 Desconectado' }}
+                    <!-- <strong>Connected:</strong> {{ currentPlayer.is_connected ? '🟢 Conectado' : '🔴 Desconectado' }} -->
                   </div>
                 </div>
 
@@ -78,7 +78,7 @@
                     <div v-for="player in players" :key="player.player_id" class="mb-1">
                       <strong>{{ player.username }}</strong> - 
                       {{ player.is_alive ? '✅' : '💀' }} - 
-                      {{ player.is_connected ? '🟢' : '🔴' }} - 
+                      <!-- {{ player.is_connected ? '🟢' : '🔴' }} -  -->
                       {{ player.user_status }}
                     </div>
                   </div>

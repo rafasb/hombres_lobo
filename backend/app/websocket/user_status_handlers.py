@@ -9,6 +9,7 @@ from app.websocket.messages_types import (
 )
 from app.services.user_service import UserService
 from app.models.user import UserStatusUpdate, UserStatus
+from app.services.game_state_service import game_state_manager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,11 @@ class UserStatusHandler:
                 logger.info(f"Usuario {user_id} automáticamente marcado como 'in_game' al conectar")
         except Exception as e:
             logger.error(f"Error actualizando estado automático de conexión para {user_id}: {e}")
+        
+        # Actualizar los usuarios conectados en el estado del juego
+        await game_state_manager.update_connected_players(user_id, connected=True)
+
+        print(f"Usuario {user_id} conectado.")
     
     async def auto_update_status_on_disconnect(self, user_id: str):
         """Actualizar automáticamente el estado a 'disconnected' cuando se desconecta"""
@@ -53,8 +59,8 @@ class UserStatusHandler:
             
             # Solo actualizar a disconnected si no hay otras conexiones del mismo usuario
             if len(user_connections) <= 1:  # <= 1 porque la conexión actual aún no se ha removido
-                # Nuevo comportamiento: al desconectar del websocket, marcar como CONNECTED
-                status_update = UserStatusUpdate(status=UserStatus.CONNECTED)
+                # Actualizar estado a 'disconnected'
+                status_update = UserStatusUpdate(status=UserStatus.DISCONNECTED)
                 updated_user, old_status = UserService.update_user_status(user_id, status_update)
 
                 if updated_user and old_status:
@@ -67,6 +73,11 @@ class UserStatusHandler:
                     logger.info(f"Usuario {user_id} automáticamente marcado como 'active' al desconectar")
         except Exception as e:
             logger.error(f"Error actualizando estado automático de desconexión para {user_id}: {e}")
+
+        # Actualizar los usuarios conectados en el estado del juego
+        await game_state_manager.update_connected_players(user_id, connected=False)
+        print(f"Usuario {user_id} desconectado.")
+
     
     async def auto_update_status_on_join(self, connection_id: str, message_data: dict):
         """Actualizar automáticamente el estado a 'in_game' cuando se une a una partida"""
@@ -102,10 +113,14 @@ class UserStatusHandler:
                 logger.info(f"Usuario {user_id} automáticamente marcado como 'in_game' al unirse a partida {game_id}")
             else:
                 logger.warning(f"No se pudo actualizar estado para usuario {user_id}")
-                
+            
+            # Actualizar los usuarios conectados en el estado del juego
+            await game_state_manager.update_connected_players(user_id, connected=True, game_id=game_id)
+    
         except Exception as e:
             logger.error(f"Error actualizando estado automático al unirse a partida para {connection_id}: {e}")
-    
+
+        
     async def auto_update_status_on_leave_game(self, user_id: str):
         """Actualizar automáticamente el estado a 'connected' cuando sale de una partida"""
         try:
@@ -126,6 +141,9 @@ class UserStatusHandler:
                 
         except Exception as e:
             logger.error(f"Error actualizando estado automático al salir de partida para {user_id}: {e}")
+        
+        # Actualizar los usuarios conectados en el estado del juego
+        await game_state_manager.update_connected_players(user_id, connected=False)
     
     async def auto_update_status_on_game_start(self, user_ids: list[str]):
         """Actualizar automáticamente el estado a 'in_game' cuando inicia la partida"""

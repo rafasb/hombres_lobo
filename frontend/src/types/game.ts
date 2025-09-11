@@ -63,7 +63,7 @@ export interface PublicPlayerInfo {
   player_id: string
   username: string
   is_alive: boolean
-  is_connected: boolean
+  // is_connected: boolean
   user_status: PlayerStatus
 }
 

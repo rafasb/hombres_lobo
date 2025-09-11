@@ -15,7 +15,7 @@ def example_public_player_info():
         player_id="player_123",
         username="LoboBueno",
         is_alive=True,
-        is_connected=True,
+        # is_connected=True,
         user_status=UserStatus.IN_GAME
     )
     return player_info
@@ -28,21 +28,21 @@ def example_game_response():
             player_id="player_123",
             username="LoboBueno",
             is_alive=True,
-            is_connected=True,
+            # is_connected=True,
             user_status=UserStatus.IN_GAME
         ),
         PublicPlayerInfo(
             player_id="player_456",
             username="AldeanaAstuta",
             is_alive=True,
-            is_connected=False,
+            # is_connected=False,
             user_status=UserStatus.DISCONNECTED
         ),
         PublicPlayerInfo(
             player_id="player_789",
             username="VidenteSabio",
             is_alive=False,
-            is_connected=True,
+            # is_connected=True,
             user_status=UserStatus.IN_GAME
         )
     ]
@@ -74,14 +74,14 @@ def example_game_state_update():
             player_id="player_123",
             username="LoboBueno",
             is_alive=True,
-            is_connected=True,
+            # is_connected=True,
             user_status=UserStatus.IN_GAME
         ),
         PublicPlayerInfo(
             player_id="player_456",
             username="AldeanaAstuta",
             is_alive=True,
-            is_connected=True,
+            # is_connected=True,
             user_status=UserStatus.IN_GAME
         )
     ]
@@ -125,7 +125,7 @@ def build_game_response_from_game_and_users(game, users_dict):
                 player_id=player_id,
                 username=user.username,
                 is_alive=player_info.is_alive if player_info else True,
-                is_connected=player_id in game.connected_players,
+                # is_connected=player_id in game.connected_players,
                 user_status=user.status
             )
             public_players.append(public_player)

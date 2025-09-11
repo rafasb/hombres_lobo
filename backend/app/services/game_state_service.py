@@ -2,7 +2,7 @@
 Game State Service
 Maneja el estado del juego en memoria integrado con sistema de fases
 """
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import asyncio
 from app.models.game_and_player import Game, GameStatus, PlayerInfo
@@ -291,6 +291,66 @@ class GameStateManager:
     def get_active_games(self) -> List[str]:
         """Obtener lista de juegos activos"""
         return list(self.active_games.keys())
+    
+    async def update_connected_players(self, user_id: str, connected: bool, game_id: Optional[str] = None):
+        """
+        Actualizar el estado de conexión de un jugador específico
+        
+        Args:
+            user_id: ID del usuario
+            connected: True para agregar, False para eliminar de connected_players
+            game_id: ID del juego específico. Si es None, busca en todos los juegos activos
+        """
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # Si se proporciona game_id específico, actualizar solo ese juego
+            if game_id:
+                game_state = self.active_games.get(game_id)
+                if game_state:
+                    self._update_player_connection_state(game_state, user_id, connected)
+                    logger.info(f"Actualizado estado de conexión para usuario {user_id} en juego {game_id}: {'conectado' if connected else 'desconectado'}")
+                else:
+                    logger.warning(f"Juego {game_id} no encontrado en juegos activos")
+            else:
+                # Buscar en todos los juegos activos donde el usuario sea jugador
+                updated_games = []
+                for active_game_id, game_state in self.active_games.items():
+                    if user_id in game_state.game_data.players:
+                        self._update_player_connection_state(game_state, user_id, connected)
+                        updated_games.append(active_game_id)
+                
+                if updated_games:
+                    logger.info(f"Actualizado estado de conexión para usuario {user_id} en juegos: {updated_games}: {'conectado' if connected else 'desconectado'}")
+                else:
+                    logger.info(f"Usuario {user_id} no encontrado en ningún juego activo")
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error actualizando estado de conexión del jugador {user_id}: {e}")
+    
+    def _update_player_connection_state(self, game_state: 'GameState', user_id: str, connected: bool):
+        """
+        Actualiza el estado de conexión de un jugador en un juego específico
+        
+        Args:
+            game_state: Estado del juego
+            user_id: ID del usuario
+            connected: True para agregar, False para eliminar
+        """
+        if connected:
+            # Agregar usuario a connected_players si no está ya
+            if user_id not in game_state.game_data.connected_players:
+                game_state.game_data.connected_players.append(user_id)
+        else:
+            # Eliminar usuario de connected_players si está presente
+            if user_id in game_state.game_data.connected_players:
+                game_state.game_data.connected_players.remove(user_id)
+        
+        # Guardar cambios
+        game_state._save_changes()
     
     async def _cleanup_loop(self):
         """Loop de limpieza para juegos inactivos"""

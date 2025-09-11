@@ -411,7 +411,7 @@ export const useGameStore = defineStore('game', {
                   player_id: playerDTO.id,
                   username: playerDTO.username || playerDTO.name || '',
                   is_alive: playerDTO.status === 'alive',
-                  is_connected: playerDTO.is_connected ?? true,
+                  // is_connected: playerDTO.is_connected ?? true,
                   user_status: 'in_game' as PlayerStatus
                 })
               }
