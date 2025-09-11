@@ -17,7 +17,8 @@ class Roles(str, Enum):
 
 # Simplificado: un único modelo base con todos los campos usados por roles específicos
 class PlayerInfo(BaseModel):
-    '''Información de roles (incluye campos específicos para evitar subclases).'''
+    '''Información de roles (incluye campos específicos para evitar subclases).
+    Esta información solo debe poder leerla el jugador correspondiente y el servidor.'''
     # Campos comunes a todos los roles
     role: Roles
     player_id: str
@@ -94,6 +95,7 @@ class GameCreate(GameBase):
     creator_id: str
 
 class Game(GameBase):
+    '''Modelo principal de la partida. Esta información solo debe poder leerla el servidor.'''
     id: str
     creator_id: str
     player_ids: List[str] = Field(default_factory=list)  # IDs de jugadores (antes de empezar la partida)

@@ -15,12 +15,12 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from app.models.user import UserAccessRole, UserUpdate, UserStatusUpdate
 from app.models.user_responses import (
     UserProfileResponse,
-    UsersListResponse,
+    # UsersListResponse,
     UserUpdateResponse,
     UserStatusUpdateResponse
 )
 from app.services.user_service import UserService
-from app.core.dependencies import get_current_user, admin_required
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/users",tags=["users"])
 
@@ -33,35 +33,36 @@ def get_my_profile(current_user=Depends(get_current_user)):
         user=current_user
     )
 
-@router.get("/{user_id}", response_model=UserProfileResponse)
-def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
-    """Obtiene los datos de un usuario específico por su ID."""
-    # Verificar que solo puede ver su propio perfil o ser admin
-    if current_user.role != UserAccessRole.ADMIN and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Solo puedes acceder a tu propio perfil")
+# Es un enpoint solo para admins, se ha comentado para evitar confusión
+# @router.get("/{user_id}", response_model=UserProfileResponse)
+# def get_user_by_id(user_id: str, current_user=Depends(get_current_user)):
+#     """Obtiene los datos de un usuario específico por su ID."""
+#     # Verificar que solo puede ver su propio perfil o ser admin
+#     if current_user.role != UserAccessRole.ADMIN and current_user.id != user_id:
+#         raise HTTPException(status_code=403, detail="Solo puedes acceder a tu propio perfil")
     
-    user_obj = UserService.get_user(user_id)
-    if not user_obj:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+#     user_obj = UserService.get_user(user_id)
+#     if not user_obj:
+#         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
-    return UserProfileResponse(
-        success=True,
-        message="Usuario obtenido exitosamente",
-        user=user_obj
-    )
+#     return UserProfileResponse(
+#         success=True,
+#         message="Usuario obtenido exitosamente",
+#         user=user_obj
+#     )
 
-@router.get("", response_model=UsersListResponse)
-def list_users(admin=Depends(admin_required)):
-    """Obtiene la lista completa de todos los usuarios registrados (solo administradores)."""
-    """Solo los administradores pueden ver la lista completa de usuarios."""
-    users = UserService.get_all_users()
+# @router.get("", response_model=UsersListResponse)
+# def list_users(admin=Depends(admin_required)):
+#     """Obtiene la lista completa de todos los usuarios registrados (solo administradores)."""
+#     """Solo los administradores pueden ver la lista completa de usuarios."""
+#     users = UserService.get_all_users()
     
-    return UsersListResponse(
-        success=True,
-        message="Lista de usuarios obtenida exitosamente",
-        users=users,
-        total_users=len(users)
-    )
+#     return UsersListResponse(
+#         success=True,
+#         message="Lista de usuarios obtenida exitosamente",
+#         users=users,
+#         total_users=len(users)
+#     )
 
 @router.put("/me", response_model=UserUpdateResponse)
 def update_my_profile(

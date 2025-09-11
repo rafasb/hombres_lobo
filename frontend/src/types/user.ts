@@ -4,6 +4,12 @@
  */
 
 /**
+ * Estados de un usuario en el sistema
+ */
+export type UserStatus = 'banned' | 'connected' | 'disconnected' | 'in_game' 
+
+
+/**
  * Interfaz base del usuario - campos mínimos requeridos
  */
 export interface BaseUser {
@@ -44,7 +50,3 @@ export interface AuthUser extends BaseUser {
  */
 export type UserRole = 'admin' | 'player'
 
-/**
- * Tipo para el estado de usuario
- */
-export type UserStatus = 'banned' | 'connected' | 'disconnected' | 'in_game'

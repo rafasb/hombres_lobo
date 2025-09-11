@@ -1,9 +1,20 @@
 /**
  * Tipos y interfaces relacionados con WebSocket
- * Centralización de definiciones para comunicación en tiempo real
- */
-
-/**
+ * Centralización de definiciones para comunicación en tiexport type WebSocketMessageType =
+  // Conexión y estado de usuario
+  | 'player_connected'
+  | 'player_disconnected'
+  | 'player_banned'
+  | 'player_left_game'
+  | 'user_status_changed'
+  | 'user_connection_status'
+  // Comandos de juego
+  | 'in_game'
+  | 'join_game'          // Frontend command (not in backend enum)
+  | 'start_game'         // Frontend command (not in backend enum)
+  | 'restart_game'
+  | 'game_status'
+  | 'force_next_phase'   // Frontend command (not in backend enum)*
  * Interfaz base para mensajes de WebSocket
  */
 /**
@@ -115,7 +126,6 @@ export type WebSocketMessageType =
   | 'player_banned'
   | 'player_left_game'
   | 'user_status_changed'
-  | 'user_status_update'
   | 'user_connection_status'
   // Comandos de juego
   | 'in_game'
@@ -123,7 +133,6 @@ export type WebSocketMessageType =
   | 'start_game'         // Frontend command (not in backend enum)
   | 'restart_game'
   | 'game_status'
-  | 'get_game_status'
   | 'force_next_phase'   // Frontend command (not in backend enum)
   // Fases del juego
   | 'phase_changed'
@@ -167,7 +176,6 @@ export interface WebSocketMessageMap {
   player_banned: { user_id: string; username: string }
   player_left_game: { playerId: string }
   user_status_changed: { user_id: string; old_status: string; new_status: string }
-  user_status_update: { user_id: string; status: string }
   user_connection_status: { isConnected: boolean; isInGame: boolean }
 
   // Comandos de juego
@@ -177,23 +185,26 @@ export interface WebSocketMessageMap {
   restart_game: undefined
   game_status: { 
     game_id: string; 
-    phase: string; 
-    players: Array<{ id: string; username: string; status?: string; role?: string }>;
-    connected_players: string[];
-    living_players: string[];
-    dead_players: string[];
-    is_first_night?: boolean;
-    time_remaining?: number;
-  }
-  get_game_status: { 
-    game_id: string; 
-    phase: string; 
-    players: Array<{ id: string; username: string; status?: string; role?: string }>;
-    connected_players: string[];
-    living_players: string[];
-    dead_players: string[];
-    is_first_night?: boolean;
-    time_remaining?: number;
+    name: string;
+    creator_id: string;
+    creator_name: string;
+    status: string;
+    current_round: number;
+    is_first_night: boolean;
+    max_players: number;
+    current_players: number;
+    players: Array<{ 
+      player_id: string; 
+      username: string; 
+      is_alive: boolean; 
+      is_connected: boolean; 
+      user_status: string; 
+    }>;
+    eliminated_players: string[];
+    connected_players_count: number;
+    created_at: string;
+    success: boolean;
+    message: string;
   }
   force_next_phase: undefined
 

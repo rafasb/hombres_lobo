@@ -3,6 +3,13 @@ import type { User } from '../types/user'
 import { logoutEventBus } from './authStore'
 import { useWebSocketStore } from '../composables/useWebSocketStore'
 
+// Store para gestionar el estado del usuario y su conexión WebSocket
+// El store se encarga de:
+// - Mantener el perfil básico del usuario
+// - Mantener el estado ligero de conexión (connected, disconnected, in_game, banned)
+// - Gestionar errores y estados de carga relacionados con el usuario
+// - Suscribirse a mensajes WebSocket relevantes para actualizar el estado del usuario en tiempo real
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     // perfil básico del usuario (null cuando no hay sesión)
@@ -75,13 +82,6 @@ export const useUserStore = defineStore('user', {
         }
       })
 
-      // Suscribirse a actualizaciones de estado del usuario
-      subscribeToMessage('user_status_update', (data) => {
-        if (data && this.user && data.user_id === this.user.id) {
-          console.log('[UserStore] Recibida actualización de estado:', data)
-          this.setStatus(data.status as any)
-        }
-      })
 
       // Suscribirse a estado de conexión del usuario
       subscribeToMessage('user_connection_status', (data) => {

@@ -1,7 +1,14 @@
+// Store de Pinia para almacenar y gestionar el estado de la partida
+// El store se encarga de:
+// - Mantener la información de la partida (id, estado, jugadores, fase actual, etc.)
+// - Gestionar errores y estados de carga relacionados con la partida
+// - Suscribirse a mensajes WebSocket relevantes para actualizar el estado de la partida en tiempo real
+// - Proveer getters para acceder a información derivada del estado de la partida
+
 import { defineStore } from 'pinia'
-import type { GamePlayer } from '../types'
 import { logoutEventBus } from './authStore'
 import { useWebSocketStore } from '../composables/useWebSocketStore'
+import type { PublicPlayerInfo, PlayerStatus } from '../types/game'
 
 /**
  * Store para gestionar la información de la partida cuando el usuario está dentro de una partida.
@@ -12,11 +19,12 @@ import { useWebSocketStore } from '../composables/useWebSocketStore'
  * 
  * Ahora integrado con WebSocket para recibir actualizaciones en tiempo real del backend.
  */
+
 export const useGameStore = defineStore('game', {
   state: () => ({
     gameId: '' as string, // id de la partida a la que pertenece el usuario
     // players contiene los demás jugadores (excluye al usuario local si es necesario)
-    players: [] as GamePlayer[],
+    players: [] as PublicPlayerInfo[],
     // Flags y mensajes para manejo de carga/errores desde la UI
     loadingPlayers: false,
     loadingAction: false,
@@ -66,11 +74,11 @@ export const useGameStore = defineStore('game', {
     },
     
     // Devuelve solo los ids de los jugadores
-    playerIds: (state) => state.players.map(p => p.id),
+    playerIds: (state) => state.players.map(p => p.player_id),
     
     // Mapa rápido id -> jugador
-    playersById: (state) => state.players.reduce<Record<string, GamePlayer>>((acc, p) => {
-      acc[p.id] = p
+    playersById: (state) => state.players.reduce<Record<string, PublicPlayerInfo>>((acc, p) => {
+      acc[p.player_id] = p
       return acc
     }, {}),
     
@@ -97,14 +105,14 @@ export const useGameStore = defineStore('game', {
       this.lastUpdate = new Date()
     },
 
-    setPlayers(players: GamePlayer[]) {
+    setPlayers(players: PublicPlayerInfo[]) {
       // Reemplaza la lista completa de jugadores
       this.players = players.slice()
       this.lastUpdate = new Date()
     },
 
-    addOrUpdatePlayer(player: GamePlayer) {
-      const idx = this.players.findIndex(p => p.id === player.id)
+    addOrUpdatePlayer(player: PublicPlayerInfo) {
+      const idx = this.players.findIndex(p => p.player_id === player.player_id)
       if (idx === -1) {
         this.players.push(player)
       } else {
@@ -115,12 +123,12 @@ export const useGameStore = defineStore('game', {
     },
 
     removePlayer(playerId: string) {
-      this.players = this.players.filter(p => p.id !== playerId)
+      this.players = this.players.filter(p => p.player_id !== playerId)
       this.lastUpdate = new Date()
     },
 
-    updatePlayerStatus(playerId: string, partial: Partial<GamePlayer>) {
-      const idx = this.players.findIndex(p => p.id === playerId)
+    updatePlayerStatus(playerId: string, partial: Partial<PublicPlayerInfo>) {
+      const idx = this.players.findIndex(p => p.player_id === playerId)
       if (idx !== -1) {
         this.players.splice(idx, 1, { ...this.players[idx], ...partial })
         this.lastUpdate = new Date()
@@ -171,7 +179,7 @@ export const useGameStore = defineStore('game', {
       
       // Actualizar estado del jugador eliminado si aplica
       if (eliminatedPlayer) {
-        this.updatePlayerStatus(eliminatedPlayer, { status: 'eliminated' })
+        this.updatePlayerStatus(eliminatedPlayer, { user_status: 'eliminated' })
         
         // Remover de jugadores vivos y agregar a muertos
         this.livingPlayers = this.livingPlayers.filter(id => id !== eliminatedPlayer)
@@ -272,13 +280,31 @@ export const useGameStore = defineStore('game', {
           console.log('[GameStore] Estado del juego recibido:', data)
           
           if (data.game_id) this.setGameId(data.game_id)
-          if (data.phase) this.setCurrentPhase(data.phase, data.time_remaining)
-          if (data.players) this.setPlayers(data.players as GamePlayer[])
-          if (data.connected_players) this.setConnectionInfo(data.connected_players.length, data.players?.length || 0)
-          if (data.living_players && data.dead_players) {
-            this.setPlayerLists(data.living_players, data.dead_players)
-          }
+          if (data.status) this.setGameStatus(data.status)
+          if (data.current_round !== undefined) this.setCurrentPhase(`Round ${data.current_round}`)
           if (data.is_first_night !== undefined) this.setFirstNight(data.is_first_night)
+          
+          // Actualizar players directamente con PublicPlayerInfo
+          if (data.players) {
+            // Asegurar que user_status sea del tipo correcto
+            const validatedPlayers = data.players.map(player => ({
+              ...player,
+              user_status: player.user_status as PlayerStatus
+            }))
+            this.setPlayers(validatedPlayers)
+          }
+          
+          // Actualizar información de conexión
+          if (data.connected_players_count !== undefined && data.current_players !== undefined) {
+            this.setConnectionInfo(data.connected_players_count, data.current_players)
+          }
+          
+          // Actualizar listas de jugadores vivos/muertos basado en players
+          if (data.players) {
+            const livingPlayers = data.players.filter(p => p.is_alive).map(p => p.player_id)
+            const deadPlayers = data.players.filter(p => !p.is_alive).map(p => p.player_id)
+            this.setPlayerLists(livingPlayers, deadPlayers)
+          }
         }
       })
 
@@ -309,15 +335,15 @@ export const useGameStore = defineStore('game', {
           this.setGameStatus('started')
           
           if (data.players) {
-            // Convertir la estructura de players del mensaje a GamePlayer
-            const gamePlayers: GamePlayer[] = data.players.map((p: any) => ({
-              id: p.id,
+            // Convertir estructura {id, name} a PublicPlayerInfo
+            const convertedPlayers: PublicPlayerInfo[] = data.players.map((p: any) => ({
+              player_id: p.id,
               username: p.name,
-              status: 'alive',
-              role: '', // Se actualizará cuando se revele
-              game_id: this.gameId
+              is_alive: true, // Por defecto al iniciar el juego
+              is_connected: true, // Asumimos conectados al iniciar
+              user_status: 'in_game' as PlayerStatus
             }))
-            this.setPlayers(gamePlayers)
+            this.setPlayers(convertedPlayers)
           }
         }
       })
@@ -382,11 +408,11 @@ export const useGameStore = defineStore('game', {
             data.playersStatus.forEach((playerDTO: any) => {
               if (playerDTO.id) {
                 this.addOrUpdatePlayer({
-                  id: playerDTO.id,
+                  player_id: playerDTO.id,
                   username: playerDTO.username || playerDTO.name || '',
-                  status: playerDTO.status || 'alive',
-                  role: '', // Se actualizará cuando se revele
-                  game_id: this.gameId
+                  is_alive: playerDTO.status === 'alive',
+                  is_connected: playerDTO.is_connected ?? true,
+                  user_status: 'in_game' as PlayerStatus
                 })
               }
             })

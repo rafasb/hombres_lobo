@@ -1,5 +1,16 @@
+/// La función principal de WebSocketManager es manejar una conexión WebSocket
+/// con el backend para recibir actualizaciones del estado del juego y del usuario.
+/// Solo envía respuestas de heartbeat cuando el backend lo solicita.
+/// Todas las demás interacciones del usuario (unirse a juego, cambiar estado, etc.)
+/// deben hacerse vía llamadas API REST normales, no mediante mensajes WebSocket.
+///
+/// Key behaviors:
+/// - Only receives messages from backend
+/// - Only sends heartbeat responses when requested by backend
+/// - All other user interactions should use API calls, not WebSocket messages
 import { computed, onUnmounted } from 'vue'
 import { BaseWebSocketManager } from './BaseWebSocketManager'
+import { useUserStore } from '../stores/userStore'
 import type {
   GameWebSocketMessage
 } from '../types'
@@ -45,6 +56,16 @@ export class WebSocketManager extends BaseWebSocketManager {
             reconnectAttempts: 0,
             error: null
           }
+          
+          // Actualizar el estado en userStore
+          try {
+            const userStore = useUserStore()
+            userStore.setWebSocketConnected(true)
+            console.log('[WebSocket] Estado actualizado en userStore: connected')
+          } catch (error) {
+            console.warn('[WebSocket] No se pudo actualizar userStore:', error)
+          }
+          
           resolve()
         }
 
@@ -52,6 +73,15 @@ export class WebSocketManager extends BaseWebSocketManager {
           console.log('WebSocket closed:', event)
           this.status.value.isConnected = false
           this.stopHeartbeatResponse()
+
+          // Actualizar el estado en userStore
+          try {
+            const userStore = useUserStore()
+            userStore.setWebSocketConnected(false)
+            console.log('[WebSocket] Estado actualizado en userStore: disconnected')
+          } catch (error) {
+            console.warn('[WebSocket] No se pudo actualizar userStore:', error)
+          }
 
           if (!event.wasClean && this.status.value.reconnectAttempts < this.maxReconnectAttempts) {
             this.attemptReconnect()
@@ -101,6 +131,15 @@ export class WebSocketManager extends BaseWebSocketManager {
     }
 
     this.status.value.isConnected = false
+    
+    // Actualizar el estado en userStore
+    try {
+      const userStore = useUserStore()
+      userStore.setWebSocketConnected(false)
+      console.log('[WebSocket] Estado actualizado en userStore: disconnected (manual)')
+    } catch (error) {
+      console.warn('[WebSocket] No se pudo actualizar userStore:', error)
+    }
   }
 
   /**

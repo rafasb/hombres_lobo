@@ -23,6 +23,8 @@ export function useGameConnection(gameId: string) {
   const VALID_PLAYER_STATUSES = ['banned', 'connected', 'disconnected', 'in_game'] as const
 
   const mapRawPlayerToStatus = (raw: any, connectedPlayers?: any[]): PlayerStatus => {
+    // Mapea un objeto crudo a PlayerStatus
+    // connectedPlayers es una lista opcional de IDs de jugadores actualmente conectados
     const player = raw as PlayerDTO
     let status: PlayerStatus['status'] = 'disconnected'
 
@@ -180,11 +182,12 @@ export function useGameConnection(gameId: string) {
       }
 
   const unsubHeartbeat = wsManager.subscribe('heartbeat', handleHeartbeat)
+  // Fin suscripciones 
+  // La función subscribe devuelve una función de desuscripción, que luego se guarda para limpieza
+
+      // Guardar funciones de desuscripción para limpieza posterior
 
       unsubscribeFunctions = [unsubGameState, unsubUserStatusChanged, unsubSuccess, unsubError, unsubHeartbeat]
-
-      // Solicitar el estado inicial del juego
-      requestGameState()
 
     } catch (error) {
       console.error('Error initializing WebSocket connection:', error)
@@ -212,12 +215,7 @@ export function useGameConnection(gameId: string) {
     console.log('Initialized players status:', gameConnectionState.value)
   }
 
-  // Solicitar el estado actual del juego
-  const requestGameState = () => {
-    // NOTA: Según la nueva arquitectura, no enviamos mensajes de comando vía WebSocket
-    // El estado del juego se debe solicitar vía API call, no WebSocket
-    console.log('Game state should be requested via API call, not WebSocket')
-  }
+ 
 
   // Enviar mensaje de actualización de estado
   const updateUserStatus = (status: string) => {
@@ -317,7 +315,6 @@ export function useGameConnection(gameId: string) {
     connectionHealthText,
     
     // Métodos
-    requestGameState,
     notifyUserJoinedLobby,
     notifyUserLeftLobby,
     notifyUserDisconnected,

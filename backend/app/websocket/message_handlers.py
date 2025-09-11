@@ -10,6 +10,7 @@ from app.websocket.messages_types import (
 )
 from app.websocket.user_status_handlers import user_status_handler
 from app.core.security import verify_access_token
+from app.services.game_responses_service import GameResponsesService
 import json
 import logging
 from datetime import datetime
@@ -104,6 +105,8 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
     try:
         logger.info(f"Intentando conectar WebSocket para juego {game_id}")
         logger.info(f"Token recibido: {token[:50]}...")
+        print(f"Intentando conectar WebSocket para juego {game_id}")
+        print(f"Token recibido: {token[:50]}...")
         
         # Verificar token de autenticación
         payload = verify_access_token(token)
@@ -150,12 +153,34 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
             params={"game_id": game_id},
             timestamp=datetime.now()
         )
+        
         await connection_manager.send_personal_message(
             connection_id,
             welcome_message
         )
 
-        
+        # Enviar datos de la partida usando GameResponse
+        try:
+            game_response = GameResponsesService.get_game_response_by_id(game_id)
+            if game_response:
+                game_data_message = WebSocketMessageV2(
+                    type=MessageType.GAME_STATUS,
+                    data=game_response.dict(),
+                    timestamp=datetime.now()
+                )
+                
+                await connection_manager.send_personal_message(
+                    connection_id,
+                    game_data_message
+                )
+                logger.info(f"Datos de partida enviados a usuario {user_id} en juego {game_id}")
+                print(f"Datos de partida enviados a usuario {user_id} en juego {game_id}")
+            else:
+                logger.warning(f"No se pudieron obtener datos de la partida {game_id} para usuario {user_id}")
+                print(f"No se pudieron obtener datos de la partida {game_id} para usuario {user_id}")
+        except Exception as e:
+            logger.error(f"Error enviando datos de partida a {user_id}: {e}")
+            print(f"Error enviando datos de partida a {user_id}: {e}")
         # Loop principal de mensajes
         # Los únicos mensajes que se pueden recibir son de HEARTBEAT
 

@@ -3,6 +3,13 @@ import { getProfile } from '../services/authService'
 import api from '../services/api'
 import type { AuthUser } from '../types'
 
+// Store para gestionar la autenticación del usuario
+// El store se encarga de:
+// - Mantener el token de acceso y el perfil básico del usuario
+// - Gestionar la carga del perfil desde el token almacenado
+// - Proporcionar acciones para login, logout y actualización del perfil
+// - Emitir eventos globales (event bus) para comunicar logout a otros stores
+
 // Event bus simple para comunicar logout
 export const logoutEventBus = {
   listeners: [] as (() => void)[],

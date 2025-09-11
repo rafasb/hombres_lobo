@@ -26,9 +26,9 @@ export const gameService = {
    * Obtiene una partida específica por ID
    */
   async getGameById(gameId: string): Promise<Game> {
-  const response = await api.get(`/game/${gameId}`)
-    // La nueva API devuelve una estructura con success, message y game
-    return response.data.game
+    const response = await api.get(`/game/${gameId}`)
+    // La API devuelve directamente un GameResponse, no envuelto en {game: ...}
+    return response.data
   },
 
   /**

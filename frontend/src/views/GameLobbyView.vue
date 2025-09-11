@@ -1,470 +1,277 @@
+<!-- VISTA DE LA PARTIDA (juego) 
+ Los stores de Pinia ya se inicializan desde App.vue
+ -->
+
 <template>
   <div class="min-vh-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-  <!-- Navegación común -->
-  <PageWithNav :show-admin="auth?.isAdmin" @navigate="handleNavigation">
-
-  <div class="mobile-container">
+    <div class="mobile-container">
       <div class="container-fluid">
         <div class="row justify-content-center">
           <div class="col-12">
-            <!-- Header con navegación de retorno -->
+            <!-- Header básico -->
             <div class="card shadow-sm mb-4" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: none; border-radius: 15px;">
               <div class="card-body">
-                <div class="d-flex align-items-center gap-3">
-                  <div>
-                    <h1 class="card-title mb-0 text-primary fw-bold">
-                      <i class="bi bi-door-open me-2"></i>
-                      Lobby de la Partida
-                    </h1>
-                  </div>
-                </div>
+                <h1 class="card-title mb-0 text-primary fw-bold">
+                  <i class="bi bi-door-open me-2"></i>
+                  🚧 GameLobby - Reconstrucción Paso a Paso
+                </h1>
+                <p class="text-muted mb-0">Game ID: {{ gameId }}</p>
               </div>
             </div>
 
-      <!-- Indicador de carga -->
-      <div v-if="loading" class="text-center py-5">
-        <div class="card shadow-sm" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
-          <div class="card-body py-5">
-            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-            <p class="text-muted mt-3">Cargando partida...</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Contenido principal cuando no está cargando -->
-      <div v-else-if="game" class="row g-4">
-        <!-- Estado de conexión WebSocket -->
-        <div class="col-12">
-          <ConnectionStatus
-            :gameConnectionState="gameConnectionState"
-            :connectionStatus="connectionStatus"
-            :connectionStatusText="connectionStatusText"
-            :connectionStatusClass="connectionStatusClass"
-            :isUserActiveInLobby="isUserActiveInLobby"
-            :connectionHealthText="connectionHealthText"
-            @reconnect="initializeConnection"
-          />
-        </div>
-
-        <!-- Información de la partida -->
-        <div class="col-12 col-lg-6">
-          <div class="card shadow-sm h-100" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">
-                <i class="bi bi-info-circle me-2"></i>
-                Información de la Partida
-              </h5>
-            </div>
-            <div class="card-body">
-              <h3 class="card-title text-primary mb-3">{{ game.name }}</h3>
-              
-              <div class="row g-3">
-                <div class="col-6">
-                  <div class="d-flex flex-column">
-                    <small class="text-muted">Estado</small>
-                    <span 
-                      class="badge align-self-start"
-                      :class="{
-                        'bg-warning': game.status === 'waiting',
-                        'bg-success': game.status === 'started' || game.status === 'night' || game.status === 'day',
-                        'bg-secondary': game.status === 'finished',
-                        'bg-info': game.status === 'paused'
-                      }"
-                    >
-                      <i class="bi me-1" :class="{
-                        'bi-clock': game.status === 'waiting',
-                        'bi-play-circle': game.status === 'started' || game.status === 'night' || game.status === 'day',
-                        'bi-check-circle': game.status === 'finished',
-                        'bi-pause-circle': game.status === 'paused'
-                      }"></i>
-                      {{ gameStatusText }}
-                    </span>
-                  </div>
-                </div>
-                
-                <div class="col-6">
-                  <div class="d-flex flex-column">
-                    <small class="text-muted">Creador</small>
-                    <span class="fw-medium">
-                      <i class="bi bi-crown me-1 text-warning"></i>
-                      {{ creatorName }}
-                    </span>
-                  </div>
-                </div>
-                
-                <div class="col-6">
-                  <div class="d-flex flex-column">
-                    <small class="text-muted">Jugadores</small>
-                    <span class="fw-medium">
-                      <i class="bi bi-people me-1"></i>
-                      {{ game.player_ids.length }} / {{ game.max_players }}
-                    </span>
-                  </div>
-                </div>
-                
-                <div class="col-6">
-                  <div class="d-flex flex-column">
-                    <small class="text-muted">Creada</small>
-                    <span class="fw-medium">
-                      <i class="bi bi-calendar me-1"></i>
-                      {{ formatDate(game.created_at ?? '') }}
-                    </span>
-                  </div>
-                </div>
-                
-                <div v-if="game && typeof game.current_round === 'number' && game.current_round > 0" class="col-6">
-                  <div class="d-flex flex-column">
-                    <small class="text-muted">Ronda</small>
-                    <span class="fw-medium">
-                      <i class="bi bi-arrow-repeat me-1"></i>
-                      {{ game.current_round }}
-                    </span>
-                  </div>
-                </div>
+            <!-- Panel de Debug con datos reales -->
+            <div class="card shadow-sm mb-4" style="background: rgba(255, 255, 255, 0.95);">
+              <div class="card-header bg-info text-white">
+                <h5 class="mb-0">🔧 Debug Panel - Datos Reactivos</h5>
               </div>
-            </div>
-          </div>
-        </div>
+              <div class="card-body">
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <strong>Estado de Carga:</strong>
+                    <span class="badge ms-2" :class="loading ? 'bg-warning' : 'bg-success'">
+                      {{ loading ? 'Cargando...' : 'Completado' }}
+                    </span>
+                  </div>
+                  <div class="col-md-4">
+                    <strong>WebSocket:</strong>
+                    <span class="badge ms-2" :class="isConnected ? 'bg-success' : 'bg-danger'">
+                      {{ isConnected ? 'Conectado' : 'Desconectado' }}
+                    </span>
+                  </div>
+                  <div class="col-md-4">
+                    <strong>Game Data:</strong>
+                    <span class="badge ms-2" :class="gameData ? 'bg-success' : 'bg-warning'">
+                      {{ gameData ? 'Cargado' : 'Sin datos' }}
+                    </span>
+                  </div>
+                </div>
 
-        <!-- Lista de jugadores -->
-                <div class="col-12 col-lg-6">
-          <div class="card shadow-sm h-100" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
-            <div class="card-header bg-primary text-white">
-              <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                  <i class="bi bi-people-fill me-2"></i>
-                          Jugadores ({{ game.player_ids.length }})
-                </h5>
-                        <small>
-                          <i class="bi bi-controller me-1"></i>
-                          {{ inGameCount }} en la partida
-                        </small>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div class="list-group list-group-flush">
-                <div 
-                  v-for="player in playersList" 
-                  :key="player.id"
-                  class="list-group-item"
-                  :class="{ 
-                    'list-group-item-primary': player.id === localUserId,
-                    'list-group-item-warning': player.id === game.creator_id && player.id !== localUserId
-                  }"
-                  style="background: rgba(255, 255, 255, 0.8);"
-                >
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-2">
-                      <!-- Indicador de conexión -->
-                      <span 
-                        class="badge rounded-pill"
-                        :class="playerDotClass(player.id)"
-                        style="width: 10px; height: 10px;"
-                        :title="playerStatusText(player.id)"
-                      ></span>
-                      
-                      <!-- Nombre del jugador -->
-                      <span class="fw-medium">{{ player.username }}</span>
-                      
-                      <!-- Indicador de actividad adicional -->
-                      <small v-if="getPlayerConnectionStatus(player.id)?.lastSeen" 
-                            class="text-muted">
-                        ({{ playerStatusText(player.id) }})
-                      </small>
-                    </div>
-                    
-                    <!-- Badges del jugador -->
-                    <div class="d-flex gap-1">
-                      <span v-if="player.id === game.creator_id" class="badge bg-warning text-dark">
-                        <i class="bi bi-crown me-1"></i>
-                        Creador
-                      </span>
-                      <span v-if="player.id === localUserId" class="badge bg-primary">
-                        <i class="bi bi-person-check me-1"></i>
-                        Tú
-                      </span>
-                      <span v-if="getPlayerConnectionStatus(player.id)?.status === 'in_game'" class="badge bg-success">
-                        <i class="bi bi-controller me-1"></i>
-                        En partida
-                      </span>
-                      <span v-else-if="getPlayerConnectionStatus(player.id)?.status === 'connected'" class="badge bg-warning text-dark">
-                        <i class="bi bi-wifi me-1"></i>
-                        Conectado
-                      </span>
+                <!-- Error si existe -->
+                <div v-if="error" class="alert alert-danger">
+                  ❌ {{ error }}
+                </div>
+                
+                <!-- Usuario actual -->
+                <div v-if="currentUser" class="mb-3">
+                  <h6>👤 Usuario Actual:</h6>
+                  <div class="bg-light p-2 rounded small">
+                    <strong>ID:</strong> {{ currentUser.id }}<br>
+                    <strong>Username:</strong> {{ currentUser.username }}<br>
+                    <strong>Status:</strong> {{ currentUser.status }}
+                  </div>
+                </div>
+
+                <!-- Jugador actual -->
+                <div v-if="currentPlayer" class="mb-3">
+                  <h6>🎭 Jugador en Partida:</h6>
+                  <div class="bg-light p-2 rounded small">
+                    <strong>Player ID:</strong> {{ currentPlayer.player_id }}<br>
+                    <strong>Alive:</strong> {{ currentPlayer.is_alive ? '✅ Vivo' : '💀 Muerto' }}<br>
+                    <strong>Connected:</strong> {{ currentPlayer.is_connected ? '🟢 Conectado' : '🔴 Desconectado' }}
+                  </div>
+                </div>
+
+                <!-- Lista de jugadores -->
+                <div v-if="players && players.length > 0" class="mb-3">
+                  <h6>👥 Jugadores ({{ players.length }}):</h6>
+                  <div class="bg-light p-2 rounded small">
+                    <div v-for="player in players" :key="player.player_id" class="mb-1">
+                      <strong>{{ player.username }}</strong> - 
+                      {{ player.is_alive ? '✅' : '💀' }} - 
+                      {{ player.is_connected ? '🟢' : '🔴' }} - 
+                      {{ player.user_status }}
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Acciones del jugador -->
-        <div class="col-12">
-          <div class="card shadow-sm" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">
-                <i class="bi bi-gear me-2"></i>
-                Acciones
-              </h5>
-            </div>
-            <div class="card-body">
-              <div class="d-flex flex-wrap gap-3 justify-content-center">
-                <!-- Botón para unirse -->
-                <button 
-                  v-if="canJoinGame" 
-                  @click="joinGame"
-                  :disabled="loading"
-                  class="btn btn-success btn-lg"
-                >
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  <i v-else class="bi bi-box-arrow-in-right me-2"></i>
-                  Unirse a la partida
-                </button>
-
-                <!-- Botón para salir -->
-                <button 
-                  v-if="canLeaveGame" 
-                  @click="leaveGame"
-                  :disabled="loading"
-                  class="btn btn-outline-danger btn-lg"
-                >
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  <i v-else class="bi bi-box-arrow-left me-2"></i>
-                  Abandonar partida
-                </button>
-
-                <!-- Botón para iniciar (solo el creador) -->
-                <button 
-                  v-if="canStartGame" 
-                  @click="startGame"
-                  :disabled="loading"
-                  class="btn btn-primary btn-lg"
-                >
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  <i v-else class="bi bi-play-circle me-2"></i>
-                  Iniciar partida
-                </button>
-              </div>
-
-              <!-- Información adicional para el creador -->
-              <div v-if="isCreator && game.status === 'waiting'" class="mt-4 text-center">
-                <div v-if="game.player_ids.length < 4" class="alert alert-warning">
-                  <i class="bi bi-exclamation-triangle me-2"></i>
-                  <strong>Atención:</strong> Se necesitan al menos 4 jugadores para iniciar la partida
+                
+                <!-- Datos completos del juego -->
+                <div v-if="gameData" class="mt-3">
+                  <h6>📊 Datos Completos de la Partida:</h6>
+                  <pre class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto;">{{ JSON.stringify(gameData, null, 2) }}</pre>
                 </div>
-                <div v-else class="alert alert-success">
-                  <i class="bi bi-check-circle me-2"></i>
-                  <strong>¡Perfecto!</strong> La partida está lista para comenzar
+                
+                <div v-else-if="!loading" class="mt-3">
+                  <div class="alert alert-warning">
+                    ⚠️ No se han cargado los datos de la partida desde el store
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mensaje de error si no se encontró la partida -->
-      <div v-else class="text-center py-5">
-        <div class="card shadow-sm" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
-          <div class="card-body py-5">
-            <div class="mb-4">
-              <i class="bi bi-exclamation-circle text-danger" style="font-size: 4rem;"></i>
-            </div>
-            <h2 class="text-danger mb-3">Partida no encontrada</h2>
-            <p class="text-muted mb-4">La partida que buscas no existe o no tienes permisos para verla.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Notificaciones -->
-      <div v-if="notification" 
-           class="position-fixed bottom-0 end-0 p-3" 
-           style="z-index: 1055;">
-        <div 
-          class="alert mb-0 shadow"
-          :class="{
-            'alert-success': notification.type === 'success',
-            'alert-danger': notification.type === 'error'
-          }"
-          role="alert"
-        >
-          <i class="bi me-2" :class="{
-            'bi-check-circle': notification.type === 'success',
-            'bi-exclamation-triangle': notification.type === 'error'
-          }"></i>
-          {{ notification.message }}
-        </div>
-      </div>
           </div>
         </div>
       </div>
     </div>
-    </PageWithNav>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { computed } from 'vue'
+import { ref, computed, onMounted, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
-import type { GamePlayer } from '../types/game'
-import { useGameLobby } from '../composables/useGameLobby'
-import { useGameConnection } from '../composables/useGameConnection'
-import { useNavigation } from '../composables/useNavigation'
-import { useAuthStore } from '../stores/authStore'
+import { useUserStore } from '../stores/userStore'
+import { useGameStore } from '../stores/gameStore'
 import { useStoreInitialization } from '../composables/useStoreInitialization'
-import PageWithNav from '../components/PageWithNav.vue'
-import ConnectionStatus from '../components/ConnectionStatus.vue'
+import { useWebSocket } from '../websocket/WebSocketManager'
+import { useAuthStore } from '../stores/authStore'
+import { gameService } from '../services/gameService'
+import { getProfile } from '../services/authService'
 
+// Obtener parámetros de la ruta
 const route = useRoute()
 const gameId = route.params.id as string
-const auth = useAuthStore()
-const { handleNavigation } = useNavigation()
 
-// Inicializar stores con suscripciones WebSocket específicas del juego
-const { playerStore, userStore, gameStore, initializeGameStores } = useStoreInitialization()
+// Acceso a los stores y funciones de inicialización
+const userStore = useUserStore()
+const gameStore = useGameStore()
+const authStore = useAuthStore()
+const { loadGameData: storeLoadGameData } = useStoreInitialization()
 
-// Inicializar suscripciones WebSocket del juego
-initializeGameStores()
+// Establecer conexión WebSocket específica para este juego
+const { createConnection } = useWebSocket(gameId)
 
-const {
-  // Estado
-  game,
-  playerUsers,
-  loading,
-  notification,
-  
-  // Computed
-  isCreator,
-  canStartGame,
-  canJoinGame,
-  canLeaveGame,
-  gameStatusText,
-  creatorName,
-  
-  // Métodos
-  loadGame,
-  joinGame: originalJoinGame,
-  leaveGame: originalLeaveGame,
-  startGame,
-  formatDate
-} = useGameLobby(gameId)
+// Estado de carga
+const loading = ref(true)
+const error = ref<string | null>(null)
 
-// Computed reactivos basados en los stores de Pinia
-const inGameCount = computed(() => {
-  // Usar gameStore para contadores
-  if (gameStore.connectedPlayersCount > 0) {
-    // Aproximar jugadores in_game desde livingPlayers si no hay info directa
-    return gameStore.livingPlayers.length
-  }
-  
-  // Fallback al gameConnectionState
-  return gameConnectionState.value.playersStatus.filter(p => p.status === 'in_game').length
+// Datos reactivos desde los stores
+const currentUser = computed(() => userStore.user)
+const players = computed(() => gameStore.players)
+
+// Crear objeto gameData reactivo desde el gameStore
+const gameData = computed(() => ({
+  gameId: gameStore.gameId,
+  status: gameStore.gameStatus,
+  players: gameStore.players,
+  connectedPlayers: gameStore.connectedPlayersCount,
+  totalPlayers: gameStore.totalPlayersCount,
+  phase: gameStore.currentPhase,
+  isFirstNight: gameStore.isFirstNight
+}))
+
+// Encontrar el jugador actual en la lista de players
+const currentPlayer = computed(() => {
+  if (!currentUser.value || !players.value) return null
+  return players.value.find(p => p.player_id === currentUser.value?.id)
 })
 
-const playerDotClass = (playerId: string) => {
-  // Intentar usar datos del playerStore primero
-  const player = playerStore.players.find(p => p.id === playerId)
-  if (player && player.status) {
-    if (player.status === 'in_game') return 'bg-success'
-    if (player.status === 'connected') return 'bg-warning'
-    return 'bg-secondary'
-  }
+// WebSocket connection status - usar solo el estado de Pinia
+const isConnected = computed(() => {
+  // Usar solo el estado centralizado del userStore
+  const connected = userStore.isWebSocketConnected
   
-  // Fallback al método original
-  const st = getPlayerConnectionStatus(playerId)
-  if (!st) return 'bg-secondary'
-  if (st.status === 'in_game') return 'bg-success'
-  if (st.status === 'connected') return 'bg-warning'
-  return 'bg-secondary'
-}
-
-const playerStatusText = (playerId: string) => {
-  // Intentar usar datos del playerStore primero
-  const player = playerStore.players.find(p => p.id === playerId)
-  if (player && player.status) {
-    if (player.status === 'in_game') return 'En partida'
-    if (player.status === 'connected') return 'Conectado'
-    return 'Desconectado'
-  }
+  console.log('🔌 Estado WebSocket (desde Pinia):', { 
+    connected,
+    userStatus: userStore.status,
+    lastUpdate: userStore.lastStatusUpdate
+  })
   
-  // Fallback al método original
-  const st = getPlayerConnectionStatus(playerId)
-  if (!st) return 'Desconocido'
-  if (st.status === 'in_game') return 'En partida'
-  if (st.status === 'connected') return 'Conectado'
-  return 'Desconectado'
-}
-
-// Lista de jugadores reactiva: priorizar playerStore, con fallback
-const playersList = computed<GamePlayer[]>(() => {
-  // Si playerStore tiene datos, usarlos (son más actualizados vía WebSocket)
-  if (playerStore.players && playerStore.players.length > 0) {
-    return playerStore.players.map(p => ({
-      id: p.id,
-      username: p.username || p.name || 'Unknown',
-      status: p.status || 'disconnected'
-    })) as GamePlayer[]
-  }
-  
-  // Fallback a datos del composable (carga inicial HTTP)
-  return (playerUsers as unknown) as GamePlayer[]
+  return connected
 })
 
-// ID del usuario local: priorizar userStore
-const localUserId = computed(() => {
-  return userStore.user?.id ?? auth.user?.id
-})
-
-// Funciones wrapper para actualizar estado de jugadores
-const joinGame = async () => {
-  await originalJoinGame()
-  if (game.value) {
-    // Convertir player_ids a formato compatible con initializePlayersStatus
-    const playersArray = game.value.player_ids.map(id => ({ id, username: 'loading...' }))
-    initializePlayersStatus(playersArray)
+// Función para cargar datos del juego
+const loadGameData = async () => {
+  console.log('🚀 Iniciando carga completa de datos para la partida:', gameId)
+  loading.value = true
+  error.value = null
+  
+  try {
+    console.log('📦 Los stores ya están inicializados desde App.vue')
+    
+    console.log('👤 1. Cargando información del usuario actual...')
+    // 1. Cargar información del usuario actual (quien está logueado)
+    const profileResult = await getProfile()
+    if (profileResult.user) {
+      // Crear un objeto User completo con los datos básicos
+      const userProfile = profileResult.user
+      const fullUser = {
+        id: userProfile.id,
+        username: userProfile.username,
+        role: userProfile.role as 'admin' | 'player',
+        email: '', // Campo requerido pero no disponible en este endpoint
+        status: 'connected' as const,
+        in_game: true, // Está en juego porque está en GameLobby
+        game_id: gameId // Asignar el gameId actual
+      }
+      userStore.setUser(fullUser)
+      console.log('✅ Usuario cargado:', fullUser)
+    } else {
+      console.error('❌ Error cargando perfil:', profileResult.error)
+    }
+    
+    console.log('🎮 2. Cargando datos específicos de partida...')
+    // 2. Cargar datos específicos de partida en los stores
+    await storeLoadGameData(gameId)
+    
+    console.log('🔌 3. Estableciendo conexión WebSocket para el juego...')
+    // 3. Establecer conexión WebSocket específica para este juego
+    if (authStore.token) {
+      try {
+        const wsManager = createConnection(authStore.token)
+        await wsManager.connect()
+        console.log('✅ Conexión WebSocket establecida para juego:', gameId)
+      } catch (error) {
+        console.error('❌ Error estableciendo conexión WebSocket:', error)
+      }
+    } else {
+      console.warn('⚠️  No hay token de autenticación para WebSocket')
+    }
+    
+    console.log('🌐 4. Cargando datos del juego desde la API...')
+    // 4. Cargar datos del juego desde la API (información pública)
+    const gameInfo = await gameService.getGameById(gameId)
+    console.log('📋 Información del juego obtenida:', gameInfo)
+    
+    // 5. Sincronizar los datos obtenidos con los stores
+    if (gameInfo) {
+      console.log('📊 5. Sincronizando datos con los stores...')
+      
+      // Actualizar gameStore con la información de la partida
+      gameStore.setGameId(gameInfo.game_id)
+      gameStore.setGameStatus(gameInfo.status)
+      gameStore.setCurrentPhase(`Round ${gameInfo.current_round}`)
+      gameStore.setFirstNight(gameInfo.is_first_night)
+      
+      // Actualizar la lista de jugadores si existe
+      if (gameInfo.players && Array.isArray(gameInfo.players)) {
+        console.log('👥 Sincronizando lista de jugadores:', gameInfo.players)
+        gameStore.setPlayers(gameInfo.players)
+      }
+      
+      // Actualizar información de conexión
+      gameStore.setConnectionInfo(gameInfo.current_players, gameInfo.max_players)
+      
+      console.log('✅ Datos sincronizados con los stores')
+    }
+    
+    // TODO: 6. Cargar información privada del jugador actual desde la API
+    // Esta información incluiría el rol, habilidades, etc.
+    // await playerService.getCurrentPlayerInfo(gameId)
+    
+    console.log('✅ Datos del juego cargados completamente')
+  } catch (err) {
+    console.error('❌ Error cargando datos del juego:', err)
+    error.value = 'Error al cargar los datos del juego'
+  } finally {
+    loading.value = false
   }
 }
 
-const leaveGame = async () => {
-  await originalLeaveGame()
-  // No actualizamos el estado aquí porque leaveGame redirige
-}
-
-// WebSocket connection management
-const {
-  // Estado
-  gameConnectionState,
-  connectionStatus,
+// Watcher para observar cambios en los datos reactivos
+watchEffect(() => {
+  console.log('🔄 Datos reactivos actualizados:')
+  console.log('- Usuario:', currentUser.value)
+  console.log('- Jugador actual:', currentPlayer.value)
+  console.log('- Game Data:', gameData.value)
+  console.log('- Lista jugadores:', players.value)
+  console.log('- WebSocket conectado:', isConnected.value)
   
-  // Computed
-  connectionStatusText,
-  connectionStatusClass,
-  isUserActiveInLobby,
-  connectionHealthText,
-  
-  // Métodos
-  getPlayerConnectionStatus,
-  initializeConnection,
-  initializePlayersStatus,
-  notifyUserJoinedLobby
-} = useGameConnection(gameId)
+  // Log adicional para debugging del WebSocket (simplificado)
+  console.log('🔌 Estado WebSocket desde Pinia:')
+  console.log('  - userStore.isWebSocketConnected:', userStore.isWebSocketConnected)
+})
 
-// Cargar la partida al montar el componente
+// Cargar al montar
 onMounted(async () => {
-  // Cargar datos de la partida
-  await loadGame()
-  
-  // Si se cargó correctamente, inicializar estado de jugadores
-  if (game.value) {
-    // Convertir player_ids a formato compatible con initializePlayersStatus
-    const playersArray = game.value.player_ids.map(id => ({ id, username: 'loading...' }))
-    initializePlayersStatus(playersArray)
-  }
-  
-  // Notificar que el usuario se unió al lobby después de un pequeño retraso
-  setTimeout(() => {
-    notifyUserJoinedLobby()
-  }, 1000)
+  console.log('🎯 Componente montado. Game ID:', gameId)
+  await loadGameData()
 })
 </script>

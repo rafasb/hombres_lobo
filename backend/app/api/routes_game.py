@@ -7,58 +7,59 @@ Requiere autenticación JWT para acceder.
 from fastapi import APIRouter, HTTPException, Depends, Body
 from app.models.game_and_player import GameStatus
 from app.models.game_responses import (
-    GameGetResponse,
     GameJoinResponse,
     GameLeaveResponse,
     GameRoleAssignmentResponse,
     GameUpdateResponse,
     GameStatusUpdateResponse,
-    GameDeleteResponse
+    GameDeleteResponse,
+    GameResponse
 )
-from app.models.user import UserAccessRole, User, UserStatus, UserStatusUpdate
-from app.services.user_service import (
-    UserService
-)
+from app.models.user import UserAccessRole, User
+
 from app.services.game_service import (
     get_game,
     update_game_params,
     creator_delete_game,
     join_game,
 )
+from app.services.game_responses_service import (
+    GameResponsesService,
+)
 from app.services.game_flow_service import (
     change_game_status,
     assign_roles,
 )
 from app.core.dependencies import get_current_user, get_current_user_id
-import logging
+
+from app.websocket.connection_manager import connection_manager
+from app.websocket.messages_types import (
+    WsMessageGameStatus, MessageType
+)
 
 router = APIRouter(prefix="/game", tags=["game"])
 
 
-@router.get("/{game_id}", response_model=GameGetResponse)
+@router.get("/{game_id}", response_model=GameResponse)
 def get_game_by_id(game_id: str, user=Depends(get_current_user)):
+    """Obtiene la información pública completa de una partida."""
     game = get_game(game_id)
     if not game:
         raise HTTPException(status_code=404, detail="Partida no encontrada")
     
-    try:
-        # intentar actualizar el estado del usuario a 'in_game'
-        status_update = UserStatusUpdate(status=UserStatus.IN_GAME, game_id=game_id)
-        print(f"🔄 Actualizando estado del usuario {user.id} a 'in_game' para la partida {game_id}")
-        print(f"--> status_update: {status_update}")
-        updated_user, old_status = UserService.update_user_status(user_id=user.id, status_update=status_update)
-        logging.info(f"Estado del usuario {user.id} actualizado a 'in_game'")
-        if updated_user is not None:
-            print(f"Estado anterior: {old_status}, Estado nuevo: {updated_user.status}")
-            print(f'Partida actual: {user.game_id} partida original {game_id}')
-            print(f'updated_user: {updated_user} | status_update: {status_update}')
-    except Exception as e:
-        logging.warning(f"No se pudo actualizar el estado del usuario {user.id} a 'in_game': {e}")
-    return GameGetResponse(
+    # Usar GameResponsesService para obtener la respuesta completa
+    game_response = GameResponsesService.get_game_response_by_id(
+        game_id=game_id,
         success=True,
-        message="Partida obtenida exitosamente",
-        game=game
+        message="Información de la partida obtenida exitosamente"
     )
+    # TODO: Adicionalmente se remite un mensaje por websocket a los jugadores conectados
+    
+
+    if not game_response:
+        raise HTTPException(status_code=404, detail="No se pudo obtener la información de la partida")
+    
+    return game_response 
 
 
 @router.post("/{game_id}/join", response_model=GameJoinResponse)

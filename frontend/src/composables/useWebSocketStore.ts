@@ -114,7 +114,6 @@ export const WebSocketMessageCategories = {
   // Mensajes relacionados con el estado del usuario
   USER_STATUS: [
     'user_status_changed',
-    'user_status_update', 
     'user_connection_status'
   ] as const,
 

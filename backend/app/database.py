@@ -482,7 +482,6 @@ if admin_username and admin_email and admin_password:
 
 def save_user(user: User) -> None:
     """Guarda un usuario en la base de datos."""
-    print(f"💾 Guardando usuario: {user}")
     with get_db_session() as db:
         db_user = db.query(UserDB).filter(UserDB.id == user.id).first()
         if db_user:

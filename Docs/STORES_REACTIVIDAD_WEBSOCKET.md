@@ -19,7 +19,7 @@ Se ha completado la actualización de los stores de Pinia para que la informaci�
 ### 2. **Stores Actualizados con Suscripciones WebSocket**
 
 #### **UserStore** ✅
-- **Mensajes WebSocket:** `user_status_changed`, `user_status_update`, `user_connection_status`, `player_banned`, `error`
+- **Mensajes WebSocket:** `user_status_changed`, `user_connection_status`, `player_banned`, `error`
 - **Reactividad:** Estado del usuario (connected/disconnected/in_game/banned)
 - **Uso:** Información del usuario actual a través de toda la aplicación
 

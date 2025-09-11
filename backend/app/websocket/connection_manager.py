@@ -1,6 +1,20 @@
 """
 Connection Manager para WebSocket
 Maneja conexiones, rooms de juegos y broadcast de mensajes
+Métodos Pricipales:
+- connect(websocket, user_id, game_id=None) -> connection_id
+- disconnect(connection_id)
+- send_personal_message(connection_id, message)
+- broadcast_to_game(game_id, message, exclude_connection=None)
+- broadcast_to_all(message)
+- join_game_room(connection_id, game_id)
+- leave_game_room(connection_id, game_id)
+- get_game_connections(game_id) -> List[connection_id]
+- get_game_users(game_id) -> List[user_id]
+- is_user_connected(user_id, game_id=None) -> bool
+- get_connection_info(connection_id) -> dict
+- cleanup_after_disconnect()
+- _heartbeat_loop()  # Tarea interna para mantener conexiones vivas
 """
 from typing import Dict, List, Set
 from fastapi import WebSocket
@@ -11,6 +25,8 @@ from datetime import datetime
 import logging
 from enum import Enum
 from app.websocket.messages_types import MessageType, WsMessagePlayerId, WebSocketMessageV2 as WebSocketMessage
+from app.services.user_service import UserService, UserStatus, UserStatusUpdate
+
 
 class WebSocketState(str, Enum):
     CONNECTING = "CONNECTING"
@@ -34,6 +50,7 @@ class ConnectionManager:
         # Heartbeat para mantener conexiones vivas
         self.heartbeat_task = None
         self.logger = logging.getLogger("websocket.connection_manager")
+        print("ConnectionManager inicializado")
 
     def _normalize_message(self, connection_id , message: WebSocketMessage) -> str:
         # Normalizar mensaje: asumimos WebSocketMessage (pydantic). Si falla, usar fallback sencillo.
@@ -45,7 +62,8 @@ class ConnectionManager:
 
         # Asegurar campo type mínimo
         if "type" not in message_dict:
-            message_dict["type"] = "system_message"
+            message_dict["type"] = str(MessageType.SYSTEM_MESSAGE)
+            print(f"Warning: mensaje sin tipo desde {connection_id}: {message_dict}")
 
         message_text = json.dumps(message_dict, default=str)
 
@@ -86,6 +104,8 @@ class ConnectionManager:
         if len(self.active_connections) == 1 and not self.heartbeat_task:
             self.heartbeat_task = asyncio.create_task(self._heartbeat_loop())
         
+        print(f"WebSocket conectado: connection_id={connection_id}, user_id={user_id}, game_id={game_id}")
+
         # Notificar cambio de estado a conectado (se llama desde websocket_endpoint)
         return connection_id
 
@@ -108,13 +128,24 @@ class ConnectionManager:
                                 type=MessageType.PLAYER_LEFT_GAME,
                                 data=user_id), 
                             exclude_connection=connection_id)
-            
+                    try:
+                        # Modificar el estado de usuario a 'disconnected' en la base de datos
+                        new_user_state = UserStatusUpdate(
+                            status=UserStatus.DISCONNECTED,
+                            game_id=game_id,
+                        )
+                        if user_id:
+                            UserService.update_user_status(user_id, new_user_state)
+                    except Exception as e:
+                        self.logger.error(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
+                        print(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
+
             # Limpiar registros
             del self.active_connections[connection_id]
             del self.connection_info[connection_id]
             if connection_id in self.connection_users:
                 del self.connection_users[connection_id]
-        
+        print(f"WebSocket desconectado: connection_id={connection_id}, user_id={user_id}")
         # Retornar user_id para llamadas externas de actualización de estado
         return user_id
         
@@ -145,6 +176,7 @@ class ConnectionManager:
                     type=MessageType.IN_GAME,
                     data=user_id),
                 exclude_connection=connection_id)
+            print(f"Usuario {user_id} se unió a room de juego {game_id}")
 
     async def leave_game_room(self, connection_id: str, game_id: str):
         """Salir de room de juego"""
@@ -160,6 +192,7 @@ class ConnectionManager:
                         type=MessageType.PLAYER_LEFT_GAME,
                         data=user_id),
                 )
+                print(f"Usuario {user_id} salió de room de juego {game_id}")
 
     async def send_personal_message(self, connection_id: str, message: WebSocketMessage):
         if connection_id not in self.active_connections:
@@ -179,6 +212,8 @@ class ConnectionManager:
             # Loguear stacktrace y desconectar en caso de error
             self.logger.exception(f"Error enviando mensaje personal a {connection_id}")
             await self.disconnect(connection_id)
+
+        print(f"Mensaje personal enviado a connection_id={connection_id}")
 
     async def broadcast_to_game(self, game_id: str, message: WebSocketMessage, exclude_connection: str | None = None):
         """Broadcast mensaje a todos en un juego"""
@@ -216,6 +251,8 @@ class ConnectionManager:
         for connection_id in disconnected_connections:
             await self.disconnect(connection_id)
 
+        print(f"Broadcast enviado a game_id={game_id}, excluyendo connection_id={exclude_connection}")
+
     async def broadcast_to_all(self, message: WebSocketMessage):
         """Broadcast mensaje a todas las conexiones activas"""
         message_text = self._normalize_message("broadcast_all", message)
@@ -244,6 +281,8 @@ class ConnectionManager:
         for connection_id in disconnected_connections:
             await self.disconnect(connection_id)
 
+        print("Broadcast enviado a todas las conexiones activas")
+
     def get_game_connections(self, game_id: str) -> List[str]:
         """Obtener lista de conexiones en un juego"""
         return list(self.game_rooms.get(game_id, set()))
@@ -270,6 +309,7 @@ class ConnectionManager:
 
     async def _heartbeat_loop(self):
         """Loop de heartbeat para mantener conexiones vivas"""
+        print("Iniciando heartbeat loop")
         while True:
             try:
                 await asyncio.sleep(30)  # Heartbeat cada 30 segundos
@@ -306,6 +346,7 @@ class ConnectionManager:
                 break
             except Exception as e:
                 print(f"Error en heartbeat loop: {e}")
+        
 
 # Instancia global del connection manager
 connection_manager = ConnectionManager()

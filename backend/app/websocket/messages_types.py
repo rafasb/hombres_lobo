@@ -18,7 +18,6 @@ class MessageType(str, Enum):
     
     # Estados de usuario
     USER_STATUS_CHANGED = "user_status_changed"
-    USER_STATUS_UPDATE = "user_status_update"
     
     # Comandos de juego
     IN_GAME = "in_game"         # Notifica que un usuario está en una partida.
