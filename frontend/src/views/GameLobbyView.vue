@@ -197,12 +197,16 @@ const loadGameData = async () => {
       console.error('❌ Error cargando perfil:', profileResult.error)
     }
     
-    console.log('🎮 2. Cargando datos específicos de partida...')
-    // 2. Cargar datos específicos de partida en los stores
+    console.log('🎮 2. Estableciendo gameId en store (esto auto-inicializará WebSocket)...')
+    // 2. Establecer gameId en el store - esto activará automáticamente la inicialización WebSocket
+    gameStore.setGameId(gameId)
+    
+    console.log('📊 3. Cargando datos específicos de partida...')
+    // 3. Cargar datos específicos de partida en los stores
     await storeLoadGameData(gameId)
     
-    console.log('🔌 3. Estableciendo conexión WebSocket para el juego...')
-    // 3. Establecer conexión WebSocket específica para este juego
+    console.log('🔌 4. Estableciendo conexión WebSocket para el juego...')
+    // 4. Establecer conexión WebSocket específica para este juego
     if (authStore.token) {
       try {
         const wsManager = createConnection(authStore.token)
@@ -215,17 +219,16 @@ const loadGameData = async () => {
       console.warn('⚠️  No hay token de autenticación para WebSocket')
     }
     
-    console.log('🌐 4. Cargando datos del juego desde la API...')
-    // 4. Cargar datos del juego desde la API (información pública)
+    console.log('🌐 5. Cargando datos del juego desde la API...')
+    // 5. Cargar datos del juego desde la API (información pública)
     const gameInfo = await gameService.getGameById(gameId)
     console.log('📋 Información del juego obtenida:', gameInfo)
     
-    // 5. Sincronizar los datos obtenidos con los stores
+    // 6. Sincronizar los datos obtenidos con los stores
     if (gameInfo) {
-      console.log('📊 5. Sincronizando datos con los stores...')
+      console.log('📊 6. Sincronizando datos con los stores...')
       
       // Actualizar gameStore con la información de la partida
-      gameStore.setGameId(gameInfo.game_id)
       gameStore.setGameStatus(gameInfo.status)
       gameStore.setCurrentPhase(`Round ${gameInfo.current_round}`)
       gameStore.setFirstNight(gameInfo.is_first_night)
@@ -242,11 +245,8 @@ const loadGameData = async () => {
       console.log('✅ Datos sincronizados con los stores')
     }
     
-    // TODO: 6. Cargar información privada del jugador actual desde la API
-    // Esta información incluiría el rol, habilidades, etc.
-    // await playerService.getCurrentPlayerInfo(gameId)
-    
     console.log('✅ Datos del juego cargados completamente')
+    console.log('🔄 Las suscripciones WebSocket se han auto-inicializado con el gameId')
   } catch (err) {
     console.error('❌ Error cargando datos del juego:', err)
     error.value = 'Error al cargar los datos del juego'

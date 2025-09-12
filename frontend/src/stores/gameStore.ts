@@ -6,6 +6,7 @@
 // - Proveer getters para acceder a información derivada del estado de la partida
 
 import { defineStore } from 'pinia'
+import { nextTick, watch } from 'vue'
 import { logoutEventBus } from './authStore'
 import { useWebSocketStore } from '../composables/useWebSocketStore'
 import type { PublicPlayerInfo, PlayerStatus } from '../types/game'
@@ -29,6 +30,10 @@ export const useGameStore = defineStore('game', {
     loadingPlayers: false,
     loadingAction: false,
     errorMessage: null as string | null,
+    
+    // Control de inicialización WebSocket
+    _webSocketInitialized: false as boolean,
+    _gameIdWatcher: null as any, // Para almacenar el watcher
     
     // Estado del juego desde WebSocket
     currentPhase: '' as string,
@@ -101,8 +106,119 @@ export const useGameStore = defineStore('game', {
 
   actions: {
     setGameId(id: string) {
+      console.log(`[GameStore] 🎯 setGameId llamado con: "${id}"`)
+      const oldGameId = this.gameId
       this.gameId = id
       this.lastUpdate = new Date()
+      
+      // Auto-inicializar WebSocket cuando se establece un gameId válido
+      if (id && id !== oldGameId) {
+        console.log(`[GameStore] 🚀 Game ID cambió de "${oldGameId}" a "${id}", iniciando auto-inicialización`)
+        this._autoInitializeWebSocketOnGameId()
+      } else if (!id && oldGameId) {
+        console.log(`[GameStore] 🔄 Game ID limpiado, reseteando WebSocket`)
+        this._resetWebSocketInitialization()
+      }
+    },
+
+    /**
+     * Auto-inicializa las suscripciones WebSocket cuando gameId está disponible
+     */
+    _autoInitializeWebSocketOnGameId() {
+      // Usar nextTick para asegurar que el estado esté completamente actualizado
+      nextTick(() => {
+        console.log(`[GameStore] 🔍 Verificando condiciones para auto-inicialización...`)
+        console.log(`  - gameId: "${this.gameId}"`)
+        console.log(`  - _webSocketInitialized: ${this._webSocketInitialized}`)
+        
+        // Solo inicializar si tenemos gameId y no hemos inicializado ya
+        if (this.gameId && !this._webSocketInitialized) {
+          console.log(`[GameStore] ✅ Condiciones cumplidas, iniciando WebSocket...`)
+          
+          try {
+            // Verificar que el WebSocket esté disponible
+            const webSocketStore = useWebSocketStore()
+            
+            if (webSocketStore.hasActiveConnection()) {
+              console.log(`[GameStore] 🔌 WebSocket ya conectado, inicializando suscripciones...`)
+              this.initializeWebSocketSubscriptions()
+              this._webSocketInitialized = true
+            } else {
+              console.log(`[GameStore] ⏳ WebSocket no conectado, configurando watcher...`)
+              this._setupWebSocketWatcher()
+            }
+          } catch (error) {
+            console.error(`[GameStore] ❌ Error en auto-inicialización:`, error)
+          }
+        } else {
+          console.log(`[GameStore] ⏭️  Saltando auto-inicialización (condiciones no cumplidas)`)
+        }
+      })
+    },
+
+    /**
+     * Configura un watcher para cuando WebSocket se conecte
+     */
+    _setupWebSocketWatcher() {
+      // Limpiar watcher anterior si existe
+      if (this._gameIdWatcher) {
+        this._gameIdWatcher()
+        this._gameIdWatcher = null
+      }
+
+      try {
+        const webSocketStore = useWebSocketStore()
+        
+        // Crear watcher que se ejecute cuando WebSocket se conecte
+        this._gameIdWatcher = watch(
+          () => webSocketStore.hasActiveConnection(),
+          (isConnected: boolean) => {
+            console.log(`[GameStore] 🔌 WebSocket estado cambió a: ${isConnected}`)
+            
+            if (isConnected && this.gameId && !this._webSocketInitialized) {
+              console.log(`[GameStore] 🎯 WebSocket conectado y gameId disponible, inicializando suscripciones...`)
+              
+              try {
+                this.initializeWebSocketSubscriptions()
+                this._webSocketInitialized = true
+                
+                // Limpiar watcher ya que ya se inicializó
+                if (this._gameIdWatcher) {
+                  this._gameIdWatcher()
+                  this._gameIdWatcher = null
+                }
+                
+                console.log(`[GameStore] ✅ Suscripciones WebSocket inicializadas exitosamente`)
+              } catch (error) {
+                console.error(`[GameStore] ❌ Error inicializando suscripciones WebSocket:`, error)
+              }
+            }
+          },
+          { immediate: true } // Verificar inmediatamente
+        )
+        
+        console.log(`[GameStore] 👀 Watcher de WebSocket configurado`)
+      } catch (error) {
+        console.error(`[GameStore] ❌ Error configurando watcher de WebSocket:`, error)
+      }
+    },
+
+    /**
+     * Resetea el estado de inicialización WebSocket
+     */
+    _resetWebSocketInitialization() {
+      console.log(`[GameStore] 🔄 Reseteando inicialización WebSocket...`)
+      
+      this._webSocketInitialized = false
+      
+      // Limpiar watcher si existe
+      if (this._gameIdWatcher) {
+        this._gameIdWatcher()
+        this._gameIdWatcher = null
+        console.log(`[GameStore] 🧹 Watcher de WebSocket limpiado`)
+      }
+      
+      console.log(`[GameStore] ✅ Estado de inicialización WebSocket reseteado`)
     },
 
     setPlayers(players: PublicPlayerInfo[]) {
@@ -251,19 +367,22 @@ export const useGameStore = defineStore('game', {
       this.votingTimeRemaining = 0
       this.currentVotes = {}
       
-      // Limpiar final de juego
+      // Limpiar información de final de juego
       this.winningTeam = ''
       this.winners = []
       this.finalRoles = {}
       
-      // Limpiar conexión
+      // Limpiar conexión y jugadores
       this.connectedPlayersCount = 0
       this.totalPlayersCount = 0
       this.livingPlayers = []
       this.deadPlayers = []
       
+      // Resetear inicialización WebSocket
+      this._resetWebSocketInitialization()
+      
       // Limpiar timestamps
-      this.lastUpdate = null
+      this.lastUpdate = new Date()
       this.lastPhaseChange = null
     },
 
