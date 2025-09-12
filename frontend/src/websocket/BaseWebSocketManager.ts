@@ -1,3 +1,8 @@
+// La función principal de BaseWebSocketManager es manejar la lógica común
+// para suscribirse y despachar mensajes WebSocket recibidos del backend.
+// Solo envía respuestas de heartbeat cuando el backend lo solicita.
+// Todas las demás interacciones del usuario (unirse a juego, cambiar estado, etc.)
+// deben hacerse vía llamadas API REST normales, no mediante mensajes WebSocket.
 import { ref } from 'vue'
 import type {
   GameWebSocketMessage,
@@ -64,6 +69,9 @@ export abstract class BaseWebSocketManager {
    * Validates message structure and handles heartbeat responses automatically
    */
   protected dispatchMessage(message: GameWebSocketMessage): void {
+    // Procesa los mensajes que tienen un campo "type"
+    // message está parseado según WebSocketMessage interface
+    console.log(`[BaseWebSocketManager] Dispatching message of type ${message.type}`)
     if (!message || typeof message.type !== 'string') {
       console.warn('[BaseWebSocketManager] Mensaje inválido recibido:', message)
       return
@@ -82,6 +90,7 @@ export abstract class BaseWebSocketManager {
     // Dispatch to registered handlers
     const handlers = this.messageHandlers.get(message.type)
     if (handlers) {
+      console.log(`[BaseWebSocketManager] Dispatching 2 message of type '${message.type}' to ${handlers.length} handlers`)
       handlers.forEach(handler => {
         try {
           // Pass the data payload to the handler, with fallback to undefined for messages without data
@@ -91,6 +100,9 @@ export abstract class BaseWebSocketManager {
           console.error(`Error in message handler for ${message.type}:`, error)
         }
       })
+    }
+    else {
+      console.log(`[BaseWebSocketManager] No handlers registered for message type '${message.type}'`)
     }
   }
 

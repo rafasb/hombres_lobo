@@ -38,14 +38,10 @@ class GameResponsesService:
         player_info = game.get_player_state(player_id)
         is_alive = player_info.is_alive if player_info else True
         
-        # # Determinar si está conectado
-        # is_connected = player_id in game.connected_players
-        
         return PublicPlayerInfo(
             player_id=player_id,
             username=user.username,
             is_alive=is_alive,
-            # is_connected=is_connected,
             user_status=user.status
         )
     

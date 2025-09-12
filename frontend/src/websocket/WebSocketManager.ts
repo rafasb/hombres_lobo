@@ -95,11 +95,13 @@ export class WebSocketManager extends BaseWebSocketManager {
         }
 
         this.ws.onmessage = (event) => {
+          // Solo procesar mensajes que tengan un campo "type"
           try {
             const parsed = JSON.parse(event.data)
             if (parsed && typeof parsed.type === 'string') {
               const message = parsed as GameWebSocketMessage
               this.dispatchMessage(message)
+              console.log('[Websocket] Received WebSocket message:', message)
             } else {
               console.warn('Received WebSocket message without type:', parsed)
             }

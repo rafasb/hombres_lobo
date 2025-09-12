@@ -1,1 +1,0 @@
-../../../backend/app/websocket/copilot-ws-messages.md

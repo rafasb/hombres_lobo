@@ -49,6 +49,7 @@ class GameResponse(BaseModel):
     players: List[PublicPlayerInfo]
     eliminated_players: List[str]  # IDs de jugadores eliminados
     connected_players_count: int
+    connected_players_count: int  # Jugadores en la partida
     
     # Información temporal
     created_at: Optional[datetime] = None

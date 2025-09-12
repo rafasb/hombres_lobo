@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import asyncio
 from app.models.game_and_player import Game, GameStatus, PlayerInfo
 from app.services.game_phases_service import GamePhaseController, GamePhase, phase_manager
+from app.services.user_service import UserService
+from app.models.user import UserStatus
 
 class GameState:
     """Wrapper de servicios para Game - NO duplica datos.
@@ -330,34 +332,76 @@ class GameStateManager:
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error actualizando estado de conexión del jugador {user_id}: {e}")
+            print(f"[GameStateManager] Error actualizando estado de conexión del jugador {user_id}: {e}")
     
-    def _update_player_connection_state(self, game_state: 'GameState', user_id: str, connected: bool):
+    async def update_connected_players_from_list(self, game_id: str, connected_user_ids: List[str]):
+        """
+        Actualiza connected_players de un juego específico con una lista completa de usuarios conectados
+        
+        Args:
+            game_id: ID del juego
+            connected_user_ids: Lista de IDs de usuarios que deberían estar conectados
+        """
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            game_state = self.active_games.get(game_id)
+            if not game_state:
+                logger.warning(f"Juego {game_id} no encontrado en juegos activos")
+                return
+            
+            # Actualizar la lista completa de connected_players
+            game_state.game_data.connected_players = list(connected_user_ids)
+            
+            # Guardar cambios
+            game_state._save_changes()
+            
+            logger.info(f"Actualizada lista completa de connected_players para juego {game_id}: {connected_user_ids}")
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error actualizando connected_players para juego {game_id}: {e}")
+            print(f"[GameStateManager] Error actualizando connected_players para juego {game_id}: {e}")
+    
+    def _update_player_connection_state(self, game_state: 'GameState', user_id: str, connected: bool|None):
         """
         Actualiza el estado de conexión de un jugador en un juego específico
         
         Args:
             game_state: Estado del juego
             user_id: ID del usuario
-            connected: True para agregar, False para eliminar
+            connected: True para agregar, False para eliminar, None para leer el estado actual
         """
-        if connected:
+        if connected is True:
             # Agregar usuario a connected_players si no está ya
             if user_id not in game_state.game_data.connected_players:
                 game_state.game_data.connected_players.append(user_id)
-        else:
+        elif connected is False:
             # Eliminar usuario de connected_players si está presente
             if user_id in game_state.game_data.connected_players:
                 game_state.game_data.connected_players.remove(user_id)
-        
+        elif connected is None:
+            # Leer el estado actual de conexión
+            user_info = UserService.get_user(user_id)
+            if user_info and user_info.status == UserStatus.IN_GAME:
+                game_state.game_data.connected_players.append(user_id)
+            elif user_id in game_state.game_data.connected_players:
+                game_state.game_data.connected_players.remove(user_id)
+
+            return False
+
         # Guardar cambios
         game_state._save_changes()
+    
     
     async def _cleanup_loop(self):
         """Loop de limpieza para juegos inactivos"""
         while True:
             try:
                 await asyncio.sleep(300)  # Verificar cada 5 minutos
-                
+                print("🧹 Ejecutando limpieza de juegos inactivos...")
                 current_time = datetime.now()
                 inactive_games = []
                 

@@ -110,7 +110,7 @@ class Game(GameBase):
     # Otros campos: historial, votos, etc.
     # Nuevos campos
     eliminated_players: List[str] = Field(default_factory=list)  # IDs de jugadores eliminados
-    connected_players: List[str] = Field(default_factory=list)  # IDs de jugadores conectados
+    connected_players: List[str] = Field(default_factory=list)  # IDs de jugadores activos en una partida
     votes: Dict[str, str] = Field(default_factory=dict)  # Votos: voter_id -> target_id
 
     model_config = ConfigDict(from_attributes=True)

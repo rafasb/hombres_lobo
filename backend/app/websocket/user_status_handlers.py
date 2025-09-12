@@ -125,7 +125,7 @@ class UserStatusHandler:
         """Actualizar automáticamente el estado a 'connected' cuando sale de una partida"""
         try:
             # Actualizar estado de 'in_game' de vuelta a 'connected'
-            status_update = UserStatusUpdate(status=UserStatus.CONNECTED)
+            status_update = UserStatusUpdate(status=UserStatus.DISCONNECTED)
             updated_user, old_status = UserService.update_user_status(user_id, status_update)
             
             if updated_user and old_status:

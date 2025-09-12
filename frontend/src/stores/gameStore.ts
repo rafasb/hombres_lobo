@@ -310,6 +310,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a cambios de fase
       subscribeToMessage('phase_changed', (data) => {
+        console.log('[GameStore] Mensaje phase_changed recibido:', data)
         if (data && typeof data === 'string') {
           console.log('[GameStore] Fase cambiada:', data)
           this.setCurrentPhase(data)
@@ -321,6 +322,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a timer de fase
       subscribeToMessage('phase_timer', (data) => {
+        console.log('[GameStore] Mensaje phase_timer recibido:', data)
         if (data && typeof data === 'number') {
           this.setTimeRemaining(data)
         } else if (data && typeof data === 'object' && 'remainingSeconds' in data) {
@@ -330,6 +332,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a inicio de juego
       subscribeToMessage('game_started', (data) => {
+        console.log('[GameStore] Mensaje game_started recibido:', data)
         if (data) {
           console.log('[GameStore] Juego iniciado:', data)
           this.setGameStatus('started')
@@ -350,6 +353,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a final de juego
       subscribeToMessage('game_ended', (data) => {
+        console.log('[GameStore] Mensaje game_ended recibido:', data)
         if (data) {
           console.log('[GameStore] Juego terminado:', data)
           this.setGameEnded(data.winning_team, data.winners, data.final_roles)
@@ -358,6 +362,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a reinicio de juego
       subscribeToMessage('game_restarted', (data) => {
+        console.log('[GameStore] Mensaje game_restarted recibido:', data)
         console.log('[GameStore] Juego reiniciado:', data)
         this.clear()
         this.setGameStatus('waiting')
@@ -365,6 +370,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscripciones de votación
       subscribeToMessage('voting_started', (data) => {
+        console.log('[GameStore] Mensaje voting_started recibido:', data)
         if (data) {
           console.log('[GameStore] Votación iniciada:', data)
           this.startVoting(
@@ -377,6 +383,7 @@ export const useGameStore = defineStore('game', {
       })
 
       subscribeToMessage('voting_ended', (data) => {
+        console.log('[GameStore] Mensaje voting_ended recibido:', data)
         if (data) {
           console.log('[GameStore] Votación terminada:', data)
           this.endVoting(data.results, data.eliminated_player)
@@ -384,6 +391,7 @@ export const useGameStore = defineStore('game', {
       })
 
       subscribeToMessage('vote_cast', (data) => {
+        console.log('[GameStore] Mensaje vote_cast recibido:', data)
         if (data) {
           console.log('[GameStore] Voto emitido:', data)
           // Aquí podríamos actualizar un contador de votos en tiempo real si fuera necesario
@@ -391,6 +399,7 @@ export const useGameStore = defineStore('game', {
       })
 
       subscribeToMessage('voting_results', (data) => {
+        console.log('[GameStore] Mensaje voting_results recibido:', data)
         if (data && data.results) {
           console.log('[GameStore] Resultados de votación:', data)
           this.currentVotes = data.results
@@ -399,6 +408,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a estado de conexión del juego
       subscribeToMessage('game_connection_state', (data) => {
+        console.log('[GameStore] Mensaje game_connection_state recibido:', data)
         if (data) {
           console.log('[GameStore] Estado de conexión del juego:', data)
           this.setConnectionInfo(data.connectedPlayersCount, data.totalPlayersCount)
@@ -422,6 +432,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a mensajes de error relacionados con el juego
       subscribeToMessage('error', (data) => {
+        console.log('[GameStore] Mensaje error recibido:', data)
         if (data && data.error_code) {
           console.error('[GameStore] Error recibido:', data)
           

@@ -111,7 +111,7 @@ class ConnectionManager:
         if len(self.active_connections) == 1 and not self.heartbeat_task:
             self.heartbeat_task = asyncio.create_task(self._heartbeat_loop())
         
-        print(f"WebSocket conectado: connection_id={connection_id}, user_id={user_id}, game_id={game_id}")
+        print(f"[WEBSOCKET] WebSocket conectado: connection_id={connection_id}, user_id={user_id}, game_id={game_id}")
 
         # Notificar cambio de estado a conectado (se llama desde websocket_endpoint)
         return connection_id
@@ -129,6 +129,7 @@ class ConnectionManager:
                     
                     # Notificar a otros en la room (user_id ya fue obtenido arriba)
                     if user_id:
+                        
                         await self.broadcast_to_game(
                             game_id, 
                             WsMessagePlayerId(
@@ -143,9 +144,11 @@ class ConnectionManager:
                         )
                         if user_id:
                             UserService.update_user_status(user_id, new_user_state)
+                        
+                        
                     except Exception as e:
                         self.logger.error(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
-                        print(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
+                        print(f"[WEBSOCKET] Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
 
             # Limpiar registros
             del self.active_connections[connection_id]
@@ -174,9 +177,24 @@ class ConnectionManager:
         if connection_id in self.connection_info:
             self.connection_info[connection_id]["game_id"] = game_id
         
-        # Notificar a otros en la room
+        # Actualizar estado del usuario a IN_GAME cuando se une a una partida
         user_id = self.connection_users.get(connection_id)
         if user_id:
+            try:
+                new_user_state = UserStatusUpdate(
+                    status=UserStatus.IN_GAME,
+                    game_id=game_id,
+                )
+                UserService.update_user_status(user_id, new_user_state)
+                print(f"✅ Usuario {user_id} actualizado a estado IN_GAME en partida {game_id}")
+            except Exception as e:
+                self.logger.error(f"Error actualizando estado de usuario {user_id} a IN_GAME: {e}")
+                print(f"❌ Error actualizando estado de usuario {user_id} a IN_GAME: {e}")
+            
+            # Sincronizar connected_players con el estado real
+            await self.sync_connected_players_with_game_state(game_id)
+            
+            # Notificar a otros en la room
             await self.broadcast_to_game(
                 game_id, 
                 WsMessagePlayerId(
@@ -190,9 +208,24 @@ class ConnectionManager:
         if game_id in self.game_rooms and connection_id in self.game_rooms[game_id]:
             self.game_rooms[game_id].remove(connection_id)
             
-            # Notificar salida
+            # Actualizar estado del usuario a DISCONNECTED cuando abandona la partida
             user_id = self.connection_users.get(connection_id)
             if user_id:
+                try:
+                    new_user_state = UserStatusUpdate(
+                        status=UserStatus.DISCONNECTED,
+                        game_id=None,  # Limpiar game_id al abandonar
+                    )
+                    UserService.update_user_status(user_id, new_user_state)
+                    print(f"✅ Usuario {user_id} actualizado a estado DISCONNECTED al abandonar partida {game_id}")
+                except Exception as e:
+                    self.logger.error(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
+                    print(f"❌ Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
+                
+                # Sincronizar connected_players con el estado real
+                await self.sync_connected_players_with_game_state(game_id)
+                
+                # Notificar salida
                 await self.broadcast_to_game(
                     game_id,
                     WsMessagePlayerId(
@@ -220,7 +253,7 @@ class ConnectionManager:
             self.logger.exception(f"Error enviando mensaje personal a {connection_id}")
             await self.disconnect(connection_id)
 
-        print(f"Mensaje personal enviado a connection_id={connection_id}")
+        print(f"[WEBSOCKET] Mensaje personal enviado a connection_id={connection_id} tipo {message.type}. Contenido completo: {message_text}")
 
     async def broadcast_to_game(self, game_id: str, message: WebSocketMessage, exclude_connection: str | None = None):
         """Broadcast mensaje a todos en un juego"""
@@ -313,6 +346,26 @@ class ConnectionManager:
                     return conn_info.get("game_id") == game_id
                 return True
         return False
+
+    async def sync_connected_players_with_game_state(self, game_id: str):
+        """
+        Sincroniza connected_players del objeto Game con el estado real del connection_manager
+        """
+        try:
+            from app.services.game_state_service import game_state_manager
+            
+            # Obtener usuarios realmente conectados desde game_rooms
+            actual_connected_users = self.get_game_users(game_id)
+            
+            # Actualizar connected_players en el GameState
+            await game_state_manager.update_connected_players_from_list(game_id, actual_connected_users)
+            
+            print(f"🔄 Sincronizados {len(actual_connected_users)} jugadores conectados en partida {game_id}")
+            self.logger.info(f"Sincronizados connected_players para partida {game_id}: {actual_connected_users}")
+            
+        except Exception as e:
+            self.logger.error(f"Error sincronizando connected_players para partida {game_id}: {e}")
+            print(f"❌ Error sincronizando connected_players para partida {game_id}: {e}")
 
     async def _heartbeat_loop(self):
         """Loop de heartbeat para mantener conexiones vivas"""

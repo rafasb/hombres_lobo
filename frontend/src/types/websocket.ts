@@ -170,6 +170,7 @@ export type WebSocketMessageType =
  * en backend/app/websocket/messages_types.py
  */
 export interface WebSocketMessageMap {
+  // Aquí se relaciona el TIPO de mensaje con el contenido de DATA
   // Conexión y estado de usuario (WsPlayerConnectionMessage)
   player_connected: { user_id: string; username: string }
   player_disconnected: { user_id: string; username: string }
@@ -197,7 +198,7 @@ export interface WebSocketMessageMap {
       player_id: string; 
       username: string; 
       is_alive: boolean; 
-      is_connected: boolean; 
+      // is_connected: boolean; ELIMINADO EN BACKEND
       user_status: string; 
     }>;
     eliminated_players: string[];
