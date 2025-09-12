@@ -1,0 +1,10 @@
+graph TB
+    A[GameLobbyView se carga] --> B[loadGameData ejecuta]
+    B --> C[gameStore.setGameId llamado]
+    C --> D{WebSocket conectado?}
+    D -->|Sí| E[Inicializar suscripciones inmediatamente]
+    D -->|No| F[Configurar watcher]
+    F --> G[Esperar conexión WebSocket]
+    G --> H[Auto-inicializar cuando se conecte]
+    E --> I[Suscripciones activas]
+    H --> I

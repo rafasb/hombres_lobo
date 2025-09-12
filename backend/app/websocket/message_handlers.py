@@ -171,6 +171,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
         )
 
         # Enviar datos de la partida usando GameResponse
+        # ESTE (GAME_STATUS) ES EL ÚNICO MENSAJE QUE ESTÁ BIEN FORMATEADO EN LOS ENVÍOS, 
+        # JUNTO CON EL MENSAJE DE HEARTBEAT. 
+        # TODO: Revisar el formato del resto de mensajes, idealmente migrar a WebSocketMessageV2
+        # y contener la información dentro de data.
         try:
             game_response = GameResponsesService.get_game_response_by_id(game_id)
             if game_response:
