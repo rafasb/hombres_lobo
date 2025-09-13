@@ -112,7 +112,7 @@ class WebSocketMessageV2(BaseWebSocketMessage):
     """Mensaje base para WebSocket versión 2"""
     type: MessageType           # Tipo de mensaje
     timestamp: datetime = Field(default_factory=datetime.now)
-    data: Any
+    data: Any # Objeto con el contenido del mensaje (específico por tipo de mensaje)
     model_config = ConfigDict(extra="allow", from_attributes=True)  # Permitir campos adicionales
 
 # Mensajes específicos que heredan de WebSocketMessageV2

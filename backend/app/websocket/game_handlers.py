@@ -162,35 +162,7 @@ class GameHandler:
         
     async def _send_game_status(self, game_id: str, game_state: GameState):
         """Enviar estado del juego a todos los conectados"""
-        # from app.database import load_user
         
-        # # Obtener información completa de jugadores
-        # players_info = []
-        # if game_state.game_data and game_state.game_data.players:
-        #     for player_id in game_state.game_data.player_ids:
-        #         user = load_user(player_id)
-        #         if user:
-        #             players_info.append({
-        #                 "id": user.id,
-        #                 "name": user.username,
-        #                 "is_alive": player_id not in game_state.eliminated_players,
-        #                 "is_connected": player_id in game_state.connected_players,
-        #                 "role": game_state.game_data.players[player_id].role if player_id in game_state.game_data.players else None
-        #             })
-        
-        # status_message = {
-        #     "type": MessageType.SYSTEM_MESSAGE.value,
-        #     "message": f"Estado del juego: {game_state.phase.value}",
-        #     "data": {
-        #         "game_id": game_id,
-        #         "phase": game_state.phase.value,
-        #         "players": players_info,
-        #         "connected_players": list(game_state.connected_players),
-        #         "living_players": game_state.get_living_players(),
-        #         "dead_players": game_state.get_dead_players(),
-        #         "time_remaining": game_state.get_phase_time_remaining()
-        #     }
-        # }
         status_message = self.build_game_status_message(game_id, game_state)
         # TODO: Cambiar a WebSocketMessageGameStatus si es posible
 

@@ -1,0 +1,67 @@
+---
+references:
+  - "File: /backend/app/websocket/game_handlers.py"
+  - "File: /.github/copilot-instructions.md"
+generationTime: 2025-09-12T22:31:53.720Z
+---
+sequenceDiagram
+    participant Client as Game Client
+    participant CM as Connection Manager
+    participant GH as Game Handler
+    participant GSM as Game State Manager
+    participant PC as Phase Controller
+    participant VS as Voting Service
+    participant USH as User Status Handler
+
+    Note over Client,USH: Game Auto-Start Flow
+    Client->>CM: Player joins game
+    CM->>GH: Check if max players reached
+    GH->>GSM: Get game state
+    GSM-->>GH: Game state with connected players
+    
+    alt Max players reached
+        GH->>GH: _auto_start_game()
+        GH->>GSM: start_game_phases()
+        GH->>USH: auto_update_status_on_game_start()
+        
+        Note over GH,PC: Setup Phase Callbacks
+        GH->>PC: add_phase_change_callback()
+        GH->>PC: add_phase_timer_callback()
+        
+        GH->>CM: broadcast GAME_STARTED message
+        CM->>Client: Game started notification
+    end
+
+    Note over Client,USH: Phase Management Flow
+    PC->>GH: _on_phase_changed(old_phase, new_phase)
+    GH->>GSM: get_or_create_game_state()
+    GH->>PC: get_phase_info()
+    GH->>CM: broadcast WsPhaseChangedMessage
+    CM->>Client: Phase change notification
+    
+    alt new_phase == VOTING
+        GH->>GH: _start_day_voting()
+        GH->>VS: create_voting_session()
+        GH->>VS: start_voting_session()
+        GH->>CM: broadcast WsVotingStartedMessage
+        CM->>Client: Voting started notification
+    end
+
+    Note over Client,USH: Timer Updates
+    loop Phase Duration
+        PC->>GH: _on_phase_timer(phase, time_remaining)
+        GH->>CM: broadcast WsTimerMessage
+        CM->>Client: Timer update
+    end
+
+    Note over Client,USH: Game Status Broadcasting
+    GH->>GH: build_game_status_message()
+    GH->>CM: broadcast WsMessageGameStatus
+    CM->>Client: Game status update
+
+    Note over Client,USH: Error Handling
+    alt Error occurs
+        GH->>GH: _send_error()
+        GH->>CM: send_personal_message(error)
+        CM->>Client: Error notification
+    end

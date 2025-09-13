@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes_games, routes_admin, routes_users, routes_auth, routes_players_voting, routes_warewolfs, routes_special_roles, routes_sheriff, routes_hunter, routes_witch, routes_wild_child, routes_cupid, routes_game_flow, routes_game
-from app.websocket.message_handlers import websocket_endpoint
+from app.websocket.websocket_endpoint import websocket_endpoint
 
 app = FastAPI(
     title="Hombres Lobo API",

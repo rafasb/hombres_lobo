@@ -1,6 +1,8 @@
 """
 Handlers para gestión de estado de usuarios via WebSocket
 Maneja cambios de estado automáticos y notificaciones en tiempo real
+
+TODO: No conviene manegar estados de usuarios fuera de la partida.
 """
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages_types import (
@@ -34,7 +36,7 @@ class UserStatusHandler:
 
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
-                await self.broadcast_status_change(
+                await self.broadcast_status_change_to_room(
                     user_id,
                     old_status.value,
                     "in_game"
@@ -65,7 +67,7 @@ class UserStatusHandler:
 
                 if updated_user and old_status:
                     # Notificar cambio de estado a otros usuarios
-                    await self.broadcast_status_change(
+                    await self.broadcast_status_change_to_room(
                         user_id,
                         old_status.value,
                         "active"
@@ -105,7 +107,7 @@ class UserStatusHandler:
             
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
-                await self.broadcast_status_change(
+                await self.broadcast_status_change_to_room(
                     user_id, 
                     old_status.value, 
                     "in_game"
@@ -130,7 +132,7 @@ class UserStatusHandler:
             
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
-                await self.broadcast_status_change(
+                await self.broadcast_status_change_to_room(
                     user_id, 
                     old_status.value, 
                     "connected"
@@ -155,7 +157,7 @@ class UserStatusHandler:
                 
                 if updated_user and old_status:
                     # Notificar cambio de estado a otros usuarios
-                    await self.broadcast_status_change(
+                    await self.broadcast_status_change_to_room(
                         user_id, 
                         old_status.value, 
                         "in_game"
@@ -176,7 +178,7 @@ class UserStatusHandler:
             
             if updated_user and old_status:
                 # Notificar cambio de estado a otros usuarios
-                await self.broadcast_status_change(
+                await self.broadcast_status_change_to_room(
                     user_id, 
                     old_status.value, 
                     "in_game"
@@ -188,8 +190,9 @@ class UserStatusHandler:
         except Exception as e:
             logger.error(f"Error actualizando estado automático al morir jugador {user_id}: {e}")
     
-    async def broadcast_status_change(self, user_id: str, old_status: str, new_status: str, exclude_connection: str | None = None):
+    async def broadcast_status_change_to_room(self, user_id: str, old_status: str, new_status: str, exclude_connection: str | None = None):
         """Notificar cambio de estado a todos los usuarios conectados"""
+        # TODO: No actualiza la información de los jugadores, solo estado de usuario.
         try:
             # Crear mensaje de notificación
             status_message = WsUserStatusChangedMessage(
@@ -200,10 +203,10 @@ class UserStatusHandler:
             )
             
             # Enviar a todas las conexiones activas (excluyendo la especificada)
-            for conn_id, websocket in connection_manager.active_connections.items():
-                if exclude_connection and conn_id == exclude_connection:
-                    continue
-                
+            # TODO: Solo enviar a la room donde estaba registrado el usuario.
+            conn_id = connection_manager.get_connection_id_from_user_id(user_id)
+            
+            if exclude_connection and conn_id and conn_id != exclude_connection:
                 try:
                     await connection_manager.send_personal_message(conn_id, status_message)
                 except Exception as e:

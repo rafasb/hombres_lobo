@@ -26,7 +26,7 @@ import logging
 from enum import Enum
 from app.websocket.messages_types import MessageType, WsMessagePlayerId, WebSocketMessageV2 as WebSocketMessage
 from app.services.user_service import UserService, UserStatus, UserStatusUpdate
-
+from app.services.game_state_service import game_state_manager
 
 class WebSocketState(str, Enum):
     CONNECTING = "CONNECTING"
@@ -122,6 +122,16 @@ class ConnectionManager:
         if connection_id in self.active_connections:
             # Obtener user_id antes de limpiar
             user_id = self.connection_users.get(connection_id)
+            try:
+                # Modificar el estado de usuario a 'disconnected' en la base de datos
+                new_user_state = UserStatusUpdate(
+                    status=UserStatus.DISCONNECTED
+                )
+                if user_id:
+                    UserService.update_user_status(user_id, new_user_state)
+            except Exception as e:
+                self.logger.error(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
+                print(f"[WEBSOCKET] Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
             # Remover de rooms de juego
             for game_id, connections in self.game_rooms.items():
                 if connection_id in connections:
@@ -129,26 +139,12 @@ class ConnectionManager:
                     
                     # Notificar a otros en la room (user_id ya fue obtenido arriba)
                     if user_id:
-                        
                         await self.broadcast_to_game(
                             game_id, 
                             WsMessagePlayerId(
-                                type=MessageType.PLAYER_LEFT_GAME,
+                                type=MessageType.PLAYER_DISCONNECTED,
                                 data=user_id), 
-                            exclude_connection=connection_id)
-                    try:
-                        # Modificar el estado de usuario a 'disconnected' en la base de datos
-                        new_user_state = UserStatusUpdate(
-                            status=UserStatus.DISCONNECTED,
-                            game_id=game_id,
-                        )
-                        if user_id:
-                            UserService.update_user_status(user_id, new_user_state)
-                        
-                        
-                    except Exception as e:
-                        self.logger.error(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
-                        print(f"[WEBSOCKET] Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
+                            exclude_connection=connection_id)        
 
             # Limpiar registros
             del self.active_connections[connection_id]
@@ -198,7 +194,7 @@ class ConnectionManager:
             await self.broadcast_to_game(
                 game_id, 
                 WsMessagePlayerId(
-                    type=MessageType.IN_GAME,
+                    type=MessageType.PLAYER_CONNECTED,
                     data=user_id),
                 exclude_connection=connection_id)
             print(f"Usuario {user_id} se unió a room de juego {game_id}")
@@ -229,7 +225,7 @@ class ConnectionManager:
                 await self.broadcast_to_game(
                     game_id,
                     WsMessagePlayerId(
-                        type=MessageType.PLAYER_LEFT_GAME,
+                        type=MessageType.PLAYER_DISCONNECTED,
                         data=user_id),
                 )
                 print(f"Usuario {user_id} salió de room de juego {game_id}")
@@ -238,6 +234,7 @@ class ConnectionManager:
         if connection_id not in self.active_connections:
             return
         websocket = self.active_connections.get(connection_id)
+        message_text=''
         try:
             if not websocket or websocket.client_state.name != "CONNECTED":
                 self.logger.debug(f"WebSocket {connection_id} no está conectado, removiendo de conexiones activas")
@@ -336,6 +333,13 @@ class ConnectionManager:
     def get_connection_info(self, connection_id: str) -> dict:
         """Obtener información de una conexión"""
         return self.connection_info.get(connection_id, {})
+    
+    def get_connection_id_from_user_id(self, user_id: str) -> str | None:
+        """Obtener connection_id a partir de user_id (asume un solo connection_id por user_id)"""
+        for conn_id, conn_user_id in self.connection_users.items():
+            if conn_user_id == user_id:
+                return conn_id
+        return None
 
     def is_user_connected(self, user_id: str, game_id: str | None = None) -> bool:
         """Verificar si un usuario está conectado"""
@@ -352,7 +356,6 @@ class ConnectionManager:
         Sincroniza connected_players del objeto Game con el estado real del connection_manager
         """
         try:
-            from app.services.game_state_service import game_state_manager
             
             # Obtener usuarios realmente conectados desde game_rooms
             actual_connected_users = self.get_game_users(game_id)
