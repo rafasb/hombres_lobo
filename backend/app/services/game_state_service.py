@@ -267,8 +267,8 @@ class GameStateManager:
         if not game_data:
             # Si no existe en BD, crear uno básico para desarrollo
             game_data = Game(
-                id=game_id,
                 name=f"Juego {game_id}",
+                id=game_id,
                 creator_id="temp",
                 max_players=10,
                 player_ids=[],        # inicializar lista de ids

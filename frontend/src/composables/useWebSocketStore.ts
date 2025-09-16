@@ -117,13 +117,6 @@ export const WebSocketMessageCategories = {
     'user_connection_status'
   ] as const,
 
-  // Mensajes relacionados con conexión de jugadores
-  PLAYER_CONNECTION: [
-    'player_disconnected', 
-    'player_banned',
-    'player_left_game'
-  ] as const,
-
   // Mensajes relacionados con el estado del juego
   GAME_STATE: [
     'game_started',
@@ -173,7 +166,6 @@ export const WebSocketMessageCategories = {
  * Utility para obtener tipos de mensajes por categoría
  */
 export type UserStatusMessages = typeof WebSocketMessageCategories.USER_STATUS[number]
-export type PlayerConnectionMessages = typeof WebSocketMessageCategories.PLAYER_CONNECTION[number]
 export type GameStateMessages = typeof WebSocketMessageCategories.GAME_STATE[number]
 export type GamePhaseMessages = typeof WebSocketMessageCategories.GAME_PHASES[number]
 export type VotingMessages = typeof WebSocketMessageCategories.VOTING[number]

@@ -98,15 +98,9 @@ export const useUserStore = defineStore('user', {
         }
       })
 
-      // Suscribirse a mensajes de baneado
-      subscribeToMessage('player_banned', (data) => {
-        if (data && this.user && data.user_id === this.user.id) {
-          console.warn('[UserStore] Usuario baneado:', data)
-          this.setStatus('banned')
-          this.setError('Tu cuenta ha sido suspendida')
-        }
-      })
-
+      // NOTA: La funcionalidad de usuario baneado ahora se maneja 
+      // a través del estado general del juego en lugar de mensajes específicos
+      
       // Suscribirse a mensajes de error para manejar errores relacionados con el usuario
       subscribeToMessage('error', (data) => {
         if (data && data.error_code) {

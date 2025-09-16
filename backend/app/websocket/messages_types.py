@@ -11,16 +11,11 @@ from app.services.voting_service import VoteType
 from app.services.game_state_service import GamePhase
 
 class MessageType(str, Enum):
-    # Conexión
-    PLAYER_DISCONNECTED = "player_disconnected" # Notifica que un usuario se desconecta de la aplicación
-    PLAYER_BANNED = "player_banned"  # Notifica que un usuario esta baneado
-    
     # Estados de usuario
     USER_STATUS_CHANGED = "user_status_changed"
     
     # Comandos de juego
     IN_GAME = "in_game"         # Notifica que un usuario está en una partida.
-    PLAYER_LEFT_GAME = "player_left_game"  # Notifica que un usuario se desvincula de una partida
     RESTART_GAME = "restart_game"
     GAME_STATUS = "game_status"
     
@@ -91,8 +86,6 @@ class SystemMessageType(str, Enum):
     CONNECTED_TO_GAME = "connected_to_game"
     DISCONNECTED_FROM_GAME = "disconnected_from_game"
     PLAYER_JOINED = "player_joined"
-    PLAYER_LEFT = "player_left"
-    PLAYER_BANNED = "player_banned"
     GAME_STARTED = "game_started"
     GAME_ENDED = "game_ended"
     PHASE_CHANGED = "phase_changed"

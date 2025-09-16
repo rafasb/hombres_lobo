@@ -5,9 +5,6 @@
 
 export type WebSocketMessageType =
   // Conexión y estado de usuario
-  | 'player_disconnected'
-  | 'player_banned'
-  | 'player_left_game'
   | 'user_status_changed'
   | 'user_connection_status'
   // Comandos de juego
@@ -104,7 +101,6 @@ export type SystemMessageType =
   | 'disconnected_from_game'
   | 'player_joined'
   | 'player_left'
-  | 'player_banned'
   | 'game_started'
   | 'game_ended'
   | 'phase_changed'
@@ -171,9 +167,6 @@ export type PlayerConnectionStatus = PlayerStatus
 export interface WebSocketMessageMap {
   // Aquí se relaciona el TIPO de mensaje con el contenido de DATA
   // Conexión y estado de usuario (WsPlayerConnectionMessage)
-  player_disconnected: { user_id: string; username: string }
-  player_banned: { user_id: string; username: string }
-  player_left_game: { playerId: string }
   user_status_changed: { user_id: string; old_status: string; new_status: string }
   user_connection_status: { isConnected: boolean; isInGame: boolean }
 
