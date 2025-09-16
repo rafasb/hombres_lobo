@@ -55,7 +55,7 @@ export const useGameStore = defineStore('game', {
     finalRoles: {} as Record<string, string>, // user_id -> role
     
     // Conexión y jugadores
-    connectedPlayersCount: 0 as number,
+    enrolledPlayersCount: 0 as number,
     totalPlayersCount: 0 as number,
     livingPlayers: [] as string[],
     deadPlayers: [] as string[],
@@ -100,7 +100,7 @@ export const useGameStore = defineStore('game', {
     alivePlayersCount: (state) => state.livingPlayers.length,
     deadPlayersCount: (state) => state.deadPlayers.length,
     connectionRate: (state) => state.totalPlayersCount > 0 
-      ? state.connectedPlayersCount / state.totalPlayersCount 
+      ? state.enrolledPlayersCount / state.totalPlayersCount 
       : 0,
   },
 
@@ -322,7 +322,7 @@ export const useGameStore = defineStore('game', {
 
     // Gestión de conexión y jugadores
     setConnectionInfo(connectedCount: number, totalCount: number) {
-      this.connectedPlayersCount = connectedCount
+      this.enrolledPlayersCount = connectedCount
       this.totalPlayersCount = totalCount
       this.lastUpdate = new Date()
     },
@@ -373,7 +373,7 @@ export const useGameStore = defineStore('game', {
       this.finalRoles = {}
       
       // Limpiar conexión y jugadores
-      this.connectedPlayersCount = 0
+      this.enrolledPlayersCount = 0
       this.totalPlayersCount = 0
       this.livingPlayers = []
       this.deadPlayers = []
@@ -395,6 +395,7 @@ export const useGameStore = defineStore('game', {
 
       // Suscribirse a estado del juego
       subscribeToMessage('game_status', (data) => {
+        // Aquí se realizan las llamadas a las acciones para actualizar el estado del juego
         if (data) {
           console.log('[GameStore] Estado del juego recibido:', data)
           

@@ -115,11 +115,15 @@ class WebSocketMessageV2(BaseWebSocketMessage):
     data: Any # Objeto con el contenido del mensaje (específico por tipo de mensaje)
     model_config = ConfigDict(extra="allow", from_attributes=True)  # Permitir campos adicionales
 
+class UserIdName(BaseModel):
+    id: str = Field(default="")
+    name: str = Field(default="")
+
 # Mensajes específicos que heredan de WebSocketMessageV2
 class WsMessagePlayerId(WebSocketMessageV2):
     """Mensaje de identidad de jugador websocket version 2
     Requiere especificar el tipo de mensaje y el ID del jugador en data"""
-    data: str
+    data: UserIdName = Field(default_factory=UserIdName)
 
 class WsMessageError(WebSocketMessageV2):
     """Mensaje de error websocket version 2"""

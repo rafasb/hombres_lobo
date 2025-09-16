@@ -141,7 +141,7 @@ const gameData = computed(() => ({
   gameId: gameStore.gameId,
   status: gameStore.gameStatus,
   players: gameStore.players,
-  connectedPlayers: gameStore.connectedPlayersCount,
+  enrolledPlayers: gameStore.enrolledPlayersCount,
   totalPlayers: gameStore.totalPlayersCount,
   phase: gameStore.currentPhase,
   isFirstNight: gameStore.isFirstNight

@@ -354,7 +354,7 @@ const {
 // Computed reactivos basados en los stores de Pinia
 const inGameCount = computed(() => {
   // Usar gameStore para contadores
-  if (gameStore.connectedPlayersCount > 0) {
+  if (gameStore.enrolledPlayersCount > 0) {
     // Aproximar jugadores in_game desde livingPlayers si no hay info directa
     return gameStore.livingPlayers.length
   }

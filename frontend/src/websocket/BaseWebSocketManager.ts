@@ -102,7 +102,8 @@ export abstract class BaseWebSocketManager {
       })
     }
     else {
-      console.log(`[BaseWebSocketManager] No handlers registered for message type '${message.type}'`)
+      if (message.type !== 'heartbeat') {// Avoid cluttering logs with heartbeat messages
+        console.log(`[BaseWebSocketManager] No handlers registered for message type '${message.type}'`)}
     }
   }
 

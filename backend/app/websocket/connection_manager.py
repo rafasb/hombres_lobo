@@ -24,7 +24,7 @@ import uuid
 from datetime import datetime
 import logging
 from enum import Enum
-from app.websocket.messages_types import MessageType, WsMessagePlayerId, WebSocketMessageV2 as WebSocketMessage
+from app.websocket.messages_types import MessageType, UserIdName, WsMessagePlayerId, WebSocketMessageV2 as WebSocketMessage
 from app.services.user_service import UserService, UserStatus, UserStatusUpdate
 from app.services.game_state_service import game_state_manager
 
@@ -143,7 +143,8 @@ class ConnectionManager:
                             game_id, 
                             WsMessagePlayerId(
                                 type=MessageType.PLAYER_DISCONNECTED,
-                                data=user_id), 
+                                data=UserIdName(id=user_id, name="")
+                            ),  # Nombre no disponible aquí
                             exclude_connection=connection_id)        
 
             # Limpiar registros
@@ -195,7 +196,7 @@ class ConnectionManager:
                 game_id, 
                 WsMessagePlayerId(
                     type=MessageType.PLAYER_CONNECTED,
-                    data=user_id),
+                    data=UserIdName(id=user_id, name="")),
                 exclude_connection=connection_id)
             print(f"Usuario {user_id} se unió a room de juego {game_id}")
 
@@ -226,7 +227,7 @@ class ConnectionManager:
                     game_id,
                     WsMessagePlayerId(
                         type=MessageType.PLAYER_DISCONNECTED,
-                        data=user_id),
+                        data=UserIdName(id=user_id, name="")),
                 )
                 print(f"Usuario {user_id} salió de room de juego {game_id}")
 
