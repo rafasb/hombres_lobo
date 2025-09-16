@@ -12,10 +12,9 @@ from app.services.game_state_service import GamePhase
 
 class MessageType(str, Enum):
     # Estados de usuario
-    USER_STATUS_CHANGED = "user_status_changed"
+    PLAYER_STATUS_CHANGED = "user_status_changed"
     
     # Comandos de juego
-    IN_GAME = "in_game"         # Notifica que un usuario está en una partida.
     RESTART_GAME = "restart_game"
     GAME_STATUS = "game_status"
     
@@ -216,7 +215,7 @@ class WsGameEndedMessage(WebSocketMessageV2):
 
 class WsUserStatusChangedMessage(WebSocketMessageV2):
     """Mensaje de cambio de estado de usuario websocket version 2"""
-    type: MessageType = MessageType.USER_STATUS_CHANGED
+    type: MessageType = MessageType.PLAYER_STATUS_CHANGED
     user_id: str
     old_status: str
     new_status: str
@@ -248,7 +247,7 @@ class WsUserConnectionStatusMessage(WebSocketMessageV2):
 
 # Tipos de mensajes para validación (actualizados)
 MESSAGE_MODELS = {
-    MessageType.USER_STATUS_CHANGED: WsUserStatusChangedMessage,
+    MessageType.PLAYER_STATUS_CHANGED: WsUserStatusChangedMessage,
     MessageType.PHASE_CHANGED: WsPhaseChangedMessage,
     MessageType.PHASE_TIMER: WsTimerMessage,
     MessageType.VOTE_CAST: WsVoteMessage,
