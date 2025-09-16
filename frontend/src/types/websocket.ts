@@ -1,8 +1,10 @@
 /**
  * Tipos y interfaces relacionados con WebSocket
- * Centralización de definiciones para comunicación en tiexport type WebSocketMessageType =
+ * Centralización de definiciones para comunicación en tiempo real
+ */
+
+export type WebSocketMessageType =
   // Conexión y estado de usuario
-  | 'player_connected'
   | 'player_disconnected'
   | 'player_banned'
   | 'player_left_game'
@@ -14,9 +16,33 @@
   | 'start_game'         // Frontend command (not in backend enum)
   | 'restart_game'
   | 'game_status'
-  | 'force_next_phase'   // Frontend command (not in backend enum)*
- * Interfaz base para mensajes de WebSocket
- */
+  | 'force_next_phase'   // Frontend command (not in backend enum)
+  // Fases del juego
+  | 'phase_changed'
+  | 'phase_timer'
+  | 'game_started'
+  | 'game_ended'
+  // Votaciones
+  | 'vote_cast'
+  | 'voting_started'
+  | 'voting_ended'
+  | 'voting_results'
+  // Acciones de roles
+  | 'role_action'
+  | 'night_action'
+  // Eventos del juego
+  | 'player_eliminated'
+  | 'player_role_revealed'
+  // Sistema
+  | 'heartbeat'
+  | 'error'
+  | 'success'
+  | 'system_message'
+  // Estados de conexión
+  | 'game_connection_state'
+  | 'players_status_update'
+  | 'game_restarted'
+
 /**
  * Interfaz base para mensajes de WebSocket (genérica)
  * Se sugiere usar `GameWebSocketMessage` (discriminated union) en lugar de esta interfaz directa.
@@ -118,35 +144,8 @@ export type PlayerConnectionStatus = PlayerStatus
 /**
  * Tipos de mensajes WebSocket específicos del juego
  * Sincronizados con MessageType en backend/app/websocket/messages_types.py
+ * NOTA: Esta definición está duplicada arriba - eliminar una de las dos
  */
-export type WebSocketMessageType =
-  // Conexión y estado de usuario
-  | 'player_connected'
-  | 'player_disconnected'
-  | 'player_banned'
-  | 'player_left_game'
-  | 'user_status_changed'
-  | 'user_connection_status'
-  // Comandos de juego
-  | 'in_game'
-  | 'join_game'          // Frontend command (not in backend enum)
-  | 'start_game'         // Frontend command (not in backend enum)
-  | 'restart_game'
-  | 'game_status'
-  | 'force_next_phase'   // Frontend command (not in backend enum)
-  // Fases del juego
-  | 'phase_changed'
-  | 'phase_timer'
-  | 'game_started'
-  | 'game_ended'
-  | 'game_restarted'
-  // Votaciones
-  | 'vote_cast'
-  | 'voting_started'
-  | 'voting_ended'
-  | 'voting_results'
-  | 'cast_vote'          // Frontend command (not in backend enum)
-  | 'get_voting_status'  // Frontend command (not in backend enum)
   // Acciones de roles
   | 'role_action'
   | 'night_action'
@@ -172,7 +171,6 @@ export type WebSocketMessageType =
 export interface WebSocketMessageMap {
   // Aquí se relaciona el TIPO de mensaje con el contenido de DATA
   // Conexión y estado de usuario (WsPlayerConnectionMessage)
-  player_connected: { user_id: string; username: string }
   player_disconnected: { user_id: string; username: string }
   player_banned: { user_id: string; username: string }
   player_left_game: { playerId: string }
@@ -240,8 +238,6 @@ export interface WebSocketMessageMap {
     is_tie: boolean 
   }
   voting_results: { results: Record<string, number> }
-  cast_vote: { voter_id: string; target_id: string }
-  get_voting_status: undefined
 
   // Acciones de roles (WsRoleActionMessage)
   role_action: { actor_id: string; action: string; target_id?: string }

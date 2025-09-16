@@ -12,7 +12,6 @@ from app.services.game_state_service import GamePhase
 
 class MessageType(str, Enum):
     # Conexión
-    PLAYER_CONNECTED = "player_connected"  # Notifica que un usuario se conecta a la aplicación
     PLAYER_DISCONNECTED = "player_disconnected" # Notifica que un usuario se desconecta de la aplicación
     PLAYER_BANNED = "player_banned"  # Notifica que un usuario esta baneado
     
@@ -119,12 +118,6 @@ class UserIdName(BaseModel):
     id: str = Field(default="")
     name: str = Field(default="")
 
-# Mensajes específicos que heredan de WebSocketMessageV2
-class WsMessagePlayerId(WebSocketMessageV2):
-    """Mensaje de identidad de jugador websocket version 2
-    Requiere especificar el tipo de mensaje y el ID del jugador en data"""
-    data: UserIdName = Field(default_factory=UserIdName)
-
 class WsMessageError(WebSocketMessageV2):
     """Mensaje de error websocket version 2"""
     type: MessageType = MessageType.ERROR
@@ -135,12 +128,6 @@ class WsMessageSuccess(WebSocketMessageV2):
     """Mensaje de éxito websocket version 2"""
     type: MessageType = MessageType.SUCCESS
     data: str
-
-class WsPlayerConnectionMessage(WebSocketMessageV2):
-    """Mensaje de conexión/desconexión de jugador"""
-    user_id: str
-    username: str
-    data: str = ""  # Mensaje adicional
 
 class WsPhaseChangedMessage(WebSocketMessageV2):
     """Mensaje de cambio de fase websocket version 2"""
@@ -268,8 +255,6 @@ class WsUserConnectionStatusMessage(WebSocketMessageV2):
 
 # Tipos de mensajes para validación (actualizados)
 MESSAGE_MODELS = {
-    MessageType.PLAYER_CONNECTED: WsPlayerConnectionMessage,
-    MessageType.PLAYER_DISCONNECTED: WsPlayerConnectionMessage,
     MessageType.USER_STATUS_CHANGED: WsUserStatusChangedMessage,
     MessageType.PHASE_CHANGED: WsPhaseChangedMessage,
     MessageType.PHASE_TIMER: WsTimerMessage,

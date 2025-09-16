@@ -15,6 +15,8 @@ Métodos Pricipales:
 - get_connection_info(connection_id) -> dict
 - cleanup_after_disconnect()
 - _heartbeat_loop()  # Tarea interna para mantener conexiones vivas
+
+No se encarga de notificar ni actualizar estados de usuario, eso lo hacen los handlers externos.
 """
 from typing import Dict, List, Set
 from fastapi import WebSocket
@@ -24,9 +26,8 @@ import uuid
 from datetime import datetime
 import logging
 from enum import Enum
-from app.websocket.messages_types import MessageType, UserIdName, WsMessagePlayerId, WebSocketMessageV2 as WebSocketMessage
+from app.websocket.messages_types import MessageType, WebSocketMessageV2 as WebSocketMessage
 from app.services.user_service import UserService, UserStatus, UserStatusUpdate
-from app.services.game_state_service import game_state_manager
 
 class WebSocketState(str, Enum):
     CONNECTING = "CONNECTING"
@@ -119,6 +120,8 @@ class ConnectionManager:
     async def disconnect(self, connection_id: str):
         """Desconectar un cliente"""
         user_id = None
+        affected_games = []  # Inicializar aquí para que esté disponible en todo el método
+        
         if connection_id in self.active_connections:
             # Obtener user_id antes de limpiar
             user_id = self.connection_users.get(connection_id)
@@ -132,29 +135,26 @@ class ConnectionManager:
             except Exception as e:
                 self.logger.error(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
                 print(f"[WEBSOCKET] Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
-            # Remover de rooms de juego
+            
+            # Identificar juegos afectados antes de limpiar
             for game_id, connections in self.game_rooms.items():
                 if connection_id in connections:
+                    affected_games.append(game_id)
                     connections.remove(connection_id)
-                    
-                    # Notificar a otros en la room (user_id ya fue obtenido arriba)
-                    if user_id:
-                        await self.broadcast_to_game(
-                            game_id, 
-                            WsMessagePlayerId(
-                                type=MessageType.PLAYER_DISCONNECTED,
-                                data=UserIdName(id=user_id, name="")
-                            ),  # Nombre no disponible aquí
-                            exclude_connection=connection_id)        
 
             # Limpiar registros
             del self.active_connections[connection_id]
             del self.connection_info[connection_id]
             if connection_id in self.connection_users:
                 del self.connection_users[connection_id]
+                
         print(f"WebSocket desconectado: connection_id={connection_id}, user_id={user_id}")
-        # Retornar user_id para llamadas externas de actualización de estado
-        return user_id
+        
+        # Retornar información para que el caller maneje las notificaciones
+        return {
+            "user_id": user_id,
+            "affected_games": affected_games
+        }
         
     async def cleanup_after_disconnect(self):
         """Limpiar recursos después de desconexión"""
@@ -164,7 +164,7 @@ class ConnectionManager:
             self.heartbeat_task = None
 
     async def join_game_room(self, connection_id: str, game_id: str):
-        """Unir conexión a room de juego"""
+        """Unir conexión a room de juego - Solo gestión técnica"""
         if game_id not in self.game_rooms:
             self.game_rooms[game_id] = set()
         
@@ -188,20 +188,19 @@ class ConnectionManager:
                 self.logger.error(f"Error actualizando estado de usuario {user_id} a IN_GAME: {e}")
                 print(f"❌ Error actualizando estado de usuario {user_id} a IN_GAME: {e}")
             
-            # Sincronizar connected_players con el estado real
-            await self.sync_connected_players_with_game_state(game_id)
-            
-            # Notificar a otros en la room
-            await self.broadcast_to_game(
-                game_id, 
-                WsMessagePlayerId(
-                    type=MessageType.PLAYER_CONNECTED,
-                    data=UserIdName(id=user_id, name="")),
-                exclude_connection=connection_id)
             print(f"Usuario {user_id} se unió a room de juego {game_id}")
+            
+            # Retornar información para notificaciones externas
+            return {
+                "user_id": user_id,
+                "game_id": game_id,
+                "action": "joined"
+            }
+        
+        return None
 
     async def leave_game_room(self, connection_id: str, game_id: str):
-        """Salir de room de juego"""
+        """Salir de room de juego - Solo gestión técnica"""
         if game_id in self.game_rooms and connection_id in self.game_rooms[game_id]:
             self.game_rooms[game_id].remove(connection_id)
             
@@ -219,17 +218,16 @@ class ConnectionManager:
                     self.logger.error(f"Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
                     print(f"❌ Error actualizando estado de usuario {user_id} a DISCONNECTED: {e}")
                 
-                # Sincronizar connected_players con el estado real
-                await self.sync_connected_players_with_game_state(game_id)
-                
-                # Notificar salida
-                await self.broadcast_to_game(
-                    game_id,
-                    WsMessagePlayerId(
-                        type=MessageType.PLAYER_DISCONNECTED,
-                        data=UserIdName(id=user_id, name="")),
-                )
                 print(f"Usuario {user_id} salió de room de juego {game_id}")
+                
+                # Retornar información para notificaciones externas
+                return {
+                    "user_id": user_id,
+                    "game_id": game_id,
+                    "action": "left"
+                }
+        
+        return None
 
     async def send_personal_message(self, connection_id: str, message: WebSocketMessage):
         if connection_id not in self.active_connections:
@@ -351,25 +349,6 @@ class ConnectionManager:
                     return conn_info.get("game_id") == game_id
                 return True
         return False
-
-    async def sync_connected_players_with_game_state(self, game_id: str):
-        """
-        Sincroniza connected_players del objeto Game con el estado real del connection_manager
-        """
-        try:
-            
-            # Obtener usuarios realmente conectados desde game_rooms
-            actual_connected_users = self.get_game_users(game_id)
-            
-            # Actualizar connected_players en el GameState
-            await game_state_manager.update_connected_players_from_list(game_id, actual_connected_users)
-            
-            print(f"🔄 Sincronizados {len(actual_connected_users)} jugadores conectados en partida {game_id}")
-            self.logger.info(f"Sincronizados connected_players para partida {game_id}: {actual_connected_users}")
-            
-        except Exception as e:
-            self.logger.error(f"Error sincronizando connected_players para partida {game_id}: {e}")
-            print(f"❌ Error sincronizando connected_players para partida {game_id}: {e}")
 
     async def _heartbeat_loop(self):
         """Loop de heartbeat para mantener conexiones vivas"""

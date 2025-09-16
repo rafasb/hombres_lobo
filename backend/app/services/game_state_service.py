@@ -1,6 +1,7 @@
 """
 Game State Service
 Maneja el estado del juego en memoria integrado con sistema de fases
+También se encarga de lanzar las notificaciones de WebSocket cuando hay cambios en el estado del juego.
 """
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
@@ -9,6 +10,9 @@ from app.models.game_and_player import Game, GameStatus, PlayerInfo
 from app.services.game_phases_service import GamePhaseController, GamePhase, phase_manager
 from app.services.user_service import UserService
 from app.models.user import UserStatus
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GameState:
     """Wrapper de servicios para Game - NO duplica datos.
@@ -275,6 +279,8 @@ class GameStateManager:
         # Crear nuevo estado
         game_state = GameState(game_id, game_data)
         self.active_games[game_id] = game_state
+
+        print(f"[GameStateService] Creado nuevo juego {game_id}")
         
         return game_state
     
@@ -283,6 +289,7 @@ class GameStateManager:
         if game_id in self.active_games:
             game_state = self.active_games[game_id]
             game_state.is_active = False
+            print(f"[GameStateService] Removiendo juego {game_id}")
             
             # Cancelar timer de fase
             if game_state.phase_timer_task:
@@ -310,11 +317,19 @@ class GameStateManager:
             # Si se proporciona game_id específico, actualizar solo ese juego
             if game_id:
                 game_state = self.active_games.get(game_id)
+                if not game_state:
+                    # Intentar cargar el GameState si no está en memoria
+                    logger.info(f"GameState {game_id} no encontrado en memoria para usuario {user_id}, intentando cargar...")
+                    game_state = await self.get_or_create_game_state(game_id)
+                
                 if game_state:
                     self._update_player_connection_state(game_state, user_id, connected)
                     logger.info(f"Actualizado estado de conexión para usuario {user_id} en juego {game_id}: {'conectado' if connected else 'desconectado'}")
+                    
+                    # Notificar automáticamente el estado actualizado
+                    await self._notify_game_state_updated(game_id)
                 else:
-                    logger.warning(f"Juego {game_id} no encontrado en juegos activos")
+                    logger.error(f"No se pudo obtener o crear GameState para partida {game_id} y usuario {user_id}")
             else:
                 # Buscar en todos los juegos activos donde el usuario sea jugador
                 updated_games = []
@@ -325,6 +340,10 @@ class GameStateManager:
                 
                 if updated_games:
                     logger.info(f"Actualizado estado de conexión para usuario {user_id} en juegos: {updated_games}: {'conectado' if connected else 'desconectado'}")
+                    
+                    # Notificar automáticamente a todos los juegos afectados
+                    for affected_game_id in updated_games:
+                        await self._notify_game_state_updated(affected_game_id)
                 else:
                     logger.info(f"Usuario {user_id} no encontrado en ningún juego activo")
                 
@@ -332,24 +351,29 @@ class GameStateManager:
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error actualizando estado de conexión del jugador {user_id}: {e}")
-            print(f"[GameStateManager] Error actualizando estado de conexión del jugador {user_id}: {e}")
+            print(f"[GameStateService] Error actualizando estado de conexión del jugador {user_id}: {e}")
     
     async def update_connected_players_from_list(self, game_id: str, connected_user_ids: List[str]):
         """
         Actualiza connected_players de un juego específico con una lista completa de usuarios conectados
+        Automáticamente notifica a todos los jugadores el estado actualizado de la partida.
+        Asegura que el GameState existe antes de intentar la actualización.
         
         Args:
             game_id: ID del juego
             connected_user_ids: Lista de IDs de usuarios que deberían estar conectados
         """
         try:
-            import logging
-            logger = logging.getLogger(__name__)
             
             game_state = self.active_games.get(game_id)
             if not game_state:
-                logger.warning(f"Juego {game_id} no encontrado en juegos activos")
-                return
+                # Intentar cargar el GameState si no está en memoria
+                logger.info(f"GameState {game_id} no encontrado en memoria, intentando cargar...")
+                game_state = await self.get_or_create_game_state(game_id)
+                if not game_state:
+                    logger.error(f"No se pudo obtener o crear GameState para partida {game_id}")
+                    print(f"[GameStateService] ❌ No se pudo obtener o crear GameState para partida {game_id}")
+                    return
             
             # Actualizar la lista completa de connected_players
             game_state.game_data.connected_players = list(connected_user_ids)
@@ -359,11 +383,38 @@ class GameStateManager:
             
             logger.info(f"Actualizada lista completa de connected_players para juego {game_id}: {connected_user_ids}")
             
+            # Notificar automáticamente el estado actualizado a todos los jugadores
+            await self._notify_game_state_updated(game_id)
+            
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error actualizando connected_players para juego {game_id}: {e}")
-            print(f"[GameStateManager] Error actualizando connected_players para juego {game_id}: {e}")
+            print(f"[GameStateService] Error actualizando connected_players para juego {game_id}: {e}")
+    
+    async def sync_connected_players_with_connection_manager(self, game_id: str, actual_connected_users: List[str]):
+        """
+        Sincroniza connected_players del estado de la partida con la información real del ConnectionManager.
+        Este método debe ser llamado cuando hay cambios en las conexiones WebSocket.
+        Asegura que el GameState existe antes de intentar la sincronización.
+        
+        Args:
+            game_id: ID de la partida
+            actual_connected_users: Lista de usuarios realmente conectados según ConnectionManager
+        """
+        try:
+            # Asegurar que el GameState existe en memoria antes de sincronizar
+            game_state = await self.get_or_create_game_state(game_id)
+            if not game_state:
+                logger.error(f"No se pudo obtener o crear GameState para partida {game_id}")
+                print(f"[GameStateService] ❌ No se pudo obtener o crear GameState para partida {game_id}")
+                return
+            
+            await self.update_connected_players_from_list(game_id, actual_connected_users)          
+            print(f"[GameStateService] 🔄 Sincronizados {len(actual_connected_users)} jugadores conectados en partida {game_id}")
+            logger.info(f"[GameStateService] Sincronizados connected_players para partida {game_id}: {actual_connected_users}")
+            
+        except Exception as e:
+            logger.error(f"Error sincronizando connected_players para partida {game_id}: {e}")
+            print(f"[GameStateService] ❌ Error sincronizando connected_players para partida {game_id}: {e}")
     
     def _update_player_connection_state(self, game_state: 'GameState', user_id: str, connected: bool|None):
         """
@@ -395,13 +446,49 @@ class GameStateManager:
         # Guardar cambios
         game_state._save_changes()
     
+    async def _notify_game_state_updated(self, game_id: str):
+        """
+        Notifica a todos los jugadores conectados que el estado de la partida se ha actualizado.
+        Centraliza las notificaciones de WebSocket siguiendo el principio de responsabilidad única.
+        """
+        try:
+            
+            # Importar aquí para evitar dependencia circular
+            from app.websocket.connection_manager import connection_manager
+            from app.services.game_responses_service import GameResponsesService
+            from app.websocket.messages_types import MessageType, WebSocketMessageV2
+            
+            # Crear el mensaje de actualización del estado de la partida
+            game_update = GameResponsesService.create_connection_update(game_id, True)
+            
+            if game_update:
+                # Crear mensaje WebSocket
+                update_message = WebSocketMessageV2(
+                    type=MessageType.GAME_STATUS,
+                    data=game_update.dict(),
+                    timestamp=datetime.now()
+                )
+                
+                # Enviar a todos los jugadores conectados de la partida
+                await connection_manager.broadcast_to_game(game_id, update_message)
+                
+                logger.info(f"Notificación de estado actualizado enviada a partida {game_id}")
+                print(f"[GameStateService] Estado de partida {game_id} notificado a todos los jugadores")
+            else:
+                logger.warning(f"No se pudo generar actualización de estado para partida {game_id}")
+                print(f"[GameStateService] No se pudo generar actualización de estado para partida {game_id}")
+
+        except Exception as e:
+            logger.error(f"Error notificando actualización de estado para partida {game_id}: {e}")
+            print(f"[GameStateService] Error notificando actualización de estado para partida {game_id}: {e}")
+    
     
     async def _cleanup_loop(self):
         """Loop de limpieza para juegos inactivos"""
         while True:
             try:
                 await asyncio.sleep(300)  # Verificar cada 5 minutos
-                print("🧹 Ejecutando limpieza de juegos inactivos...")
+                print("[GameStateService]🧹 Ejecutando limpieza de juegos inactivos...")
                 current_time = datetime.now()
                 inactive_games = []
                 
@@ -418,7 +505,7 @@ class GameStateManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Error en cleanup loop: {e}")
+                print(f"[GameStateService] Error en cleanup loop: {e}")
 
 # Instancia global del game state manager
 game_state_manager = GameStateManager()

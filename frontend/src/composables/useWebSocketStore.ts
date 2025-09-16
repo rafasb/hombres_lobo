@@ -119,7 +119,6 @@ export const WebSocketMessageCategories = {
 
   // Mensajes relacionados con conexión de jugadores
   PLAYER_CONNECTION: [
-    'player_connected',
     'player_disconnected', 
     'player_banned',
     'player_left_game'

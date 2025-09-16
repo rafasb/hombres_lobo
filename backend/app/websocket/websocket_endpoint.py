@@ -1,8 +1,12 @@
+'''
+Este módulo se encarga de manejar el endpoint principal de WebSocket,
+incluyendo autenticación, gestión de conexiones, recepción y envío de mensajes,
+y actualización automática del estado de los usuarios.
+'''
 from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime
 import json
 import logging
-from typing import Any
 
 from app.websocket.connection_manager import connection_manager
 from app.core.security import verify_access_token
@@ -10,7 +14,7 @@ from app.websocket.user_status_handlers import user_status_handler
 from app.services.game_responses_service import GameResponsesService
 
 from app.websocket.messages_types import (
-    MessageType, ErrorCode, WsMessageError, WsMessageSuccess,
+    MessageType, ErrorCode,
     WebSocketMessageV2, WsSystemMessage, SystemMessageType
 )
 
@@ -22,6 +26,7 @@ logger = logging.getLogger(__name__)
 async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> None:
     """Endpoint principal de WebSocket"""
     connection_id = None
+    user_id = None
     
     try:
         logger.info(f"Intentando conectar WebSocket para juego {game_id}")
@@ -65,6 +70,17 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
             await user_status_handler.auto_update_status_on_connect(user_id)
         except Exception as e:
             logger.warning(f"Error actualizando estado a conectado para {user_id}: {e}")
+        
+        # Sincronizar estado de connected_players con ConnectionManager
+        try:
+            from app.services.game_state_service import game_state_manager
+            actual_connected_users = connection_manager.get_game_users(game_id)
+            await game_state_manager.sync_connected_players_with_connection_manager(game_id, actual_connected_users)
+            logger.info(f"Sincronizados connected_players para {game_id}: {actual_connected_users}")
+            print(f"Sincronizados connected_players para {game_id}: {actual_connected_users}")
+        except Exception as e:
+            logger.warning(f"Error sincronizando connected_players para {game_id}: {e}")
+            print(f"Error sincronizando connected_players para {game_id}: {e}")
         
         # Enviar mensaje de bienvenida usando SystemMessage
         welcome_message = WsSystemMessage(
@@ -121,11 +137,9 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
                 await message_handler.handle_message(connection_id, message_data)
                 
             except WebSocketDisconnect:
-                # Manejar desconexión
+                # Manejar desconexión - la limpieza se hace en finally
                 logger.info(f"WebSocket desconectado para conexión {connection_id}")
                 print(f"WebSocket desconectado para conexión {connection_id}")
-                if user_id:
-                    await user_status_handler.auto_update_status_on_disconnect(user_id)
                 break
             except json.JSONDecodeError:
                 await message_handler.send_error(
@@ -142,10 +156,15 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
                 )
                 
     except WebSocketDisconnect: 
-        try:
-            await user_status_handler.auto_update_status_on_disconnect(user_id)
-        except Exception as e:
-            logger.warning(f"Error actualizando estado de usuario a desconectado: {e}")
+        if user_id:
+            try:
+                await user_status_handler.auto_update_status_on_disconnect(user_id)
+                from app.services.game_state_service import game_state_manager
+                # Sincronizar estado de connected_players después de la desconexión
+                actual_connected_users = connection_manager.get_game_users(game_id)
+                await game_state_manager.sync_connected_players_with_connection_manager(game_id, actual_connected_users)
+            except Exception as e:
+                logger.warning(f"Error actualizando estado de usuario a desconectado: {e}")
 
     except Exception as e:
         logger.error(f"Error en websocket endpoint: {e}")
@@ -157,7 +176,12 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
     finally:
         # Limpiar conexión y actualizar estado
         if connection_id:
-            user_id = await connection_manager.disconnect(connection_id)
+            # Obtener user_id antes de desconectar si no lo tenemos ya
+            if not user_id:
+                user_id = connection_manager.connection_users.get(connection_id)
+            
+            # Desconectar la conexión
+            await connection_manager.disconnect(connection_id)
             
             # Actualizar estado del usuario a 'disconnected' automáticamente
             if user_id:
@@ -165,6 +189,14 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, token: str) -> 
                     await user_status_handler.auto_update_status_on_disconnect(user_id)
                 except Exception as e:
                     logger.warning(f"Error actualizando estado a desconectado para {user_id}: {e}")
+                
+                # Sincronizar estado de connected_players después de la desconexión
+                try:
+                    from app.services.game_state_service import game_state_manager
+                    actual_connected_users = connection_manager.get_game_users(game_id)
+                    await game_state_manager.sync_connected_players_with_connection_manager(game_id, actual_connected_users)
+                except Exception as e:
+                    logger.warning(f"Error sincronizando connected_players tras desconexión: {e}")
             
             # Limpiar recursos finales
             await connection_manager.cleanup_after_disconnect()

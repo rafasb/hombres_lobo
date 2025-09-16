@@ -1,13 +1,13 @@
 """
 Handlers para gestión de estado de usuarios via WebSocket
 Maneja cambios de estado automáticos y notificaciones en tiempo real
-
+Ya no se encarga de enviar las notificaciones, eso lo hace GameStateService.
 TODO: No conviene manegar estados de usuarios fuera de la partida.
 """
 from app.websocket.connection_manager import connection_manager
 from app.websocket.messages_types import (
     WsUserStatusChangedMessage, WsMessageError,
-    WsMessageSuccess, MessageType, ErrorCode
+    ErrorCode
 )
 from app.services.user_service import UserService
 from app.models.user import UserStatusUpdate, UserStatus
@@ -35,17 +35,12 @@ class UserStatusHandler:
             updated_user, old_status = UserService.update_user_status(user_id, status_update)
 
             if updated_user and old_status:
-                # Notificar cambio de estado a otros usuarios
-                await self.broadcast_status_change_to_room(
-                    user_id,
-                    old_status.value,
-                    "in_game"
-                )
                 logger.info(f"Usuario {user_id} automáticamente marcado como 'in_game' al conectar")
         except Exception as e:
             logger.error(f"Error actualizando estado automático de conexión para {user_id}: {e}")
         
         # Actualizar los usuarios conectados en el estado del juego
+        # GameStateService se encarga automáticamente de notificar a todos los jugadores
         await game_state_manager.update_connected_players(user_id, connected=True)
 
         print(f"Usuario {user_id} conectado.")
@@ -66,17 +61,12 @@ class UserStatusHandler:
                 updated_user, old_status = UserService.update_user_status(user_id, status_update)
 
                 if updated_user and old_status:
-                    # Notificar cambio de estado a otros usuarios
-                    await self.broadcast_status_change_to_room(
-                        user_id,
-                        old_status.value,
-                        "active"
-                    )
-                    logger.info(f"Usuario {user_id} automáticamente marcado como 'active' al desconectar")
+                    logger.info(f"Usuario {user_id} automáticamente marcado como 'disconnected' al desconectar")
         except Exception as e:
             logger.error(f"Error actualizando estado automático de desconexión para {user_id}: {e}")
 
         # Actualizar los usuarios conectados en el estado del juego
+        # GameStateService se encarga automáticamente de notificar a todos los jugadores
         await game_state_manager.update_connected_players(user_id, connected=False)
         print(f"Usuario {user_id} desconectado.")
 

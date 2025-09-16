@@ -216,24 +216,25 @@ class GameResponsesService:
         return GameResponsesService.build_game_state_update(game, users_dict, update_type)
     
     @staticmethod
-    def create_player_connection_update(
+    def create_connection_update(
         game_id: str,
-        player_id: str,
         is_connected: bool
     ) -> Optional[GameStateUpdateResponse]:
         """
-        Crea una actualización específica para cambios de conexión de jugadores.
+        Crea una actualización del estado del juego tras cambio de conexión.
+        En lugar de enviar notificación específica de conexión/desconexión,
+        envía el estado completo actualizado de la partida.
         
         Args:
-            game_id: ID de la partida
-            player_id: ID del jugador que cambió su estado de conexión
-            is_connected: True si se conectó, False si se desconectó
+            game_id: ID del juego
+            is_connected: True si se conectó, False si se desconectó (usado solo para logging)
             
         Returns:
-            GameStateUpdateResponse con la actualización de conexión
+            GameStateUpdateResponse con el estado completo actualizado del juego
         """
-        update_type = "player_connected" if is_connected else "player_disconnected"
-        return GameResponsesService.get_game_state_update_by_id(game_id, update_type)
+        # Simplificación: siempre enviar estado actualizado de la partida
+        # sin distinguir entre conexión/desconexión
+        return GameResponsesService.get_game_state_update_by_id(game_id, "game_state_updated")
     
     @staticmethod
     def create_phase_change_update(
