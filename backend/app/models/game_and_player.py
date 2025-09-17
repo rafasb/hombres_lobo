@@ -81,7 +81,7 @@ class GameStatus(str, Enum):
     STARTED = "started"      # En curso
     NIGHT = "night"          # Fase de noche
     DAY = "day"              # Fase de día
-    VOTING = "voting"      # Fase de votación
+    VOTING = "voting"      # Fase de votación del día
     TRIAL = "trial"        # Fase de juicio
     EXECUTION = "execution"  # Fase de ejecución
     PAUSED = "paused"        # Pausada

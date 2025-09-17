@@ -383,7 +383,7 @@ def reset_day_votes(game_id: str) -> Optional[Game]:
         return None
     
     # Limpiar los votos diurnos
-    game.day_votes = {}
+    game.day_votes.clear()
     
     save_game(game)
     return game
@@ -418,10 +418,6 @@ def get_voting_summary(game_id: str) -> Dict[str, Any]:
         "voting_complete": total_votes >= total_players,
         "game_status": game.status.value
     }
-
-
-# Funciones para la Vidente
-
 
 def is_valid_target(game: Game, target_id: str) -> bool:
     if target_id not in game.players:

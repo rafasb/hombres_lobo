@@ -1,0 +1,74 @@
+stateDiagram-v2
+    direction LR
+
+    state "Juego Hombres Lobo" as Game {
+        direction LR
+
+        state "Inicio del Juego" as Initial
+        state "Fase del Día" as Day
+        state "Fase de la Noche" as Night
+        state "Procesamiento de Muertes" as DeathProcessing
+        state "Juego Terminado" as EndGame
+
+        Initial --> Day: Asignar Roles
+        Day --> Night: La noche cae
+        Night --> Day: El sol sale
+
+        state "Acciones del Día" as DayActions {
+            [*] --> Discussion
+            Discussion --> Vote: Discusión termina
+            Vote --> DeathCheck: Votación finalizada
+            DeathCheck --> DeathProcessing: Si hay muerto
+            DeathCheck --> Discussion: No hay muerto
+        }
+
+        Day --> DayActions: Comienza el día
+        DayActions --> Night: Termina el día
+
+        state "Acciones de la Noche" as NightActions {
+            [*] --> WolvesVote: Comienza la noche
+            WolvesVote --> SeerAction: Lobos eligen víctima
+            SeerAction --> WitchAction: Vidente ve a alguien
+            WitchAction --> DeathCheckNight: Bruja usa poción
+            DeathCheckNight --> DeathProcessing: Si hay muerto
+            DeathCheckNight --> EndNight: No hay muerto
+        }
+
+        Night --> NightActions: Comienza la noche
+        NightActions --> Day: Termina la noche
+
+        state DeathProcessing {
+            [*] --> CheckEnamorado: Muerte inicial
+            CheckEnamorado --> CheckHunter: Si no es Enamorado
+            CheckEnamorado --> EnamoradoDies: Si es Enamorado
+            EnamoradoDies --> CheckHunter: El otro enamorado muere
+            CheckHunter --> CheckWildChild: Si no es Cazador
+            CheckHunter --> HunterAction: Si es Cazador
+            HunterAction --> CheckEnamoradoByHunter: Cazador mata a alguien
+            CheckEnamoradoByHunter --> CheckWildChild: Si no es Enamorado
+            CheckEnamoradoByHunter --> EnamoradoDiesByHunter: Si es Enamorado
+            EnamoradoDiesByHunter --> CheckWildChild: Pareja muere
+            CheckWildChild --> CheckSheriff: Si no es modelo del Niño Salvaje
+            CheckWildChild --> WildChildWolf: Si es modelo del Niño Salvaje
+            WildChildWolf --> CheckSheriff: Se convierte en lobo
+            CheckSheriff --> [*]: Si no es Sheriff
+            CheckSheriff --> NewSheriff: Si es Sheriff
+            NewSheriff --> [*]: Nuevo Sheriff elegido
+        }
+        
+        Day --> DeathProcessing: Muere alguien
+        Night --> DeathProcessing: Muere alguien
+        DeathProcessing --> Day: Fin de las muertes
+        DeathProcessing --> Night: Fin de las muertes
+
+        DeathProcessing --> EndGame: Fin del juego
+        Night --> EndGame: Fin del juego
+        Day --> EndGame: Fin del juego
+    }
+
+    state "Condición de Victoria" as Victory {
+        state "Aldeanos Ganan" as VillagersWin
+        state "Lobos Ganan" as WolvesWin
+    }
+    
+    EndGame --> Victory: Se cumplen las condiciones

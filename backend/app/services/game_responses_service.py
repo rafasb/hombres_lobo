@@ -109,7 +109,7 @@ class GameResponsesService:
             max_players=game.max_players,
             current_players=len(game.player_ids),
             players=public_players,
-            eliminated_players=game.eliminated_players.copy(),
+            defeated_players_ids=game.eliminated_players.copy(),
             connected_players_count=len(game.connected_players),
             created_at=game.created_at,
             success=success,
