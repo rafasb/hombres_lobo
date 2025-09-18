@@ -413,10 +413,14 @@ export const useGameStore = defineStore('game', {
             }))
             this.setPlayers(validatedPlayers)
           }
+
+          this.enrolledPlayersCount = data.players.length;
+          // debugger;
+          this.totalPlayersCount = data.max_players || -1;
           
           // Actualizar información de conexión
           if (data.connected_players_count !== undefined && data.current_players !== undefined) {
-            this.setConnectionInfo(data.connected_players_count, data.current_players)
+          //  this.setConnectionInfo(data.connected_players_count, data.current_players)
           }
           
           // Actualizar listas de jugadores vivos/muertos basado en players
@@ -531,7 +535,7 @@ export const useGameStore = defineStore('game', {
         console.log('[GameStore] Mensaje game_connection_state recibido:', data)
         if (data) {
           console.log('[GameStore] Estado de conexión del juego:', data)
-          this.setConnectionInfo(data.connectedPlayersCount, data.totalPlayersCount)
+         // this.setConnectionInfo(data.connectedPlayersCount, data.totalPlayersCount)
           
           if (data.playersStatus) {
             // Actualizar información de jugadores

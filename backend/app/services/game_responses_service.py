@@ -5,9 +5,9 @@ GameStateUpdateResponse a partir de los datos del juego y usuarios.
 """
 
 from typing import Dict, List, Optional
-from datetime import datetime, UTC
+# from datetime import datetime, UTC
 
-from app.models.game_responses import GameResponse, PublicPlayerInfo, GameStateUpdateResponse
+from app.models.game_responses import GameResponse, PublicPlayerInfo
 from app.models.game_and_player import Game, GameStatus
 from app.models.user import User
 from app.services.game_service import get_game
@@ -121,7 +121,7 @@ class GameResponsesService:
         game: Game, 
         users_dict: Dict[str, User],
         update_type: str = "game_state_update"
-    ) -> GameStateUpdateResponse:
+    ) -> GameResponse:
         """
         Construye una respuesta simplificada para actualizaciones de estado.
         Ideal para mensajes WebSocket.
@@ -132,22 +132,29 @@ class GameResponsesService:
             update_type: Tipo de actualización (game_state_update, phase_change, etc.)
             
         Returns:
-            GameStateUpdateResponse con datos esenciales para el frontend
+            GameResponse con datos esenciales para el frontend
         """
         # Construir lista de jugadores públicos
         public_players = GameResponsesService.build_public_players_list(game, users_dict)
-        
-        return GameStateUpdateResponse(
+        creator_user = users_dict.get(game.creator_id)
+        creator_name = creator_user.username if creator_user else "Desconocido"
+        response = GameResponse(
             game_id=game.id,
+            name=game.name,
+            creator_id=game.creator_id,
+            creator_name=creator_name,
             status=game.status,
             current_round=game.current_round,
+            is_first_night=game.is_first_night,
+            max_players=game.max_players,
             current_players=len(game.player_ids),
-            connected_players_count=len(game.connected_players),
             players=public_players,
-            eliminated_players=game.eliminated_players.copy(),
-            update_type=update_type,
-            timestamp=datetime.now(UTC)
+            defeated_players_ids=game.eliminated_players.copy(),
+            connected_players_count=len(game.connected_players),
+            success=True,
+            message=update_type
         )
+        return response
     
     @staticmethod
     def get_game_response_by_id(
@@ -190,7 +197,7 @@ class GameResponsesService:
     def get_game_state_update_by_id(
         game_id: str,
         update_type: str = "game_state_update"
-    ) -> Optional[GameStateUpdateResponse]:
+    ) -> Optional[GameResponse]:
         """
         Obtiene una actualización de estado de partida por su ID.
         
@@ -199,7 +206,7 @@ class GameResponsesService:
             update_type: Tipo de actualización
             
         Returns:
-            GameStateUpdateResponse si la partida existe, None en caso contrario
+            GameResponse si la partida existe, None en caso contrario
         """
         # Cargar la partida
         game = get_game(game_id)
@@ -219,7 +226,7 @@ class GameResponsesService:
     def create_connection_update(
         game_id: str,
         is_connected: bool
-    ) -> Optional[GameStateUpdateResponse]:
+    ) -> Optional[GameResponse]:
         """
         Crea una actualización del estado del juego tras cambio de conexión.
         En lugar de enviar notificación específica de conexión/desconexión,
@@ -230,7 +237,7 @@ class GameResponsesService:
             is_connected: True si se conectó, False si se desconectó (usado solo para logging)
             
         Returns:
-            GameStateUpdateResponse con el estado completo actualizado del juego
+            GameResponse con el estado completo actualizado del juego
         """
         # Simplificación: siempre enviar estado actualizado de la partida
         # sin distinguir entre conexión/desconexión
@@ -240,7 +247,7 @@ class GameResponsesService:
     def create_phase_change_update(
         game_id: str,
         new_phase: GameStatus
-    ) -> Optional[GameStateUpdateResponse]:
+    ) -> Optional[GameResponse]:
         """
         Crea una actualización específica para cambios de fase del juego.
         
@@ -249,7 +256,7 @@ class GameResponsesService:
             new_phase: Nueva fase del juego
             
         Returns:
-            GameStateUpdateResponse con la actualización de fase
+            GameResponse con la actualización de fase
         """
         return GameResponsesService.get_game_state_update_by_id(
             game_id, 
@@ -260,7 +267,7 @@ class GameResponsesService:
     def create_player_elimination_update(
         game_id: str,
         eliminated_player_id: str
-    ) -> Optional[GameStateUpdateResponse]:
+    ) -> Optional[GameResponse]:
         """
         Crea una actualización específica para eliminación de jugadores.
         
@@ -269,7 +276,7 @@ class GameResponsesService:
             eliminated_player_id: ID del jugador eliminado
             
         Returns:
-            GameStateUpdateResponse con la actualización de eliminación
+            GameResponse con la actualización de eliminación
         """
         return GameResponsesService.get_game_state_update_by_id(
             game_id, 

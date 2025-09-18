@@ -58,22 +58,22 @@ class GameResponse(BaseModel):
     message: str = "Game data retrieved successfully"
 
 
-class GameStateUpdateResponse(BaseModel):
-    """
-    Respuesta simplificada para actualizaciones de estado del juego via WebSocket.
-    Incluye solo los campos que cambian frecuentemente.
-    """
-    game_id: str
-    status: GameStatus
-    current_round: int
-    current_players: int
-    connected_players_count: int
-    players: List[PublicPlayerInfo]
-    eliminated_players: List[str]
+# class GameStateUpdateResponse(BaseModel):
+#     """
+#     Respuesta simplificada para actualizaciones de estado del juego via WebSocket.
+#     Incluye solo los campos que cambian frecuentemente.
+#     """
+#     game_id: str
+#     status: GameStatus
+#     current_round: int
+#     current_players: int
+#     connected_players_count: int
+#     players: List[PublicPlayerInfo]
+#     eliminated_players: List[str]
     
-    # Tipo de actualización para el frontend
-    update_type: str = "game_state_update"
-    timestamp: Optional[datetime] = None
+#     # Tipo de actualización para el frontend
+#     update_type: str = "game_state_update"
+#     timestamp: Optional[datetime] = None
 
 
 class GameActionResponse(BaseModel):
