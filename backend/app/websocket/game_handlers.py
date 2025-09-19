@@ -25,9 +25,9 @@ class GameHandler:
         try:
             logger.info(f"Iniciando juego automáticamente: {game_id}")
             
-            # Iniciar sistema de fases integrado
-            await game_state.start_game_phases()
-            
+            # TODO: Iniciar sistema de fases integrado
+            # 
+
             # Actualizar estado de todos los jugadores a 'alive_in_game'
             try:
                 

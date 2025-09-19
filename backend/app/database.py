@@ -172,7 +172,7 @@ class GameDB(Base):
             is_first_night=getattr(self, 'is_first_night'),
             night_actions=getattr(self, 'night_actions') or {},
             # Nuevos campos
-            eliminated_players=getattr(self, 'eliminated_players') or [],
+            defeated_players=getattr(self, 'eliminated_players') or [],
             connected_players=getattr(self, 'connected_players') or [],
             votes=getattr(self, 'votes') or getattr(self, 'day_votes') or {}  # Priorizar votes, fallback a day_votes
         )
@@ -212,7 +212,7 @@ class GameDB(Base):
             is_first_night=game.is_first_night,
             night_actions=game.night_actions or {},
             # Nuevos campos
-            eliminated_players=game.eliminated_players or [],
+            eliminated_players=game.defeated_players or [],
             connected_players=game.connected_players or [],
             votes=game.votes or {},
             # Mantener day_votes por compatibilidad (usar votes como fuente principal)
@@ -579,6 +579,11 @@ def find_games_by_status(status: str) -> List[Game]:
     """Encuentra todas las partidas con un estado específico."""
     with get_db_session() as db:
         return [db_game.to_pydantic() for db_game in db.query(GameDB).filter(GameDB.status == status).all()]
+
+def find_games_by_player_id(player_id: str) -> List[Game]:
+    """Encuentra todas las partidas en las que participa un jugador específico."""
+    with get_db_session() as db:
+        return [db_game.to_pydantic() for db_game in db.query(GameDB).filter(GameDB.player_ids.contains([player_id])).all()]
 
 # --- Funciones helper optimizadas ---
 

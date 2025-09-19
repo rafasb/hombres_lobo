@@ -20,7 +20,7 @@ class PlayerInfo(BaseModel):
     '''Información de roles (incluye campos específicos para evitar subclases).
     Esta información solo debe poder leerla el jugador correspondiente y el servidor.'''
     # Campos comunes a todos los roles
-    role: Roles
+    role: Roles = Roles.VILLAGER
     player_id: str
     is_alive: bool = True
     lover_partner_id: Optional[str] = ''
@@ -109,7 +109,7 @@ class Game(GameBase):
     night_actions: Dict[str, Dict[str, str]] = Field(default_factory=dict)  # Acciones nocturnas por tipo y jugador
     # Otros campos: historial, votos, etc.
     # Nuevos campos
-    eliminated_players: List[str] = Field(default_factory=list)  # IDs de jugadores eliminados
+    defeated_players: List[str] = Field(default_factory=list)  # IDs de jugadores eliminados
     connected_players: List[str] = Field(default_factory=list)  # IDs de jugadores activos en una partida
     votes: Dict[str, str] = Field(default_factory=dict)  # Votos: voter_id -> target_id
 
@@ -178,10 +178,10 @@ class Game(GameBase):
         """Obtener los votos diurnos del juego (alias para compatibilidad)."""
         return self.votes
     
-    def eliminate_player(self,player_id:str):
+    def defeat_player(self,player_id:str):
         '''Eliminar jugador del juego'''
-        if player_id not in self.eliminated_players:
-            self.eliminated_players.append(player_id)
+        if player_id not in self.defeated_players:
+            self.defeated_players.append(player_id)
         
         if player_id in self.players:
             self.players[player_id].is_alive = False
@@ -235,4 +235,4 @@ class Game(GameBase):
     
     def get_dead_players(self) -> List[str]:
         """Obtener jugadores muertos"""
-        return self.eliminated_players.copy()
+        return self.defeated_players.copy()

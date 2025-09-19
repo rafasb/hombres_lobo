@@ -4,7 +4,7 @@ Incluye funciones para crear, obtener y listar partidas usando la base de datos 
 """
 
 from app.database import save_game, load_game, load_all_games, delete_game as db_delete_game
-from app.models.game_and_player import Game, GameStatus
+from app.models.game_and_player import Game, GameStatus, PlayerInfo, Roles
 from typing import Optional, List
 
 # Lógica relacionada con partidas
@@ -29,7 +29,7 @@ def leave_game(game_id: str, user_id: str) -> bool:
     - Si la partida ya ha comenzado (u otra fase): se elimina su entrada de `players` (dict).
     """
     game = load_game(game_id)
-    if not game:
+    if not isinstance(game, Game):
         return False
 
     modified = False
@@ -39,6 +39,9 @@ def leave_game(game_id: str, user_id: str) -> bool:
         if user_id in game.player_ids:
             game.player_ids.remove(user_id)
             modified = True
+            print(f"Usuario {user_id} eliminado de player_ids en partida {game_id}")
+            game.remove_connected_player(user_id)
+            print(f"Usuario {user_id} eliminado de connected_players en partida {game_id}")
 
     # Si la partida ya ha comenzado (o en cualquier otro estado), eliminar del dict de players si existe
     if user_id in game.players:
@@ -106,5 +109,6 @@ def join_game(game_id: str, user_id: str) -> bool:
     
     # Agregar el ID del usuario a la lista de jugadores
     game.player_ids.append(user_id)
+    game.players[user_id] = PlayerInfo(player_id=user_id, role=Roles.VILLAGER)  # El estado del jugador se inicializa cuando comienza la partida
     save_game(game)
     return True

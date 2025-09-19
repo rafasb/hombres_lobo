@@ -22,6 +22,7 @@ from app.services.game_service import (
     update_game_params,
     creator_delete_game,
     join_game,
+    leave_game,
 )
 from app.services.game_responses_service import (
     GameResponsesService,
@@ -31,6 +32,10 @@ from app.services.game_flow_service import (
     assign_roles,
 )
 from app.core.dependencies import get_current_user, get_current_user_id
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/game", tags=["game"])
 
@@ -58,13 +63,27 @@ def get_game_by_id(game_id: str, user=Depends(get_current_user)):
 
 
 @router.post("/{game_id}/join", response_model=GameJoinResponse)
-def join_game_endpoint(game_id: str, user: User = Depends(get_current_user)):
+async def join_game_endpoint(game_id: str, user: User = Depends(get_current_user)):
     """Permite que un usuario autenticado se una a una partida que esté esperando jugadores."""
     user_id = user.id
     if join_game(game_id, user_id):
         # Obtener la partida actualizada
         updated_game = get_game(game_id)
         if updated_game:
+
+            # from app.websocket.connection_manager import connection_manager
+
+            # try:
+            #     from app.services.game_state_service import game_state_manager
+            #     actual_connected_users = connection_manager.get_game_users(game_id)
+            #     await game_state_manager.sync_connected_players_with_connection_manager(game_id, actual_connected_users)
+            #     logger.info(f"Sincronizados connected_players para {game_id}: {actual_connected_users}")
+            #     print(f"Sincronizados connected_players para {game_id}: {actual_connected_users}")
+            # except Exception as e:
+            #     logger.warning(f"Error sincronizando connected_players para {game_id}: {e}")
+            #     print(f"Error sincronizando connected_players para {game_id}: {e}")
+
+
             return GameJoinResponse(
                 success=True,
                 message="Te has unido a la partida exitosamente",
@@ -106,15 +125,27 @@ def assign_roles_endpoint(game_id: str, user=Depends(get_current_user)):
 
 
 @router.post("/{game_id}/leave", response_model=GameLeaveResponse)
-def leave_game_endpoint(game_id: str, user=Depends(get_current_user)):
+async def leave_game_endpoint(game_id: str, user=Depends(get_current_user)):
     """Permite que un usuario autenticado abandone una partida si aún no ha comenzado."""
-    from app.services.game_service import leave_game
+    
 
     if leave_game(game_id, user.id):
         # Obtener la partida actualizada para ver cuántos jugadores quedan
         updated_game = get_game(game_id)
         # remaining players should reflect player_ids for WAITING state
         remaining_players = len(updated_game.player_ids) if updated_game and updated_game.player_ids is not None else 0
+        
+        # from app.websocket.connection_manager import connection_manager
+
+        # try:
+        #     from app.services.game_state_service import game_state_manager
+        #     actual_connected_users = connection_manager.get_game_users(game_id)
+        #     await game_state_manager.sync_connected_players_with_connection_manager(game_id, actual_connected_users)
+        #     logger.info(f"Sincronizados connected_players para {game_id}: {actual_connected_users}")
+        #     print(f"Sincronizados connected_players para {game_id}: {actual_connected_users}")
+        # except Exception as e:
+        #     logger.warning(f"Error sincronizando connected_players para {game_id}: {e}")
+        #     print(f"Error sincronizando connected_players para {game_id}: {e}")
 
         return GameLeaveResponse(
             success=True,
