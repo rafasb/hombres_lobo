@@ -192,7 +192,7 @@ export interface WebSocketMessageMap {
       // is_connected: boolean; ELIMINADO EN BACKEND
       user_status: string; 
     }>;
-    eliminated_players: string[];
+    defeated_players: string[];
     connected_players_count: number;
     created_at: string;
     success: boolean;

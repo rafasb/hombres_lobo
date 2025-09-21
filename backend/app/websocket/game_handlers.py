@@ -183,7 +183,7 @@ class GameHandler:
                     players_info.append({
                         "id": user.id,
                         "name": user.username,
-                        "is_alive": player_id not in game_state.eliminated_players,
+                        "is_alive": player_id not in game_state.defeated_players,
                         "is_connected": player_id in game_state.connected_players,
                         "role": game_state.game_data.players[player_id].role if player_id in game_state.game_data.players else None
                     })

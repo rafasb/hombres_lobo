@@ -87,7 +87,7 @@ export interface Game {
   max_players: number
   current_players: number
   players: PublicPlayerInfo[]  // Lista de información pública de jugadores
-  eliminated_players: string[]  // IDs de jugadores eliminados
+  defeated_players: string[]  // IDs de jugadores eliminados
   connected_players_count: number
   
   // Información temporal
@@ -109,7 +109,7 @@ export interface GameStateUpdate {
   current_players: number
   connected_players_count: number
   players: PublicPlayerInfo[]
-  eliminated_players: string[]
+  defeated_players: string[]
   
   // Tipo de actualización para el frontend
   update_type: string
@@ -171,7 +171,7 @@ export interface LegacyGame {
   current_round: number
   is_first_night: boolean // Indica si es la primera noche
   night_actions: Record<string, Record<string, string>> // Acciones nocturnas por tipo y jugador
-  eliminated_players: string[] // Jugadores eliminados - según API
+  defeated_players: string[] // Jugadores eliminados - según API
   connected_players: string[] // Jugadores conectados - según API  
   votes: Record<string, string> // Votos actuales: voter_id -> target_id (según API, no day_votes)
 }

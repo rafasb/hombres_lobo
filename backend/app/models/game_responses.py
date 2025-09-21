@@ -69,7 +69,7 @@ class GameResponse(BaseModel):
 #     current_players: int
 #     connected_players_count: int
 #     players: List[PublicPlayerInfo]
-#     eliminated_players: List[str]
+#     defeated_players: List[str]
     
 #     # Tipo de actualización para el frontend
 #     update_type: str = "game_state_update"
